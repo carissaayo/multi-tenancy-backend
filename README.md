@@ -198,14 +198,7 @@ Tracked per workspace:
 
 ---
 
-## What This Project Intentionally Avoids
 
-- ❌ Frontend-heavy focus
-- ❌ Fintech or payments domain overlap
-- ❌ Over-engineering microservices
-- ❌ Toy examples
-
----
 
 ## Future Enhancements
 
@@ -226,28 +219,7 @@ Tracked per workspace:
 - Redis 7+
 - Docker (optional, recommended)
 
-### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/slack-multi-tenant-backend.git
-cd slack-multi-tenant-backend
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env
-
-# Start infrastructure (Docker)
-docker-compose up -d
-
-# Run migrations
-npm run migration:run
-
-# Start development server
-npm run start:dev
-```
 
 ### Environment Variables
 
@@ -588,20 +560,6 @@ async postMessage(
 }
 ```
 
----
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
 ## Acknowledgments
 
 - Inspired by Slack's multi-workspace architecture
@@ -614,9 +572,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For questions or feedback, please open an issue or reach out at:
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@carissaayo](https://github.com/carissaayo)
+- Email: ajaoyussufayo@gmail.com
 
 ---
 
-**Built with ❤️ for learning enterprise SaaS architecture**
