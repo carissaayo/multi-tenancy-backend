@@ -9,7 +9,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - multi_tenancy-network
     volumes:
@@ -17,9 +18,9 @@ services:
       - ./package-lock.json:/app/package-lock.json
       - ./tsconfig.json:/app/tsconfig.json
       - ./nest-cli.json:/app/nest-cli.json
-      - ./src:/app/src  # Add this back for immediate sync
+      - ./src:/app/src
       - /app/node_modules
-      - /app/dist  # Add this to prevent locking
+      - /app/dist
     command: npm run start:dev
     restart: unless-stopped
     develop:
@@ -39,13 +40,32 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: multi_tenancy
+      POSTGRES_DB: multi_tenancy  # This creates the database
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - multi_tenancy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d multi_tenancy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: multi_tenancy_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - multi_tenancy-network
+    depends_on:
+      - postgres
       
 networks:
   multi_tenancy-network:

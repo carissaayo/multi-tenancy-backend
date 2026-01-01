@@ -1,0 +1,49 @@
+// src/config/env.validation.ts
+import { z } from 'zod';
+
+export const envSchema = z.object({
+  NODE_ENV: z
+    .enum(['development', 'production', 'test', 'staging'])
+    .default('development'),
+
+  PORT: z.string().regex(/^\d+$/, 'PORT must be a number').transform(Number),
+
+  APP_NAME: z.string().min(1, 'APP_NAME is required'),
+
+//   APP_URL: z.string().url('APP_URL must be a valid URL'),
+
+  DB_HOST: z.string().min(1, 'DB_HOST is required'),
+
+  DB_PORT: z
+    .string()
+    .regex(/^\d+$/, 'DB_PORT must be a number')
+    .transform(Number),
+
+  DB_USER: z.string().min(1, 'DB_USER is required'),
+
+  DB_PASSWORD: z.string().min(1, 'DB_PASSWORD is required'),
+
+  DB_NAME: z.string().min(1, 'DB_NAME is required'),
+});
+
+// Infer the TypeScript type from the schema
+export type EnvVars = z.infer<typeof envSchema>;
+
+// Validation function
+export function validateEnv(config: Record<string, unknown>): EnvVars {
+  try {
+    return envSchema.parse(config);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+     const missingVars = error.issues
+       .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+       .join('\n');
+
+
+      throw new Error(
+        `Environment validation failed:\n${missingVars}\n\nPlease check your .env file.`,
+      );
+    }
+    throw error;
+  }
+}
