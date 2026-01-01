@@ -1,9 +1,5 @@
 # Slack-Style Multi-Tenant Workspace Backend
 
-**Enterprise-Grade SaaS Architecture with NestJS**
-
----
-
 ## Overview
 
 This project is a **Slack-inspired, multi-tenant backend system** designed to demonstrate real-world SaaS architecture, strict tenant isolation, and scalable backend design.
@@ -43,7 +39,6 @@ Each **workspace is a tenant**, fully isolated at the data and authorization lay
 
 ## High-Level Architecture
 
-```
 Client (Web / Mobile)
    |
 Load Balancer / API Gateway
@@ -61,7 +56,6 @@ Tenant-Scoped Database Access
 Usage Tracking & Feature Flags
    |
 Response
-```
 
 ---
 
@@ -104,7 +98,6 @@ workspace_acme.members
 
 ## Core Modules
 
-```
 src/
 ├── core/
 │   ├── tenant/          # Workspace resolution
@@ -119,7 +112,6 @@ src/
 ├── messages/
 ├── files/
 └── notifications/
-```
 
 ---
 
@@ -132,15 +124,11 @@ Roles are **workspace-scoped**, not global:
 - **Member**
 - **Guest**
 
-### Examples:
+### Examples
 
 - Only Admins can create channels
 - Only channel members can post messages
 - Guests have read-only access
-
-**Authorization is enforced via NestJS Guards and Policies, not controller logic.**
-
----
 
 ## Request Flow (Example)
 
@@ -198,8 +186,6 @@ Tracked per workspace:
 
 ---
 
-
-
 ## Future Enhancements
 
 - [ ] WebSocket gateway for real-time messaging
@@ -209,17 +195,6 @@ Tracked per workspace:
 - [ ] Tenant migration tooling
 
 ---
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
-- Docker (optional, recommended)
-
-
 
 ### Environment Variables
 
@@ -252,30 +227,10 @@ MINIO_SECRET_KEY=minioadmin
 
 Once running, access Swagger documentation at:
 
-```
-http://localhost:3000/api/docs
-```
-
----
-
-## Testing
-
-```bash
-# Unit tests
-npm run test
-
-# E2E tests
-npm run test:e2e
-
-# Test coverage
-npm run test:cov
-```
-
----
+```http://localhost:3000/api/docs```
 
 ## Project Structure
 
-```
 src/
 ├── common/
 │   ├── decorators/
@@ -366,7 +321,6 @@ src/
 │   └── jwt.config.ts
 │
 └── main.ts
-```
 
 ---
 
@@ -479,10 +433,9 @@ CREATE TABLE workspace_acme.files (
 
 ### 1. User Registration
 
-```
 POST /auth/register
 {
-  "email": "john@example.com",
+  "email": ```"john@example.com"```,
   "password": "SecurePass123!",
   "fullName": "John Doe"
 }
@@ -492,13 +445,11 @@ Response:
   "user": { "id": "...", "email": "..." },
   "token": "eyJhbGc..."
 }
-```
 
 ### 2. Workspace Creation
 
-```
 POST /workspaces
-Headers: Authorization: Bearer <token>
+Headers: Authorization: Bearer ```<token>```
 {
   "slug": "acme",
   "name": "Acme Corporation"
@@ -512,20 +463,17 @@ Response:
     "name": "Acme Corporation"
   }
 }
-```
 
 ### 3. Workspace Access
 
-```
 GET /channels
 Headers:
-  Authorization: Bearer <token>
+  Authorization: Bearer ```<token>```
   X-Workspace-ID: acme
 
 OR
 
 Subdomain: acme.app.com
-```
 
 ---
 
@@ -573,7 +521,6 @@ async postMessage(
 For questions or feedback, please open an issue or reach out at:
 
 - GitHub: [@carissaayo](https://github.com/carissaayo)
-- Email: ajaoyussufayo@gmail.com
+- Email: <ajaoyussufayo@gmail.com>
 
 ---
-
