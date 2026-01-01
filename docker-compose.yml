@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     container_name: multi_tenancy_api
@@ -15,11 +13,25 @@ services:
     networks:
       - multi_tenancy-network
     volumes:
-      - .:/app
-      # - /app/node_modules
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./nest-cli.json:/app/nest-cli.json
+      - ./src:/app/src  # Add this back for immediate sync
+      - /app/node_modules
+      - /app/dist  # Add this to prevent locking
     command: npm run start:dev
     restart: unless-stopped
-
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+        - action: rebuild
+          path: package.json
+          
   postgres:
     image: postgres:15
     container_name: multi_tenancy_postgres
@@ -34,10 +46,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - multi_tenancy-network
-
+      
 networks:
   multi_tenancy-network:
     driver: bridge
-
+    
 volumes:
   postgres_data:
