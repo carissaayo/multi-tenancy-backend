@@ -61,15 +61,7 @@ export class SecurityMiddleware implements NestMiddleware {
         (req as any).user = authResult.user;
         (req as any).userId = String(authResult.user?._id);
       }
-
-      // if (!this.isPublicRoute(req.originalUrl)) {
-      //   const workspaceResult =
-      //     await this.workspaceResolver.resolveWorkspace(req);
-      //   if (!workspaceResult.success) return;
-
-      //   (req as any).workspace = workspaceResult.workspace;
-      //   (req as any).workspaceMember = workspaceResult.member; // User's membership in this workspace
-      // }
+      
 
       // Request logging and anomaly detection
       await this.securityLogger.logSecurityEvent(req, res, false);
