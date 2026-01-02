@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from '../../config/database.config';
 
 // Public schema entities
-import { User } from '../../modules/users/entities/user.entity';
+import { User } from '../../modules/users/user.entity';
 import { Workspace } from '../../modules/workspaces/entities/workspace.entity';
 import { FeatureFlag } from '../feature-flags/entities/feature-flag.entity';
 
