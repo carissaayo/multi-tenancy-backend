@@ -1,12 +1,23 @@
-import { Request } from 'express';
+
+import type { Request } from 'express';
 import { User } from 'src/modules/users/user.entity';
 
-
+import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
 
 export interface AuthenticatedRequest extends Request {
-  user: User;
-  userId: string;
-  workspace: string;
-  workspaceMember: string;
-  workspaceMemberRole: string;
+  verifyAccessToken?: 'nil' | 'failed' | 'success';
+  verifyAccessTokenMessage?: string | undefined;
+  userId?: string;
+  token?: string;
+  files?: any;
+
+  ip: string; // Explicitly add ip property
+  headers: any; // Explicitly add headers property
+
+  // Workspace-related properties
+  user?: User; // Authenticated user
+  workspace?: Workspace; // Current workspace context
+  workspaceMember?: string; // User's membership in this workspace
+  workspaceMemberRole?: string; // Role of user in this workspace
 }
+
