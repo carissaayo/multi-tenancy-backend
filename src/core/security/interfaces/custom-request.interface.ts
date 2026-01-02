@@ -1,9 +1,12 @@
 import { Request } from 'express';
-import { UserAdmin } from 'src/models/admin.schema';
-import { User } from 'src/models/user.schema';
+import { User } from 'src/modules/users/entities/user.entity';
+
 
 
 export interface AuthenticatedRequest extends Request {
-  user: UserAdmin|User;
+  user: User;
   userId: string;
+  workspace: string;
+  workspaceMember: string;
+  workspaceMemberRole: string;
 }

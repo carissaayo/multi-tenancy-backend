@@ -10,7 +10,7 @@ export const envSchema = z.object({
 
   APP_NAME: z.string().min(1, 'APP_NAME is required'),
 
-//   APP_URL: z.string().url('APP_URL must be a valid URL'),
+  //   APP_URL: z.string().url('APP_URL must be a valid URL'),
 
   DB_HOST: z.string().min(1, 'DB_HOST is required'),
 
@@ -24,6 +24,12 @@ export const envSchema = z.object({
   DB_PASSWORD: z.string().min(1, 'DB_PASSWORD is required'),
 
   DB_NAME: z.string().min(1, 'DB_NAME is required'),
+  ACCESS_TOKEN_SECRET: z.string().min(1, 'ACCESS_TOKEN_SECRET is required'),
+  REFRESH_TOKEN_SECRET: z.string().min(1, 'REFRESH_TOKEN_SECRET is required'),
+  JWT_DURATION_10M: z.string().min(1, 'JWT_DURATION_10M is required'),
+  JWT_DURATION_1H: z.string().min(1, 'JWT_DURATION_1H is required'),
+  JWT_DURATION_1D: z.string().min(1, 'JWT_DURATION_1D is required'),
+  JWT_DURATION_7D: z.string().min(1, 'JWT_DURATION_7D is required'),
 });
 
 // Infer the TypeScript type from the schema

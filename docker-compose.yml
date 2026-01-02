@@ -5,12 +5,14 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:3000"
     env_file:
       - .env
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - multi_tenancy-network
     volumes:
@@ -23,16 +25,7 @@ services:
       - /app/dist
     command: npm run start:dev
     restart: unless-stopped
-    develop:
-      watch:
-        - action: sync
-          path: ./src
-          target: /app/src
-          ignore:
-            - node_modules/
-        - action: rebuild
-          path: package.json
-          
+    
   postgres:
     image: postgres:15
     container_name: multi_tenancy_postgres
@@ -53,6 +46,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: multi_tenancy_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - multi_tenancy-network
+    command: redis-server --appendonly yes
   pgadmin:
     image: dpage/pgadmin4
     container_name: multi_tenancy_pgadmin
@@ -73,3 +77,4 @@ networks:
     
 volumes:
   postgres_data:
+  redis_data: 

@@ -1,8 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { MongooseModule } from '@nestjs/mongoose';
+
 import { ConfigModule } from '@nestjs/config';
-import config from 'src/common/config/config';
+
 
 
 // import { RedisRateLimiter } from './services/radis-rate-limiter.service';
@@ -16,27 +15,19 @@ import { ResponseMonitor } from './services/response-monitor.service';
 import { AttackDetector } from './services/attack-detector.service';
 import { TokenManager } from './services/token-manager.service';
 
-import { UserSchema } from 'src/models/user.schema';
-import { UserAdminSchema } from 'src/models/admin.schema';
 
 import { SecurityMiddleware } from './middlewares/security.middleware';
-import { RefreshTokenSchema } from 'src/models/refreshToken.schema';
-import { SecurityLogSchema } from 'src/models/securitylog.schema';
+import config from 'src/config/config';
 
 const appConfig = config();
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    JwtModule.register({
-      secret: appConfig.jwtSecret,
-      signOptions: { expiresIn: '1d' },
-    }),
-    MongooseModule.forFeature([
-      { name: 'UserAdmin', schema: UserAdminSchema },
-      { name: 'User', schema: UserSchema },
-      { name: 'RefreshToken', schema: RefreshTokenSchema },
-      { name: 'SecurityLog', schema: SecurityLogSchema },
-    ]),
+    // JwtModule.register({
+    //   secret: appConfig.jwtSecret,
+    //   signOptions: { expiresIn: '1d' },
+    // }),
+  
   ],
   providers: [
     CorsHandler,
@@ -55,6 +46,10 @@ const appConfig = config();
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(SecurityMiddleware).forRoutes('*');
+    // consumer
+    //   .apply(WorkspaceMiddleware)
+    //   .exclude(...publicRoutes, '/auth/(.*)')
+    //   .forRoutes('*');
   }
 }
 
