@@ -142,19 +142,19 @@ export class TokenManager {
     const workspace = req.workspace;
     const member = req.workspaceMember;
     const memberRole = req.workspaceMemberRole;
-    if (!workspace || !member) {
-      throw customError.badRequest(
-        'Workspace context required to issue access token',
-      );
-    }
+    // if (!workspace || !member) {
+    //   throw customError.badRequest(
+    //     'Workspace context required to issue access token',
+    //   );
+    // }
 
     const accessToken = this.jwtService.sign(
       {
         sub: user.id,
         email: user.email,
         workspaceId: workspace,
-        memberId: member,
-        role: memberRole,
+        // memberId: member,
+        // role: memberRole,
         isActive: user.isActive,
         iat: Math.floor(Date.now() / 1000),
       },
