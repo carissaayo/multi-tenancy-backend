@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
 import { CorsHandler } from '../services/cors-handler.service';
-// import { RateLimitHandler } from '../services/rate-limit-handler.service';
+import { RateLimitHandler } from '../services/rate-limit-handler.service';
 import { IpReputationHandler } from '../services/ip-reputation-handler.service';
 import { InputSanitizer } from '../services/input-sanitizer.service';
 import { AuthHandler } from '../services/auth-handler.service';
@@ -17,7 +17,7 @@ export class SecurityMiddleware implements NestMiddleware {
 
   constructor(
     private readonly corsHandler: CorsHandler,
-    // private readonly rateLimitHandler: RateLimitHandler,
+    private readonly rateLimitHandler: RateLimitHandler,
     private readonly ipReputationHandler: IpReputationHandler,
     private readonly inputSanitizer: InputSanitizer,
     private readonly authHandler: AuthHandler,
@@ -40,7 +40,7 @@ export class SecurityMiddleware implements NestMiddleware {
       if (!this.corsHandler.handleCORS(req, res)) return;
 
       // Rate limiting
-      // if (!(await this.rateLimitHandler.checkRateLimit(req, res))) return;
+      if (!(await this.rateLimitHandler.checkRateLimit(req, res))) return;
 
       // IP reputation check
       if (!this.ipReputationHandler.checkIPReputation(req, res)) return;
