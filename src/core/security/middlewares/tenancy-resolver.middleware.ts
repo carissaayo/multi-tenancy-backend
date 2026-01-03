@@ -28,9 +28,9 @@ export class TenantResolverMiddleware implements NestMiddleware {
   async use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       // Skip tenant resolution for global routes
-      if (this.isPublicRoute(req.path)) {
+      if (this.isPublicRoute(req.originalUrl)) {
         this.logger.debug(
-          `Skipping tenant resolution for global route: ${req.path}`,
+          `Skipping tenant resolution for global route: ${req.originalUrl}`,
         );
         return next();
       }
@@ -97,8 +97,10 @@ export class TenantResolverMiddleware implements NestMiddleware {
     // Extract first part as workspace slug
     return parts[0];
   }
-
-  private isPublicRoute(path: string): boolean {
-    return publicRoutes.some((route) => path.startsWith(route));
+  isPublicRoute(path: string): boolean {
+    return publicRoutes.some((route) => {
+      const regex = new RegExp('^' + route.replace(/:[^/]+/g, '[^/]+') + '$');
+      return regex.test(path);
+    });
   }
 }
