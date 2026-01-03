@@ -15,6 +15,7 @@ import config from 'src/config/config';
 import { User } from 'src/modules/users/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
+import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 const appConfig = config();
 
@@ -190,6 +191,63 @@ export class TokenManager {
 
     return { accessToken, refreshToken };
   }
+  // For initial login (no workspace)
+  public async signGlobalTokens(
+    user: User,
+    req: Request,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
+    const accessToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        type: 'global', // No workspace context
+        isActive: user.isActive,
+        iat: Math.floor(Date.now() / 1000),
+      },
+      {
+        expiresIn: appConfig.jwt.duration10m as StringValue, // Short-lived global token
+        secret: appConfig.jwt.access_token_secret,
+      },
+    );
 
- 
+    const refreshToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        type: 'refresh',
+        iat: Math.floor(Date.now() / 1000),
+      },
+      {
+        expiresIn: appConfig.jwt.duration7d as StringValue,
+        secret: appConfig.jwt.refresh_token_secret,
+      },
+    );
+
+    await this.storeRefreshToken(user.id, refreshToken, req);
+
+    return { accessToken, refreshToken };
+  }
+
+  // For workspace selection (workspace-scoped)
+  public signWorkspaceToken(
+    user: User,
+    workspaceId: string,
+    member: WorkspaceMember,
+  ): string {
+    return this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        workspaceId: workspaceId,
+        memberId: member.id,
+        role: member.role,
+        type: 'workspace', // Workspace-scoped
+        isActive: user.isActive,
+        iat: Math.floor(Date.now() / 1000),
+      },
+      {
+        expiresIn: appConfig.jwt.duration10m as StringValue,
+        secret: appConfig.jwt.access_token_secret,
+      },
+    );
+  }
 }

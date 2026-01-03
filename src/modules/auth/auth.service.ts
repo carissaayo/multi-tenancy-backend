@@ -44,8 +44,6 @@ export class AuthService {
       passwordHash,
       fullName,
       emailCode,
-      isEmailVerified: false,
-      isActive: true,
     });
 
     await this.userRepo.save(user);
@@ -83,6 +81,44 @@ export class AuthService {
       message: 'Signed in successfully',
     };
   }
+
+//   async selectWorkspace(
+//     workspaceId: string,
+//     req: AuthenticatedRequest, 
+//   ) {
+//     const user = await this.userRepo.findOne({
+//       where: { id: req.userId},
+//     });
+
+//     if (!user) {
+//       throw customError.unauthorized('Invalid credentials');
+//     }
+
+
+//     // Verify user is member of this workspace
+//     // const member = await this.memberService.findMember(workspaceId, user.id);
+//  const member = await this.userRepo.findOne({
+//    where: { id: req.userId },
+//  });
+    
+
+//     if (!member) {
+//       throw customError.forbidden('Not a member of this workspace');
+//     }
+
+//     // Issue workspace-scoped token
+//     const accessToken = this.tokenManager.signWorkspaceToken(
+//       user,
+//       workspaceId,
+//       member,
+//     );
+
+//     return {
+//       accessToken,
+//       workspace: member.workspace,
+//       message: 'Workspace context established',
+//     };
+//   }
 
   private async validatePassword(user: User, password: string) {
     const isValid = await bcrypt.compare(password, user.passwordHash);

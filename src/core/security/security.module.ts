@@ -52,8 +52,8 @@ import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middlew
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(TenantResolverMiddleware)
-      .forRoutes('*')
+      // .apply(TenantResolverMiddleware)
+      // .forRoutes('*')
       .apply(SecurityMiddleware)
       .forRoutes("*");
   }
