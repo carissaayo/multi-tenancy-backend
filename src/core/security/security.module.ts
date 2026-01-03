@@ -14,6 +14,9 @@ import { SecurityMiddleware } from './middlewares/security.middleware';
 import { User } from 'src/modules/users/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity'; 
 import { publicRoutes } from './constants/public-routes';
+import { RateLimitHandler } from './services/rate-limit-handler.service';
+import { RedisRateLimiter } from './services/radis-rate-limiter.service';
+import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middleware';
 
 @Module({
   imports: [
@@ -41,13 +44,17 @@ import { publicRoutes } from './constants/public-routes';
     ResponseMonitor,
     AttackDetector,
     TokenManager,
+    RateLimitHandler,
+    RedisRateLimiter,
   ],
   exports: [TokenManager, AuthHandler],
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
+      .apply(TenantResolverMiddleware)
+      .forRoutes('*')
       .apply(SecurityMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
+      .forRoutes("*");
   }
 }

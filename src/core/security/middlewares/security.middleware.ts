@@ -132,8 +132,6 @@ export class SecurityMiddleware implements NestMiddleware {
 
 isPublicRoute(path: string): boolean {
   return publicRoutes.some((route) => {
-    // Convert routes like '/repayments/verify-repayment/:txRef'
-    // into a regex: /^\/repayments\/verify-repayment\/[^/]+$/
     const regex = new RegExp('^' + route.replace(/:[^/]+/g, '[^/]+') + '$');
     return regex.test(path);
   });
