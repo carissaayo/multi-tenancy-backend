@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -13,6 +13,7 @@ import { TokenManager } from './services/token-manager.service';
 import { SecurityMiddleware } from './middlewares/security.middleware';
 import { User } from 'src/modules/users/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity'; 
+import { publicRoutes } from './constants/public-routes';
 
 @Module({
   imports: [
@@ -45,6 +46,8 @@ import { RefreshToken } from './entities/refresh-token.entity';
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(SecurityMiddleware).forRoutes('*');
+    consumer
+      .apply(SecurityMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

@@ -1,9 +1,8 @@
 export const publicRoutes = [
-  'auth/register',
-  '/auth/login',
-  '/auth/login',
-  '/auth/register',
-  '/auth/request-password-reset',
-  '/auth/password-reset',
-'/payment/paystack/webhook'
+  '/api/auth/register',
+  '/api/auth/login',
+  '/api/auth/verify-email',
+  '/api/auth/request-password-reset',
+  '/api/auth/password-reset',
+  '/api/payment/paystack/webhook',
 ];
