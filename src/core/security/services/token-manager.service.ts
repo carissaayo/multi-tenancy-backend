@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 import { Injectable, HttpStatus, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request, Response } from 'express';
@@ -6,7 +5,7 @@ import ms, { StringValue } from 'ms';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 // import { RedisRateLimiter } from './radis-rate-limiter.service';
-import { SecurityLogger } from './security.logger.service';
+// import { SecurityLogger } from './security.logger.service';
 
 import { AuthResult } from '../interfaces/security.interface';
 
@@ -25,7 +24,7 @@ export class TokenManager {
 
   constructor(
     private readonly jwtService: JwtService,
-    private readonly securityLogger: SecurityLogger,
+    // private readonly securityLogger: SecurityLogger,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,

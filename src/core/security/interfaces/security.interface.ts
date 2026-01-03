@@ -1,5 +1,4 @@
-import { UserAdmin } from 'src/models/admin.schema';
-import type { User } from 'src/models/user.schema';
+import { User } from "src/modules/users/user.entity";
 
 
 export interface RateLimitResult {
@@ -35,6 +34,6 @@ export type AuthUserType = 'user' | 'admin';
 
 export interface AuthResult {
   success: boolean;
-  user?: User | UserAdmin;
+  user?: User ;
   userType?: AuthUserType;
 }

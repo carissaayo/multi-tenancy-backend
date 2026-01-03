@@ -1,40 +1,27 @@
-// src/config/configuration.ts
-import { envSchema, validateEnv, EnvVars } from './config.validation';
-
-const config=() => {
-  // Validate and parse environment variables
-  const validatedEnv = validateEnv(process.env);
-
+const config = () => {
   return {
     app: {
-      nodeEnv: validatedEnv.NODE_ENV,
-      port: validatedEnv.PORT,
-      name: validatedEnv.APP_NAME,
-      //   url: validatedEnv.APP_URL,
+      nodeEnv: process.env.NODE_ENV || 'development',
+      port: parseInt(process.env.PORT || '8000', 10),
+      name: process.env.APP_NAME || 'App',
     },
-
     database: {
-      host: validatedEnv.DB_HOST,
-      port: validatedEnv.DB_PORT,
-      username: validatedEnv.DB_USER,
-      password: validatedEnv.DB_PASSWORD,
-      database: validatedEnv.DB_NAME,
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_NAME || 'multi_tenancy',
     },
-    jwt:{
-      access_token_secret: validatedEnv.ACCESS_TOKEN_SECRET,
-      refresh_token_secret: validatedEnv.REFRESH_TOKEN_SECRET,
-      duration10m: validatedEnv.JWT_DURATION_10M,
-      duration1h: validatedEnv.JWT_DURATION_1H,
-      duration1d: validatedEnv.JWT_DURATION_1D,
-      duration7d: validatedEnv.JWT_DURATION_7D,
-    }
-
-  
+    jwt: {
+      access_token_secret: process.env.ACCESS_TOKEN_SECRET || 'change-me',
+      refresh_token_secret: process.env.REFRESH_TOKEN_SECRET || 'change-me',
+      duration10m: process.env.JWT_DURATION_10M || '10m',
+      duration1h: process.env.JWT_DURATION_1H || '1h',
+      duration1d: process.env.JWT_DURATION_1D || '1d',
+      duration7d: process.env.JWT_DURATION_7D || '7d',
+    },
   };
 };
-export default config;
-// Export type for type-safe config access
-export type Config = ReturnType<typeof config>;
 
-// Re-export for convenience
-export type { EnvVars } from './config.validation';
+export default config;
+export type Config = ReturnType<typeof config>;

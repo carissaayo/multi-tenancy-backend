@@ -11,9 +11,6 @@ export interface AuthenticatedRequest extends Request {
   token?: string;
   files?: any;
 
-  ip: string; // Explicitly add ip property
-  headers: any; // Explicitly add headers property
-
   // Workspace-related properties
   user?: User; // Authenticated user
   workspace?: Workspace; // Current workspace context

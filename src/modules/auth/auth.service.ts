@@ -106,8 +106,8 @@ export class AuthService {
   }
 
   /* ---------------- VERIFY EMAIL ---------------- */
-  async verifyEmail(dto: VerifyEmailDTO, userId: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+  async verifyEmail(dto: VerifyEmailDTO, req: AuthenticatedRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
     if (!user || user.isEmailVerified) {
       throw customError.badRequest('Invalid verification request');
@@ -175,8 +175,8 @@ export class AuthService {
   }
 
   /* ---------------- CHANGE PASSWORD ---------------- */
-  async changePassword(dto: ChangePasswordDTO, userId: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+  async changePassword(dto: ChangePasswordDTO, req: AuthenticatedRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
     if (!user) {
       throw customError.notFound('User not found');

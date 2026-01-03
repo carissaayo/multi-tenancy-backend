@@ -7,7 +7,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { AuthService } from '../services/auth.service';
+
 
 import {
   ChangePasswordDTO,
@@ -17,13 +17,12 @@ import {
   ResetPasswordDTO,
   VerifyEmailDTO,
 } from './auth.dto';
-import { RolesGuard } from '../../common/guards/role.guard';
-import { CustomRequest } from 'src/utils/auth-utils';
-import {
-  AuthenticateTokenUserGuard,
-  ReIssueTokenUserGuard,
-} from '../../common/guards/user-auth.guard';
-import { Public } from '../../common/decorators/public.decorator';
+import { AuthService } from './auth.service';
+import { Public } from 'src/core/security/decorators/public.decorator';
+import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+
+
+
 
 @Controller('auth')
 @UsePipes(
@@ -32,7 +31,6 @@ import { Public } from '../../common/decorators/public.decorator';
     transform: true,
   }),
 )
-@UseGuards(RolesGuard)
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -44,21 +42,19 @@ export class AuthController {
 
   @Post('login')
   @Public()
-  async login(@Body() loginDto: LoginDto, @Req() req: CustomRequest) {
+  async login(@Body() loginDto: LoginDto, @Req() req: AuthenticatedRequest) {
     return this.authService.login(loginDto, req);
   }
 
   @Post('verify-email')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async verifyEmail(
     @Body() verifyEmailDto: VerifyEmailDTO,
-    @Req() req: CustomRequest,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.authService.verifyEmail(verifyEmailDto, req);
   }
 
   @Post('request-password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async passwordResetRequest(
     @Body() resetPasswordDto: RequestResetPasswordDTO,
   ) {
@@ -66,16 +62,14 @@ export class AuthController {
   }
 
   @Post('password-reset')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDTO) {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('change-password')
-  @UseGuards(AuthenticateTokenUserGuard, ReIssueTokenUserGuard)
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDTO,
-    @Req() req: CustomRequest,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.authService.changePassword(changePasswordDto, req);
   }

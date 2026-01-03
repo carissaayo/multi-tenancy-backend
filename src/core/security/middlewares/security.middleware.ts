@@ -5,7 +5,7 @@ import { CorsHandler } from '../services/cors-handler.service';
 import { IpReputationHandler } from '../services/ip-reputation-handler.service';
 import { InputSanitizer } from '../services/input-sanitizer.service';
 import { AuthHandler } from '../services/auth-handler.service';
-import { SecurityLogger } from '../services/security.logger.service';
+// import { SecurityLogger } from '../services/security.logger.service';
 import { ResponseMonitor } from '../services/response-monitor.service';
 import { publicRoutes } from '../constants/public-routes';
 
@@ -21,7 +21,7 @@ export class SecurityMiddleware implements NestMiddleware {
     private readonly ipReputationHandler: IpReputationHandler,
     private readonly inputSanitizer: InputSanitizer,
     private readonly authHandler: AuthHandler,
-    private readonly securityLogger: SecurityLogger,
+    // private readonly securityLogger: SecurityLogger,
     private readonly responseMonitor: ResponseMonitor,
   ) {}
 
@@ -59,12 +59,12 @@ export class SecurityMiddleware implements NestMiddleware {
         console.log(authResult);
 
         (req as any).user = authResult.user;
-        (req as any).userId = String(authResult.user?._id);
+        (req as any).userId = String(authResult.user?.id);
       }
       
 
-      // Request logging and anomaly detection
-      await this.securityLogger.logSecurityEvent(req, res, false);
+      // // Request logging and anomaly detection
+      // await this.securityLogger.logSecurityEvent(req, res, false);
 
       // Monitor response
       this.responseMonitor.monitorResponse(req, res, startTime);
@@ -75,12 +75,12 @@ export class SecurityMiddleware implements NestMiddleware {
         `Security middleware error: ${error?.message}`,
         error?.stack,
       );
-      await this.securityLogger.logSecurityEvent(
-        req,
-        res,
-        true,
-        `Middleware error: ${error?.message}`,
-      );
+      // await this.securityLogger.logSecurityEvent(
+      //   req,
+      //   res,
+      //   true,
+      //   `Middleware error: ${error?.message}`,
+      // );
 
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
         success: false,
