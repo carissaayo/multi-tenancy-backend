@@ -15,7 +15,7 @@ import config from 'src/config/config';
 import { User } from 'src/modules/users/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
-import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
+import { WorkspaceMember } from 'src/modules/members/member.entity';
 
 const appConfig = config();
 

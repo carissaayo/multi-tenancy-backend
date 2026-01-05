@@ -1,6 +1,8 @@
 import { registerAs } from '@nestjs/config';
 import { DataSourceOptions } from 'typeorm';
 import { join } from 'path';
+console.log(process.env.DB_USER,"user");
+console.log(process.env.DB_PASSWORD,"pass");
 
 export default registerAs(
   'database',
@@ -22,7 +24,7 @@ export default registerAs(
 
     // Migration settings
     migrations: [join(__dirname, '../database/migrations/*{.ts,.js}')],
-    migrationsRun: false,
+    migrationsRun: true,
 
     // Connection pool
     poolSize: 10,

@@ -1,4 +1,4 @@
-import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
+import { Workspace } from '../../modules/workspaces/workspace.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,

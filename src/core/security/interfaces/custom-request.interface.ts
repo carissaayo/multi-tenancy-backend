@@ -1,9 +1,9 @@
 
 import type { Request } from 'express';
-import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
+import { WorkspaceMember } from 'src/modules/members/member.entity';
 import { User } from 'src/modules/users/user.entity';
 
-import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
+import { Workspace } from 'src/modules/workspaces/workspace.entity';
 
 export interface AuthenticatedRequest extends Request {
   verifyAccessToken?: 'nil' | 'failed' | 'success';
