@@ -17,6 +17,7 @@ import { FileEntity } from '../../modules/files/entities/file.entity';
 import { UsageMetric } from '../usage/entities/usage.entity';
 import { WorkspaceMemberEntity } from 'src/modules/members/member.entity';
 import { ReactionEntity } from 'src/modules/reactions/reaction.entity';
+import { RefreshToken } from '../security/entities/refresh-token.entity';
 
 
 @Global()
@@ -42,6 +43,7 @@ import { ReactionEntity } from 'src/modules/reactions/reaction.entity';
             Workspace,
             FeatureFlag,
             UsageMetric,
+            RefreshToken,
 
             // Tenant schema entities (EntitySchema)
             WorkspaceMemberEntity,

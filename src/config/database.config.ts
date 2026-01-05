@@ -1,8 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import { DataSourceOptions } from 'typeorm';
 import { join } from 'path';
-console.log(process.env.DB_USER,"user");
-console.log(process.env.DB_PASSWORD,"pass");
+
 
 export default registerAs(
   'database',

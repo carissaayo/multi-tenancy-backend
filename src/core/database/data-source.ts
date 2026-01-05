@@ -7,14 +7,8 @@ dotenv.config({ path: join(__dirname, '../../../.env') });
 
 import config from '../../config/config';
 
-// Now env vars are available
-const appConfig = config();
 
-// Optional sanity check (remove once stable)
-console.log('DB_HOST:', process.env.DB_HOST);
-console.log('DB_USER:', process.env.DB_USER);
-console.log('DB_PASSWORD:', process.env.DB_PASSWORD);
-console.log('DB_NAME:', process.env.DB_NAME);
+const appConfig = config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
