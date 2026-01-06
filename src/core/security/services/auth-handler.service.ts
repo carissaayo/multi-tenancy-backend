@@ -7,7 +7,7 @@ import { TokenExpiredError } from 'jsonwebtoken';
 import { Repository } from 'typeorm';
 
 import { TokenManager } from './token-manager.service';
-import { User } from 'src/modules/users/user.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 import config from 'src/config/config';
 
 const appConfig = config();

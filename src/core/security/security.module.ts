@@ -11,7 +11,7 @@ import { ResponseMonitor } from './services/response-monitor.service';
 import { AttackDetector } from './services/attack-detector.service';
 import { TokenManager } from './services/token-manager.service';
 import { SecurityMiddleware } from './middlewares/security.middleware';
-import { User } from 'src/modules/users/user.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity'; 
 import { publicRoutes } from './constants/public-routes';
 import { RateLimitHandler } from './services/rate-limit-handler.service';

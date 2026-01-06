@@ -12,10 +12,10 @@ import { AuthResult } from '../interfaces/security.interface';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
 
 import config from 'src/config/config';
-import { User } from 'src/modules/users/user.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
-import { WorkspaceMember } from 'src/modules/members/member.entity';
+import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 const appConfig = config();
 

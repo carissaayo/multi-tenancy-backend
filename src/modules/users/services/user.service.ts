@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import bcrypt from 'bcryptjs';
 import { InjectRepository } from "@nestjs/typeorm";
-import { User } from "./user.entity";
+import { User } from "../entities/user.entity";
 import { Repository } from "typeorm";
 import { customError } from "src/core/error-handler/custom-errors";
-import { CreateUserDto } from "./user.dto";
+import { CreateUserDto } from "../user.dto";
 @Injectable()
 export class UsersService {
   constructor(

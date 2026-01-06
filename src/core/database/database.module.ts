@@ -4,19 +4,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from '../../config/database.config';
 
 // Public schema entities
-import { User } from '../../modules/users/user.entity';
-import { Workspace } from '../../modules/workspaces/workspace.entity';
-import { FeatureFlag } from '../feature-flags/feature-flag.entity';
+import { User } from '../../modules/users/entities/user.entity';
+import { Workspace } from '../../modules/workspaces/entities/workspace.entity';
+import { FeatureFlag } from '../feature-flags/entities/feature-flag.entity';
 
 // Tenant schema entities (EntitySchema)
 
 import { ChannelEntity } from '../../modules/channels/entities/channel.entity';
 import { ChannelMemberEntity } from '../../modules/channels/entities/channel-member.entity';
-import { MessageEntity } from '../../modules/messages/message.entity';
+import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
 import { UsageMetric } from '../usage/entities/usage.entity';
-import { WorkspaceMemberEntity } from 'src/modules/members/member.entity';
-import { ReactionEntity } from 'src/modules/reactions/reaction.entity';
+import { WorkspaceMemberEntity } from 'src/modules/members/entities/member.entity';
+import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
 import { RefreshToken } from '../security/entities/refresh-token.entity';
 
 

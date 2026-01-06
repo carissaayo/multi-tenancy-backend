@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Workspace } from '../../../modules/workspaces/workspace.entity';
+import { Workspace } from '../../../modules/workspaces/entities/workspace.entity';
 
 @Entity({ name: 'usage_metrics', schema: 'public' })
 export class UsageMetric {

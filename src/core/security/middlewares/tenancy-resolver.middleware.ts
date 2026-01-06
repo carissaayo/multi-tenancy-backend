@@ -1,13 +1,8 @@
-// ============================================
-// 1. TENANT RESOLVER MIDDLEWARE (Run FIRST)
-// ============================================
-
-// src/common/middleware/tenant-resolver.middleware.ts
 import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Workspace } from 'src/modules/workspaces/workspace.entity';
+import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
 import { publicRoutes } from '../constants/public-routes';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
 

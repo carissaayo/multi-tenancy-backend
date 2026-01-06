@@ -4,19 +4,22 @@ import { Repository } from "typeorm";
 import bcrypt from 'bcryptjs';
 
 
-import { User } from "../users/user.entity";
+import { User } from "../users/entities/user.entity";
 import { TokenManager } from "src/core/security/services/token-manager.service";
 import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, VerifyEmailDTO } from "./auth.dto";
 import { customError } from "src/core/error-handler/custom-errors";
 import { generateOtp } from "src/utils/util";
 import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
+import { UsersService } from "../users/services/user.service";
+import { MemberService } from "../members/services/member.service";
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    // private readonly emailService: EmailService,
+    private readonly userService: UsersService, 
+    private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
   ) {}
 
@@ -82,44 +85,37 @@ export class AuthService {
     };
   }
 
-//   async selectWorkspace(
-//     workspaceId: string,
-//     req: AuthenticatedRequest, 
-//   ) {
-//     const user = await this.userRepo.findOne({
-//       where: { id: req.userId},
-//     });
+  // Update the selectWorkspace method in auth.service.ts
+  async selectWorkspace(workspaceId: string, req: AuthenticatedRequest) {
+    const user = await this.userService.findById(req.userId);
 
-//     if (!user) {
-//       throw customError.unauthorized('Invalid credentials');
-//     }
+    if (!user) {
+      throw customError.unauthorized('Invalid credentials');
+    }
 
+    // Use member service to verify membership
+    const result = await this.memberService.findMemberWithWorkspace(
+      workspaceId,
+      user.id,
+    );
 
-//     // Verify user is member of this workspace
-//     // const member = await this.memberService.findMember(workspaceId, user.id);
-//  const member = await this.userRepo.findOne({
-//    where: { id: req.userId },
-//  });
-    
+    if (!result || !result.member) {
+      throw customError.forbidden('Not a member of this workspace');
+    }
 
-//     if (!member) {
-//       throw customError.forbidden('Not a member of this workspace');
-//     }
+    // Issue workspace-scoped token
+    const accessToken = this.tokenManager.signWorkspaceToken(
+      user,
+      workspaceId,
+      result.member,
+    );
 
-//     // Issue workspace-scoped token
-//     const accessToken = this.tokenManager.signWorkspaceToken(
-//       user,
-//       workspaceId,
-//       member,
-//     );
-
-//     return {
-//       accessToken,
-//       workspace: member.workspace,
-//       message: 'Workspace context established',
-//     };
-//   }
-
+    return {
+      accessToken,
+      workspace: result.workspace,
+      message: 'Workspace context established',
+    };
+  }
   private async validatePassword(user: User, password: string) {
     const isValid = await bcrypt.compare(password, user.passwordHash);
 

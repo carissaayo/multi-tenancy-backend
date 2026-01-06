@@ -1,4 +1,4 @@
-import { User } from "src/modules/users/user.entity";
+import { User } from "src/modules/users/entities/user.entity";
 
 
 export interface RateLimitResult {
