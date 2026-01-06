@@ -9,6 +9,7 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspacePlan } from '../interfaces/workspace.interface';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 
 @Injectable()
 export class WorkspacesService {
@@ -30,17 +31,17 @@ export class WorkspacesService {
    * - Makes creator the owner
    */
   async create(
-    userId: string,
+    req: AuthenticatedRequest,
     createDto: CreateWorkspaceDto,
   ): Promise<Workspace> {
-    // 1. Validate user exists
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
     }
 
     // 2. Check workspace limit per user
-    const userWorkspaceCount = await this.countUserWorkspaces(userId);
+    const userWorkspaceCount = await this.countUserWorkspaces(user.id);
     const maxWorkspaces = this.getMaxWorkspacesForUser(user);
 
     if (userWorkspaceCount >= maxWorkspaces) {
@@ -74,8 +75,12 @@ export class WorkspacesService {
       // 6. Create workspace record
       const workspace = this.workspaceRepo.create({
         ...createDto,
-        createdBy: userId,
-        plan: createDto.plan || 'free',
+        plan: createDto.plan || WorkspacePlan.FREE,
+        ownerId: user.id,
+        owner: user,
+        creator: user,
+        createdBy: user.id,
+        
         isActive: true,
         settings: {
           allowInvites: true,
@@ -93,18 +98,18 @@ export class WorkspacesService {
       await this.addOwnerMember(
         workspace.id,
         workspace.slug,
-        userId,
+        user.id,
         queryRunner,
       );
 
       // 9. Create default channels
-      await this.createDefaultChannels(workspace.slug, userId, queryRunner);
+      await this.createDefaultChannels(workspace.slug, user.id, queryRunner);
 
       // 10. Commit transaction
       await queryRunner.commitTransaction();
 
       this.logger.log(
-        `✅ Workspace created: ${workspace.slug} by user ${userId}`,
+        `✅ Workspace created: ${workspace.slug} by user ${user.id}`,
       );
 
       return workspace;
@@ -353,7 +358,7 @@ export class WorkspacesService {
     const schemaName = `workspace_${slug}`;
 
     // Create schema
-    await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     // Create members table
     await queryRunner.query(`
