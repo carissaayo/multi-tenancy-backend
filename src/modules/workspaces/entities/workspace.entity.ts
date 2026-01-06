@@ -9,6 +9,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { WorkspacePlan } from '../interfaces/workspace.interface';
 
 @Entity({ name: 'workspaces', schema: 'public' })
 export class Workspace {
@@ -27,8 +28,8 @@ export class Workspace {
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'logo_url' })
   logoUrl: string;
 
-  @Column({ type: 'varchar', length: 50, default: 'free' })
-  plan: string;
+  @Column({ type: 'varchar', length: 50, default: WorkspacePlan.FREE })
+  plan: WorkspacePlan;
 
   @Column({ type: 'boolean', default: true, name: 'is_active' })
   isActive: boolean;
@@ -43,6 +44,13 @@ export class Workspace {
   @JoinColumn({ name: 'created_by' })
   creator: User;
 
+  @Column({ type: 'uuid', name: 'owner_id' })
+  ownerId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'owner_id' })
+  owner: User;
+  
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 
