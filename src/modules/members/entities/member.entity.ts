@@ -5,6 +5,7 @@ export interface WorkspaceMember {
   userId: string;
   role: 'owner' | 'admin' | 'member' | 'guest';
   isActive: boolean;
+  permissions: string[];
   joinedAt: Date;
 }
 
@@ -34,6 +35,10 @@ export const WorkspaceMemberEntity = new EntitySchema<WorkspaceMember>({
       type: 'timestamp',
       default: () => 'NOW()',
       name: 'joined_at',
+    },
+    permissions: {
+      type: 'jsonb',
+      default: [],
     },
   },
   indices: [

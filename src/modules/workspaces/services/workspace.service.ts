@@ -10,6 +10,7 @@ import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspacePlan } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 
 @Injectable()
 export class WorkspacesService {
@@ -361,15 +362,16 @@ export class WorkspacesService {
 await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     // Create members table
-    await queryRunner.query(`
-      CREATE TABLE ${schemaName}.members (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL,
-        role VARCHAR(50) NOT NULL,
-        is_active BOOLEAN DEFAULT true,
-        joined_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+   await queryRunner.query(`
+  CREATE TABLE ${schemaName}.members (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    permissions JSONB DEFAULT '[]'::jsonb,
+    is_active BOOLEAN DEFAULT true,
+    joined_at TIMESTAMP DEFAULT NOW()
+  )
+`);
 
     await queryRunner.query(
       `CREATE INDEX idx_${schemaName}_members_user_id ON ${schemaName}.members(user_id)`,
@@ -457,13 +459,16 @@ await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
   ): Promise<void> {
     const schemaName = `workspace_${slug}`;
 
-    await queryRunner.query(
-      `
-      INSERT INTO ${schemaName}.members (user_id, role, is_active, joined_at)
-      VALUES ($1, 'owner', true, NOW())
+     const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
+
+   await queryRunner.query(
+     `
+    INSERT INTO ${schemaName}.members (user_id, role, permissions, is_active, joined_at)
+    VALUES ($1, 'owner', $2::jsonb, true, NOW())
     `,
-      [userId],
-    );
+     [userId, JSON.stringify(ownerPermissions)],
+   );
+
 
     this.logger.log(`Owner member added to ${schemaName}: ${userId}`);
   }
