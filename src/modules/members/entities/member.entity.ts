@@ -38,7 +38,7 @@ export const WorkspaceMemberEntity = new EntitySchema<WorkspaceMember>({
     },
     permissions: {
       type: 'jsonb',
-      default: [],
+      default: () => "'[]'::jsonb",
     },
   },
   indices: [

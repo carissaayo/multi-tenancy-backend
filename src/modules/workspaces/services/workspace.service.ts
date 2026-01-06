@@ -35,7 +35,6 @@ export class WorkspacesService {
     req: AuthenticatedRequest,
     createDto: CreateWorkspaceDto,
   ): Promise<Workspace> {
-
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
@@ -81,7 +80,7 @@ export class WorkspacesService {
         owner: user,
         creator: user,
         createdBy: user.id,
-        
+
         isActive: true,
         settings: {
           allowInvites: true,
@@ -282,7 +281,7 @@ export class WorkspacesService {
   async updatePlan(
     workspaceId: string,
     userId: string,
-      newPlan: WorkspacePlan,
+    newPlan: WorkspacePlan,
   ): Promise<Workspace> {
     const workspace = await this.findById(workspaceId);
 
@@ -320,20 +319,20 @@ export class WorkspacesService {
     const schemaName = `workspace_${workspace.slug}`;
 
     const [memberCount] = await this.dataSource.query(
-      `SELECT COUNT(*) as count FROM ${schemaName}.members WHERE is_active = true`,
+      `SELECT COUNT(*) as count FROM "${schemaName}".members WHERE is_active = true`,
     );
 
     const [channelCount] = await this.dataSource.query(
-      `SELECT COUNT(*) as count FROM ${schemaName}.channels`,
+      `SELECT COUNT(*) as count FROM "${schemaName}".channels`,
     );
 
     const [messageCount] = await this.dataSource.query(
-      `SELECT COUNT(*) as count FROM ${schemaName}.messages`,
+      `SELECT COUNT(*) as count FROM "${schemaName}".messages`,
     );
 
     const [fileStats] = await this.dataSource.query(
       `SELECT COUNT(*) as count, COALESCE(SUM(file_size), 0) as total_size 
-       FROM ${schemaName}.files`,
+       FROM "${schemaName}".files`,
     );
 
     return {
@@ -359,91 +358,105 @@ export class WorkspacesService {
     const schemaName = `workspace_${slug}`;
 
     // Create schema
-await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+    await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
-    // Create members table
-   await queryRunner.query(`
-  CREATE TABLE ${schemaName}.members (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL,
-    role VARCHAR(50) NOT NULL,
-    permissions JSONB DEFAULT '[]'::jsonb,
-    is_active BOOLEAN DEFAULT true,
-    joined_at TIMESTAMP DEFAULT NOW()
-  )
-`);
-
-    await queryRunner.query(
-      `CREATE INDEX idx_${schemaName}_members_user_id ON ${schemaName}.members(user_id)`,
-    );
-
-    // Create channels table
+    // Members table
     await queryRunner.query(`
-      CREATE TABLE ${schemaName}.channels (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(100) NOT NULL,
-        description TEXT,
-        is_private BOOLEAN DEFAULT false,
-        created_by UUID NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    CREATE TABLE "${schemaName}".members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL,
+      role VARCHAR(50) NOT NULL,
+      permissions JSONB NOT NULL DEFAULT '[]'::jsonb,
+      is_active BOOLEAN DEFAULT true,
+      joined_at TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT uq_${schemaName}_members_user UNIQUE (user_id),
+      CONSTRAINT chk_${schemaName}_members_permissions_array
+        CHECK (jsonb_typeof(permissions) = 'array')
+    )
+  `);
 
-    // Create channel_members table
     await queryRunner.query(`
-      CREATE TABLE ${schemaName}.channel_members (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
-        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id) ON DELETE CASCADE,
-        joined_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(channel_id, member_id)
-      )
-    `);
+    CREATE INDEX idx_${schemaName}_members_user_id
+    ON "${schemaName}".members(user_id)
+  `);
 
-    // Create messages table
+    // Channels table
     await queryRunner.query(`
-      CREATE TABLE ${schemaName}.messages (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
-        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
-        content TEXT NOT NULL,
-        thread_id UUID REFERENCES ${schemaName}.messages(id),
-        is_edited BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    CREATE TABLE "${schemaName}".channels (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(100) NOT NULL,
+      description TEXT,
+      is_private BOOLEAN DEFAULT false,
+      created_by UUID NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
 
-    await queryRunner.query(
-      `CREATE INDEX idx_${schemaName}_messages_channel ON ${schemaName}.messages(channel_id)`,
-    );
-
-    // Create files table
+    // Channel members table
     await queryRunner.query(`
-      CREATE TABLE ${schemaName}.files (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
-        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
-        file_name VARCHAR(255) NOT NULL,
-        file_size BIGINT NOT NULL,
-        mime_type VARCHAR(100),
-        storage_key VARCHAR(500) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
+    CREATE TABLE "${schemaName}".channel_members (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      channel_id UUID NOT NULL
+        REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL
+        REFERENCES "${schemaName}".members(id) ON DELETE CASCADE,
+      joined_at TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT uq_${schemaName}_channel_members UNIQUE (channel_id, member_id)
+    )
+  `);
 
-    // Create reactions table
+    // Messages table
     await queryRunner.query(`
-      CREATE TABLE ${schemaName}.reactions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        message_id UUID NOT NULL REFERENCES ${schemaName}.messages(id) ON DELETE CASCADE,
-        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
-        emoji VARCHAR(50) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(message_id, member_id, emoji)
-      )
-    `);
+    CREATE TABLE "${schemaName}".messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      channel_id UUID NOT NULL
+        REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL
+        REFERENCES "${schemaName}".members(id),
+      content TEXT NOT NULL,
+      thread_id UUID
+        REFERENCES "${schemaName}".messages(id),
+      is_edited BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+    await queryRunner.query(`
+    CREATE INDEX idx_${schemaName}_messages_channel
+    ON "${schemaName}".messages(channel_id)
+  `);
+
+    // Files table
+    await queryRunner.query(`
+    CREATE TABLE "${schemaName}".files (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      channel_id UUID NOT NULL
+        REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL
+        REFERENCES "${schemaName}".members(id),
+      file_name VARCHAR(255) NOT NULL,
+      file_size BIGINT NOT NULL,
+      mime_type VARCHAR(100),
+      storage_key VARCHAR(500) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+    // Reactions table
+    await queryRunner.query(`
+    CREATE TABLE "${schemaName}".reactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      message_id UUID NOT NULL
+        REFERENCES "${schemaName}".messages(id) ON DELETE CASCADE,
+      member_id UUID NOT NULL
+        REFERENCES "${schemaName}".members(id),
+      emoji VARCHAR(50) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT uq_${schemaName}_reactions UNIQUE (message_id, member_id, emoji)
+    )
+  `);
 
     this.logger.log(`Schema created: ${schemaName}`);
   }
@@ -459,18 +472,20 @@ await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
   ): Promise<void> {
     const schemaName = `workspace_${slug}`;
 
-     const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
+    const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
 
-   await queryRunner.query(
-     `
-    INSERT INTO ${schemaName}.members (user_id, role, permissions, is_active, joined_at)
+    await queryRunner.query(
+      `
+    INSERT INTO "${schemaName}".members
+      (user_id, role, permissions, is_active, joined_at)
     VALUES ($1, 'owner', $2::jsonb, true, NOW())
     `,
-     [userId, JSON.stringify(ownerPermissions)],
-   );
+      [userId, JSON.stringify(ownerPermissions)],
+    );
 
-
-    this.logger.log(`Owner member added to ${schemaName}: ${userId}`);
+    this.logger.log(
+      `Owner member added: user ${userId} → workspace ${workspaceId} (${schemaName})`,
+    );
   }
 
   /**
@@ -485,36 +500,42 @@ await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     // Get member ID
     const [member] = await queryRunner.query(
-      `SELECT id FROM ${schemaName}.members WHERE user_id = $1`,
+      `SELECT id FROM "${schemaName}".members WHERE user_id = $1`,
       [creatorUserId],
     );
+
+    if (!member) {
+      throw new Error(
+        `Workspace member not found for user ${creatorUserId} in ${schemaName}`,
+      );
+    }
 
     // Create #general channel
     const [generalChannel] = await queryRunner.query(
       `
-      INSERT INTO ${schemaName}.channels (name, description, is_private, created_by)
-      VALUES ('general', 'General discussion', false, $1)
-      RETURNING id
-    `,
+    INSERT INTO "${schemaName}".channels (name, description, is_private, created_by)
+    VALUES ('general', 'General discussion', false, $1)
+    RETURNING id
+  `,
       [member.id],
     );
 
     // Create #random channel
     const [randomChannel] = await queryRunner.query(
       `
-      INSERT INTO ${schemaName}.channels (name, description, is_private, created_by)
-      VALUES ('random', 'Random chat', false, $1)
-      RETURNING id
-    `,
+    INSERT INTO "${schemaName}".channels (name, description, is_private, created_by)
+    VALUES ('random', 'Random chat', false, $1)
+    RETURNING id
+  `,
       [member.id],
     );
 
     // Add creator to both channels
     await queryRunner.query(
       `
-      INSERT INTO ${schemaName}.channel_members (channel_id, member_id)
-      VALUES ($1, $2), ($3, $2)
-    `,
+    INSERT INTO "${schemaName}".channel_members (channel_id, member_id)
+    VALUES ($1, $2), ($3, $2)
+  `,
       [generalChannel.id, member.id, randomChannel.id],
     );
 
