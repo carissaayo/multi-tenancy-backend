@@ -1,30 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
-import { customError } from 'src/core/error-handler/custom-errors';
 import { User } from 'src/modules/users/entities/user.entity';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
+import { customError } from 'src/core/error-handler/custom-errors';
+import { WorkspacePlan } from '../interfaces/workspace.interface';
 
 @Injectable()
-export class WorkspaceService {
+export class WorkspacesService {
+  private readonly logger = new Logger(WorkspacesService.name);
+
   constructor(
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
-  private readonly logger = new Logger(WorkspaceService.name);
-  async findById(id: string): Promise<Workspace | null> {
-    return this.workspaceRepo.findOne({
-      where: { id, isActive: true },
-    });
-  }
 
-  async findBySlug(slug: string): Promise<Workspace | null> {
-    return this.workspaceRepo.findOne({
-      where: { slug, isActive: true },
-    });
-  }
   /**
    * Create a new workspace
    * - Creates workspace record in public schema
@@ -124,14 +121,505 @@ export class WorkspaceService {
     }
   }
 
-  async update(id: string, updates: Partial<Workspace>): Promise<Workspace> {
-    const workspace = await this.findById(id);
+  /**
+   * Find workspace by slug
+   */
+  async findBySlug(slug: string): Promise<Workspace | null> {
+    return this.workspaceRepo.findOne({
+      where: { slug },
+      relations: ['creator'],
+    });
+  }
+
+  /**
+   * Find workspace by ID
+   */
+  async findById(id: string): Promise<Workspace> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id },
+      relations: ['creator'],
+    });
 
     if (!workspace) {
       throw customError.notFound('Workspace not found');
     }
 
-    Object.assign(workspace, updates);
+    return workspace;
+  }
+
+  /**
+   * Get all workspaces for a user
+   */
+  async getUserWorkspaces(userId: string): Promise<Workspace[]> {
+    // Get all workspaces where user is a member
+    const result = await this.dataSource.query(
+      `
+      SELECT DISTINCT w.*
+      FROM public.workspaces w
+      WHERE w.id IN (
+        SELECT DISTINCT table_schema 
+        FROM information_schema.tables 
+        WHERE table_name = 'members' 
+        AND table_schema LIKE 'workspace_%'
+      )
+      AND w.is_active = true
+      ORDER BY w.created_at DESC
+      `,
+    );
+
+    // Filter workspaces where user is actually a member
+    const workspaces: Workspace[] = [];
+
+    for (const workspace of result) {
+      const isMember = await this.isUserMember(workspace.id, userId);
+      if (isMember) {
+        workspaces.push(workspace);
+      }
+    }
+
+    return workspaces;
+  }
+
+  /**
+   * Update workspace
+   */
+  async update(
+    workspaceId: string,
+    userId: string,
+    updateDto: CreateWorkspaceDto,
+  ): Promise<Workspace> {
+    const workspace = await this.findById(workspaceId);
+
+    // Check user is owner or admin
+    const canUpdate = await this.canUserManageWorkspace(workspaceId, userId);
+    if (!canUpdate) {
+      throw customError.forbidden(
+        'Only workspace owners and admins can update workspace',
+      );
+    }
+
+    // Cannot change slug after creation
+    if (updateDto.slug && updateDto.slug !== workspace.slug) {
+      throw customError.badRequest('Workspace slug cannot be changed');
+    }
+
+    // Update workspace
+    Object.assign(workspace, updateDto);
+    workspace.updatedAt = new Date();
+
     return this.workspaceRepo.save(workspace);
+  }
+
+  /**
+   * Soft delete workspace (deactivate)
+   */
+  async deactivate(workspaceId: string, userId: string): Promise<void> {
+    const workspace = await this.findById(workspaceId);
+
+    // Only owner can deactivate
+    if (workspace.createdBy !== userId) {
+      throw customError.forbidden(
+        'Only workspace owner can deactivate workspace',
+      );
+    }
+
+    workspace.isActive = false;
+    workspace.updatedAt = new Date();
+
+    await this.workspaceRepo.save(workspace);
+
+    this.logger.log(`Workspace deactivated: ${workspace.slug}`);
+  }
+
+  /**
+   * Permanently delete workspace (dangerous!)
+   */
+  async permanentlyDelete(workspaceId: string, userId: string): Promise<void> {
+    const workspace = await this.findById(workspaceId);
+
+    // Only owner can delete
+    if (workspace.createdBy !== userId) {
+      throw customError.forbidden('Only workspace owner can delete workspace');
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Drop workspace schema (CASCADE removes all tables)
+      await queryRunner.query(
+        `DROP SCHEMA IF EXISTS workspace_${workspace.slug} CASCADE`,
+      );
+
+      // 2. Delete workspace record
+      await queryRunner.manager.delete(Workspace, { id: workspaceId });
+
+      await queryRunner.commitTransaction();
+
+      this.logger.warn(`⚠️ Workspace PERMANENTLY deleted: ${workspace.slug}`);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      this.logger.error(
+        `Failed to delete workspace: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Update workspace plan (upgrade/downgrade)
+   */
+  async updatePlan(
+    workspaceId: string,
+    userId: string,
+      newPlan: WorkspacePlan,
+  ): Promise<Workspace> {
+    const workspace = await this.findById(workspaceId);
+
+    // Only owner can change plan
+    if (workspace.createdBy !== userId) {
+      throw customError.forbidden('Only workspace owner can change plan');
+    }
+
+    // Validate plan downgrade doesn't exceed limits
+    if (newPlan === 'free' && workspace.plan !== 'free') {
+      await this.validatePlanDowngrade(workspace);
+    }
+
+    workspace.plan = newPlan;
+    workspace.updatedAt = new Date();
+
+    await this.workspaceRepo.save(workspace);
+
+    this.logger.log(`Workspace plan updated: ${workspace.slug} → ${newPlan}`);
+
+    return workspace;
+  }
+
+  /**
+   * Get workspace statistics
+   */
+  async getWorkspaceStats(workspaceId: string): Promise<{
+    memberCount: number;
+    channelCount: number;
+    messageCount: number;
+    fileCount: number;
+    storageUsed: number;
+  }> {
+    const workspace = await this.findById(workspaceId);
+    const schemaName = `workspace_${workspace.slug}`;
+
+    const [memberCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM ${schemaName}.members WHERE is_active = true`,
+    );
+
+    const [channelCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM ${schemaName}.channels`,
+    );
+
+    const [messageCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM ${schemaName}.messages`,
+    );
+
+    const [fileStats] = await this.dataSource.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(file_size), 0) as total_size 
+       FROM ${schemaName}.files`,
+    );
+
+    return {
+      memberCount: parseInt(memberCount.count),
+      channelCount: parseInt(channelCount.count),
+      messageCount: parseInt(messageCount.count),
+      fileCount: parseInt(fileStats.count),
+      storageUsed: parseInt(fileStats.total_size) / (1024 * 1024), // MB
+    };
+  }
+
+  // ============================================
+  // PRIVATE HELPER METHODS
+  // ============================================
+
+  /**
+   * Create workspace schema in database
+   */
+  private async createWorkspaceSchema(
+    slug: string,
+    queryRunner: any,
+  ): Promise<void> {
+    const schemaName = `workspace_${slug}`;
+
+    // Create schema
+    await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+
+    // Create members table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        joined_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await queryRunner.query(
+      `CREATE INDEX idx_${schemaName}_members_user_id ON ${schemaName}.members(user_id)`,
+    );
+
+    // Create channels table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.channels (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        is_private BOOLEAN DEFAULT false,
+        created_by UUID NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create channel_members table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.channel_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
+        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id) ON DELETE CASCADE,
+        joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(channel_id, member_id)
+      )
+    `);
+
+    // Create messages table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
+        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
+        content TEXT NOT NULL,
+        thread_id UUID REFERENCES ${schemaName}.messages(id),
+        is_edited BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await queryRunner.query(
+      `CREATE INDEX idx_${schemaName}_messages_channel ON ${schemaName}.messages(channel_id)`,
+    );
+
+    // Create files table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.files (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
+        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
+        file_name VARCHAR(255) NOT NULL,
+        file_size BIGINT NOT NULL,
+        mime_type VARCHAR(100),
+        storage_key VARCHAR(500) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create reactions table
+    await queryRunner.query(`
+      CREATE TABLE ${schemaName}.reactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        message_id UUID NOT NULL REFERENCES ${schemaName}.messages(id) ON DELETE CASCADE,
+        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
+        emoji VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(message_id, member_id, emoji)
+      )
+    `);
+
+    this.logger.log(`Schema created: ${schemaName}`);
+  }
+
+  /**
+   * Add creator as owner member
+   */
+  private async addOwnerMember(
+    workspaceId: string,
+    slug: string,
+    userId: string,
+    queryRunner: any,
+  ): Promise<void> {
+    const schemaName = `workspace_${slug}`;
+
+    await queryRunner.query(
+      `
+      INSERT INTO ${schemaName}.members (user_id, role, is_active, joined_at)
+      VALUES ($1, 'owner', true, NOW())
+    `,
+      [userId],
+    );
+
+    this.logger.log(`Owner member added to ${schemaName}: ${userId}`);
+  }
+
+  /**
+   * Create default channels (#general, #random)
+   */
+  private async createDefaultChannels(
+    slug: string,
+    creatorUserId: string,
+    queryRunner: any,
+  ): Promise<void> {
+    const schemaName = `workspace_${slug}`;
+
+    // Get member ID
+    const [member] = await queryRunner.query(
+      `SELECT id FROM ${schemaName}.members WHERE user_id = $1`,
+      [creatorUserId],
+    );
+
+    // Create #general channel
+    const [generalChannel] = await queryRunner.query(
+      `
+      INSERT INTO ${schemaName}.channels (name, description, is_private, created_by)
+      VALUES ('general', 'General discussion', false, $1)
+      RETURNING id
+    `,
+      [member.id],
+    );
+
+    // Create #random channel
+    const [randomChannel] = await queryRunner.query(
+      `
+      INSERT INTO ${schemaName}.channels (name, description, is_private, created_by)
+      VALUES ('random', 'Random chat', false, $1)
+      RETURNING id
+    `,
+      [member.id],
+    );
+
+    // Add creator to both channels
+    await queryRunner.query(
+      `
+      INSERT INTO ${schemaName}.channel_members (channel_id, member_id)
+      VALUES ($1, $2), ($3, $2)
+    `,
+      [generalChannel.id, member.id, randomChannel.id],
+    );
+
+    this.logger.log(`Default channels created in ${schemaName}`);
+  }
+
+  /**
+   * Count workspaces owned by user
+   */
+  private async countUserWorkspaces(userId: string): Promise<number> {
+    return this.workspaceRepo.count({
+      where: { createdBy: userId, isActive: true },
+    });
+  }
+
+  /**
+   * Get max workspaces allowed for user
+   */
+  private getMaxWorkspacesForUser(user: User): number {
+    // This could be based on user's subscription
+    // For now, simple logic:
+    return 10; // Default limit
+  }
+
+  /**
+   * Validate slug format
+   */
+  private isValidSlug(slug: string): boolean {
+    const slugRegex = /^[a-z0-9-]+$/;
+    return slugRegex.test(slug) && slug.length >= 3 && slug.length <= 50;
+  }
+
+  /**
+   * Check if user is member of workspace
+   */
+  private async isUserMember(
+    workspaceId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) return false;
+
+    const schemaName = `workspace_${workspace.slug}`;
+
+    try {
+      const [result] = await this.dataSource.query(
+        `SELECT 1 FROM ${schemaName}.members 
+         WHERE user_id = $1 AND is_active = true 
+         LIMIT 1`,
+        [userId],
+      );
+
+      return !!result;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Check if user can manage workspace (owner or admin)
+   */
+  private async canUserManageWorkspace(
+    workspaceId: string,
+    userId: string,
+  ): Promise<boolean> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) return false;
+
+    // Owner can always manage
+    if (workspace.createdBy === userId) return true;
+
+    // Check if user is admin
+    const schemaName = `workspace_${workspace.slug}`;
+
+    try {
+      const [result] = await this.dataSource.query(
+        `SELECT role FROM ${schemaName}.members 
+         WHERE user_id = $1 AND is_active = true 
+         LIMIT 1`,
+        [userId],
+      );
+
+      return result && (result.role === 'admin' || result.role === 'owner');
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Validate workspace can be downgraded to free plan
+   */
+  private async validatePlanDowngrade(workspace: Workspace): Promise<void> {
+    const stats = await this.getWorkspaceStats(workspace.id);
+
+    const freeLimits = {
+      maxMembers: 10,
+      maxStorageMB: 5 * 1024, // 5GB
+    };
+
+    if (stats.memberCount > freeLimits.maxMembers) {
+      throw customError.badRequest(
+        `Cannot downgrade: Free plan allows max ${freeLimits.maxMembers} members`,
+      );
+    }
+
+    if (stats.storageUsed > freeLimits.maxStorageMB) {
+      throw customError.badRequest(
+        `Cannot downgrade: Storage exceeds free plan limit`,
+      );
+    }
   }
 }
