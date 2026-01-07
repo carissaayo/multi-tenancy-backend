@@ -324,7 +324,7 @@ export class WorkspacesService {
   async updateWorkspaceProperties(
     workspaceId: string,
     req: AuthenticatedRequest,
-    updateDto: Partial<UpdateWorkspaceDto>,
+    updateDto: UpdateWorkspaceDto,
   ): Promise<UpdateWorkspaceResponse> {
     console.log(workspaceId);
     
@@ -341,6 +341,7 @@ export class WorkspacesService {
         'Only workspace owners and admins can update workspace',
       );
     }
+    
 
     // Update workspace
     Object.assign(workspace, updateDto);

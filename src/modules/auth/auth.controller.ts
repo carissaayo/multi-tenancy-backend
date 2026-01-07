@@ -2,8 +2,6 @@ import {
   Controller,
   Post,
   Body,
-  UsePipes,
-  ValidationPipe,
   Req,
 } from '@nestjs/common';
 import {
@@ -27,12 +25,7 @@ import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-r
 
 @ApiTags('Authentication')
 @Controller('auth')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
+
 export class AuthController {
   constructor(private authService: AuthService) {}
 

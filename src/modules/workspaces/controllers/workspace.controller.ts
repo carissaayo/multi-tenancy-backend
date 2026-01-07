@@ -7,8 +7,6 @@ import {
   Param,
   Patch,
   Delete,
-  UsePipes,
-  ValidationPipe,
   Query,
 } from '@nestjs/common';
 import {
@@ -27,12 +25,6 @@ import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, UpdateWorkspaceRes
 
 @ApiTags('Workspaces')
 @Controller('workspaces')
-@UsePipes(
-  new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }),
-)
 export class WorkspacesController {
   constructor(private readonly workspaceService: WorkspacesService) {}
 
