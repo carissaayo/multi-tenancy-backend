@@ -12,7 +12,7 @@ services:
       # Enable polling for file watching in Docker (Windows compatibility)
       - CHOKIDAR_USING_POLLING=true
       - WATCHPACK_POLLING=true
-      - NESTJS_WATCH_POLLING=true  
+      - NESTJS_WATCH_POLLING=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,15 +21,16 @@ services:
     networks:
       - multi_tenancy-network
     volumes:
-      - ./src:/app/src        # Mount local source
+      - ./src:/app/src
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
       - ./tsconfig.json:/app/tsconfig.json
       - ./nest-cli.json:/app/nest-cli.json
-      - /app/node_modules     # Persist container node_modules
-      - /app/dist             # Persist compiled TS output         # Persist compiled TS output
+      - /app/node_modules
+      - /app/dist
     command: npm run start:dev
     restart: unless-stopped
+    # Remove develop.watch section if it exists
 
   postgres:
     image: postgres:15
