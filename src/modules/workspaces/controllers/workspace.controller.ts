@@ -18,10 +18,10 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { WorkspacesService } from '../services/workspace.service';
-import { CreateWorkspaceDto } from '../dtos/workspace.dto';
+import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
-import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, WorkspacePlan } from '../interfaces/workspace.interface';
+import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, UpdateWorkspaceResponse, WorkspacePlan } from '../interfaces/workspace.interface';
 
 
 
@@ -64,17 +64,17 @@ export class WorkspacesController {
     return this.workspaceService.getUserWorkspaces(req);
   }
 
-// Get single workspace by ID
-@Get(':id')
-@ApiBearerAuth('access-token')
-@ApiOperation({ summary: 'Get workspace by ID (with membership check)' })
-@ApiResponse({ status: 200, description: 'Workspace details' })
-getById(
-  @Param('id') id: string,
-  @Req() req: AuthenticatedRequest,
-): Promise<GetUserWorkspaceResponse> {
-  return this.workspaceService.getUserSingleWorkspace(id, req);
-}
+  // Get single workspace by ID
+  @Get(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get workspace by ID (with membership check)' })
+  @ApiResponse({ status: 200, description: 'Workspace details' })
+  getById(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<GetUserWorkspaceResponse> {
+    return this.workspaceService.getUserSingleWorkspace(id, req);
+  }
 
   //   @Get('slug/:slug')
   //   @ApiBearerAuth('access-token')
@@ -87,14 +87,18 @@ getById(
   // Update workspace details
   @Patch(':id')
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update workspace details' })
+  @ApiOperation({ summary: 'Update workspace properties excluding slug' })
   @ApiResponse({ status: 200, description: 'Workspace updated successfully' })
   update(
     @Param('id') workspaceId: string,
-    @Body() updateDto: CreateWorkspaceDto,
+    @Body() updateDto: UpdateWorkspaceDto,
     @Req() req: AuthenticatedRequest,
-  ): Promise<Workspace> {
-    return this.workspaceService.update(workspaceId, req.userId, updateDto);
+  ): Promise<UpdateWorkspaceResponse> {
+    return this.workspaceService.updateWorkspaceProperties(
+      workspaceId,
+      req,
+      updateDto,
+    );
   }
 
   // Deactivate (soft delete) a workspace

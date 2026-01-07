@@ -19,3 +19,10 @@ export interface GetUserWorkspaceResponse {
   refreshToken: string;
   message: string;
 }
+
+export interface UpdateWorkspaceResponse {
+  workspace: Workspace | null;
+  accessToken: string;
+  refreshToken: string;
+  message: string;
+}

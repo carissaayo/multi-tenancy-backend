@@ -1,21 +1,43 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from "class-validator";
-import { WorkspacePlan } from "../interfaces/workspace.interface";
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { WorkspacePlan } from '../interfaces/workspace.interface';
 
 export class CreateWorkspaceDto {
-    @IsString()
-    @IsNotEmpty()
-    name: string;
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 
-    @IsString()
-    @IsNotEmpty()
-    slug: string;
+  @IsString()
+  @IsNotEmpty()
+  slug: string;
 
-    @IsEnum(WorkspacePlan)
-    @IsNotEmpty()
-    @IsOptional()
-    plan: WorkspacePlan;
+  @IsEnum(WorkspacePlan)
+  @IsNotEmpty()
+  @IsOptional()
+  plan: WorkspacePlan;
 
-    @IsString()
-    @IsOptional()
-    description: string;
+  @IsString()
+  @IsOptional()
+  description: string;
+
+  @IsString()
+  @IsOptional()
+  logoUrl: string;
+}
+
+export class UpdateWorkspaceDto {
+  @IsString()
+  @IsOptional()
+  name: string;
+
+  @IsEnum(WorkspacePlan)
+  @IsOptional()
+  plan: WorkspacePlan;
+
+  @IsString()
+  @IsOptional()
+  description: string;
+
+  @IsString()
+  @IsOptional()
+  logoUrl: string;
 }

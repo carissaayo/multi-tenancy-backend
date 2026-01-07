@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
 import { User } from 'src/modules/users/entities/user.entity';
-import { CreateWorkspaceDto } from '../dtos/workspace.dto';
+import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import {
   GetUserWorkspacesResponse,
   GetUserWorkspaceResponse,
   WorkspacePlan,
+  UpdateWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
@@ -320,31 +321,44 @@ export class WorkspacesService {
   /**
    * Update workspace
    */
-  async update(
+  async updateWorkspaceProperties(
     workspaceId: string,
-    userId: string,
-    updateDto: CreateWorkspaceDto,
-  ): Promise<Workspace> {
+    req: AuthenticatedRequest,
+    updateDto: Partial<UpdateWorkspaceDto>,
+  ): Promise<UpdateWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
     const workspace = await this.findById(workspaceId);
 
     // Check user is owner or admin
-    const canUpdate = await this.canUserManageWorkspace(workspaceId, userId);
+    const canUpdate = await this.canUserManageWorkspace(workspaceId, user.id);
     if (!canUpdate) {
       throw customError.forbidden(
         'Only workspace owners and admins can update workspace',
       );
     }
 
-    // Cannot change slug after creation
-    if (updateDto.slug && updateDto.slug !== workspace.slug) {
-      throw customError.badRequest('Workspace slug cannot be changed');
-    }
-
     // Update workspace
     Object.assign(workspace, updateDto);
     workspace.updatedAt = new Date();
 
-    return this.workspaceRepo.save(workspace);
+    const savedWorkspace = await this.workspaceRepo.save(workspace);
+    const workspaceWithSafeFields = await this.findWorkspaceWithSafeFields(
+      savedWorkspace.id,
+    );
+    if (!workspaceWithSafeFields) {
+      throw customError.notFound('Workspace not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+
+    return {
+      workspace: workspaceWithSafeFields,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace updated successfully',
+    };
   }
 
   /**
@@ -533,7 +547,7 @@ export class WorkspacesService {
     });
   }
 
-  /** * Get multiple workspaces with safe user fields * @param identifiers - Array of workspace IDs or slugs * @param bySlug - If true, searches by slug; if false, searches by ID * @returns Array of workspaces with safe user fields */ 
+  /** * Get multiple workspaces with safe user fields * @param identifiers - Array of workspace IDs or slugs * @param bySlug - If true, searches by slug; if false, searches by ID * @returns Array of workspaces with safe user fields */
   private async getMultipleWorkspacesWithSafeFields(
     identifiers: string[],
     bySlug: boolean = false,
