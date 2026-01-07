@@ -12,7 +12,9 @@ services:
       # Enable polling for file watching in Docker (Windows compatibility)
       - CHOKIDAR_USING_POLLING=true
       - WATCHPACK_POLLING=true
-      - NESTJS_WATCH_POLLING=true
+      - NESTJS_WATCH_POLLING=
+      # Additional watch options
+      - NODE_ENV=development
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,7 +32,7 @@ services:
       - /app/dist
     command: npm run start:dev
     restart: unless-stopped
-    # Remove develop.watch section if it exists
+
 
   postgres:
     image: postgres:15
