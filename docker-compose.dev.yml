@@ -9,12 +9,10 @@ services:
     env_file:
       - .env
     environment:
-      # Enable polling for file watching in Docker (Windows compatibility)
-      - CHOKIDAR_USING_POLLING=true
-      - WATCHPACK_POLLING=true
-      - NESTJS_WATCH_POLLING=
-      # Additional watch options
       - NODE_ENV=development
+      # Enable polling for file watching (critical for Windows/Docker)
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -23,16 +21,18 @@ services:
     networks:
       - multi_tenancy-network
     volumes:
+      # Source code mapping
       - ./src:/app/src
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
       - ./tsconfig.json:/app/tsconfig.json
       - ./nest-cli.json:/app/nest-cli.json
-      - /app/node_modules
-      - /app/dist
+      # Preserve node_modules in container
+      - node_modules:/app/node_modules
+      # Use named volume for dist to avoid Windows file locking issues
+      - dist:/app/dist
     command: npm run start:dev
     restart: unless-stopped
-
 
   postgres:
     image: postgres:15
@@ -73,3 +73,5 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  node_modules:
+  dist:  # Named volume for dist directory to avoid Windows file locking
