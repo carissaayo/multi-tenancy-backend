@@ -34,7 +34,6 @@ export class AWSStorageService {
   private region: string;
 
   constructor(private configService: ConfigService) {
-
     this.region = this.configService.get<string>('aws.region') || '';
     const accessKeyId = this.configService.get<string>('aws.access_key_id');
     const secretAccessKey = this.configService.get<string>(
@@ -43,7 +42,6 @@ export class AWSStorageService {
     this.bucketName = this.configService.get<string>('aws.bucket_name') || '';
     this.cdnDomain = this.configService.get<string>('aws.cdn_domain');
 
- 
     if (!this.region || !accessKeyId || !secretAccessKey || !this.bucketName) {
       throw new Error(
         'AWS S3 configuration is incomplete. Please set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_BUCKET_NAME environment variables.',
@@ -79,9 +77,6 @@ export class AWSStorageService {
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
-      // ACL for public files (like workspace logos)
-      ...(options.makePublic && { ACL: 'public-read' }),
-      // Metadata for tracking
       Metadata: {
         workspaceId: options.workspaceId,
         userId: options.userId,
