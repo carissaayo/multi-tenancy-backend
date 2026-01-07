@@ -9,8 +9,6 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { customError } from 'src/core/error-handler/custom-errors';
-import config from 'src/config/config';
-
 
 export interface UploadOptions {
   workspaceId: string;
@@ -28,23 +26,38 @@ export interface UploadedFile {
   mimeType: string;
 }
 
-const appConfig = config();
 @Injectable()
 export class StorageService {
   private s3Client: S3Client;
   private bucketName: string;
   private cdnDomain?: string;
+  private region: string;
 
   constructor(private configService: ConfigService) {
+
+    this.region = this.configService.get<string>('aws.region') || '';
+    const accessKeyId = this.configService.get<string>('aws.access_key_id');
+    const secretAccessKey = this.configService.get<string>(
+      'aws.secret_access_key',
+    );
+    this.bucketName = this.configService.get<string>('aws.bucket_name') || '';
+    this.cdnDomain = this.configService.get<string>('aws.cdn_domain');
+
+ 
+    if (!this.region || !accessKeyId || !secretAccessKey || !this.bucketName) {
+      throw new Error(
+        'AWS S3 configuration is incomplete. Please set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_BUCKET_NAME environment variables.',
+      );
+    }
+
+    // Initialize S3Client with validated credentials
     this.s3Client = new S3Client({
-      region: appConfig.aws.region,
+      region: this.region,
       credentials: {
-        accessKeyId: appConfig.aws.access_key_id!,
-        secretAccessKey: appConfig.aws.secret_access_key!,
+        accessKeyId,
+        secretAccessKey,
       },
     });
-    this.bucketName = appConfig.aws.bucket_name!;
- 
   }
 
   /**
@@ -201,8 +214,8 @@ export class StorageService {
       return `https://${this.cdnDomain}/${key}`;
     }
 
-    // Use S3 direct URL
-    return `https://${this.bucketName}.s3.${this.configService.get('AWS_REGION')}.amazonaws.com/${key}`;
+    // Use S3 direct URL - Fixed: use stored region property instead of configService.get
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
   }
 
   /**
