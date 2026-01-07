@@ -11,4 +11,5 @@ export interface GetUserWorkspacesResponse {
   accessToken: string;
   refreshToken: string;
   message: string;
+  totalWorkspacesCount: number;
 }
