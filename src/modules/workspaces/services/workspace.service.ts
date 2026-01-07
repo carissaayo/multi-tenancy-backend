@@ -326,6 +326,8 @@ export class WorkspacesService {
     req: AuthenticatedRequest,
     updateDto: Partial<UpdateWorkspaceDto>,
   ): Promise<UpdateWorkspaceResponse> {
+    console.log(workspaceId);
+    
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
