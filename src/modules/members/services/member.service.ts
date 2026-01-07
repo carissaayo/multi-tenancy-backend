@@ -5,6 +5,7 @@ import { DataSource, Repository } from 'typeorm';
 import { WorkspaceMember, WorkspaceMemberEntity } from '../entities/member.entity';
 import { Workspace } from '../../workspaces/entities/workspace.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
+import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
 
 @Injectable()
 export class MemberService {
@@ -12,6 +13,7 @@ export class MemberService {
     private readonly dataSource: DataSource,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    private readonly workspacesService: WorkspacesService,
   ) {}
 
   /**
@@ -57,23 +59,27 @@ export class MemberService {
   async findMemberWithWorkspace(
     workspaceId: string,
     userId: string,
-  ): Promise<{ member: WorkspaceMember; workspace: Workspace } | null> {
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: workspaceId },
-    });
+  ): Promise<{ member: Partial<WorkspaceMember>; workspace: Workspace } | null> {
+   const workspace =
+     await this.workspacesService.findWorkspaceWithSafeFields(workspaceId);
+
 
     if (!workspace) {
       return null;
     }
 
-    const member = await this.findMember(workspaceId, userId);
+     const member = await this.findMember(workspaceId, userId);
+
 
     if (!member) {
       return null;
     }
 
     // Attach workspace to member for convenience (similar to your commented code)
-    return { member, workspace };
+    return {
+    member: this.getSafeMemberFields(member as WorkspaceMember),
+      workspace,
+    };
   }
 
   /**
@@ -176,5 +182,22 @@ export class MemberService {
     } finally {
       await this.dataSource.query(`SET search_path TO public`);
     }
+  }
+
+  /**
+   * Get member with safe fields only
+   * Returns only public/safe member information
+   */
+  private getSafeMemberFields(
+    member: WorkspaceMember,
+  ): Partial<WorkspaceMember> {
+    return {
+      id: member.id,
+      userId: member.userId,
+      role: (member as any).role, // Include role if it exists
+      isActive: member.isActive,
+      permissions: member.permissions,
+      joinedAt: member.joinedAt,
+    };
   }
 }

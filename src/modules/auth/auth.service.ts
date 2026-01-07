@@ -12,6 +12,7 @@ import { generateOtp } from "src/utils/util";
 import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
 import { UsersService } from "../users/services/user.service";
 import { MemberService } from "../members/services/member.service";
+import { WorkspaceMember } from "../members/entities/member.entity";
 
 @Injectable()
 export class AuthService {
@@ -107,7 +108,7 @@ export class AuthService {
     const accessToken = this.tokenManager.signWorkspaceToken(
       user,
       workspaceId,
-      result.member,
+      result.member as WorkspaceMember,
     );
 
     return {

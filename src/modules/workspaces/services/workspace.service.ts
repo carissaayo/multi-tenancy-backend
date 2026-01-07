@@ -487,7 +487,7 @@ export class WorkspacesService {
    * @param bySlug - If true, searches by slug; if false, searches by ID
    * @returns Workspace with safe user fields or null if not found
    */
-  private async findWorkspaceWithSafeFields(
+  public async findWorkspaceWithSafeFields(
     identifier: string,
     bySlug: boolean = false,
   ): Promise<Workspace | null> {
