@@ -20,6 +20,12 @@ const config = () => {
       duration1d: process.env.JWT_DURATION_1D || '1d',
       duration7d: process.env.JWT_DURATION_7D || '7d',
     },
+    aws: {
+      region: process.env.AWS_REGION,
+      access_key_id: process.env.AWS_ACCESS_KEY_ID,
+      secret_access_key: process.env.AWS_SECRET_ACCESS_KEY,
+      bucket_name: process.env.AWS_BUCKET_NAME,
+    },
   };
 };
 
