@@ -21,7 +21,7 @@ import { WorkspacesService } from '../services/workspace.service';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
-import { GetUserWorkspacesResponse, WorkspacePlan } from '../interfaces/workspace.interface';
+import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, WorkspacePlan } from '../interfaces/workspace.interface';
 
 
 
@@ -64,14 +64,17 @@ export class WorkspacesController {
     return this.workspaceService.getUserWorkspaces(req);
   }
 
-  // Get workspace by ID
-  @Get(':id')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get workspace by ID' })
-  @ApiResponse({ status: 200, description: 'Workspace details' })
-  getById(@Param('id') id: string): Promise<Workspace> {
-    return this.workspaceService.findById(id);
-  }
+// Get single workspace by ID
+@Get(':id')
+@ApiBearerAuth('access-token')
+@ApiOperation({ summary: 'Get workspace by ID (with membership check)' })
+@ApiResponse({ status: 200, description: 'Workspace details' })
+getById(
+  @Param('id') id: string,
+  @Req() req: AuthenticatedRequest,
+): Promise<GetUserWorkspaceResponse> {
+  return this.workspaceService.getUserSingleWorkspace(id, req);
+}
 
   //   @Get('slug/:slug')
   //   @ApiBearerAuth('access-token')

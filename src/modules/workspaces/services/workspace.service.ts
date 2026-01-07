@@ -7,6 +7,7 @@ import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import {
   GetUserWorkspacesResponse,
+  GetUserWorkspaceResponse,
   WorkspacePlan,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
@@ -114,44 +115,9 @@ export class WorkspacesService {
 
       // 10. Commit transaction
       await queryRunner.commitTransaction();
-      const savedWorkspace = await this.workspaceRepo.findOne({
-        where: { id: workspace.id },
-        relations: ['creator', 'owner'],
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          logoUrl: true,
-          plan: true,
-          isActive: true,
-          settings: true,
-          createdBy: true,
-          ownerId: true,
-          createdAt: true,
-          updatedAt: true,
-          creator: {
-            id: true,
-            email: true,
-            fullName: true,
-            avatarUrl: true,
-            isEmailVerified: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-          owner: {
-            id: true,
-            email: true,
-            fullName: true,
-            avatarUrl: true,
-            isEmailVerified: true,
-            isActive: true,
-            createdAt: true,
-            updatedAt: true,
-          },
-        },
-      });
+      const savedWorkspace = await this.findWorkspaceWithSafeFields(
+        workspace.id,
+      );
 
       this.logger.log(
         `✅ Workspace created: ${workspace.slug} by user ${user.id}`,
@@ -178,29 +144,72 @@ export class WorkspacesService {
   }
 
   /**
-   * Find workspace by slug
+   * Get a single workspace for a user (with membership check)
    */
-  async findBySlug(slug: string): Promise<Workspace | null> {
-    return this.workspaceRepo.findOne({
-      where: { slug },
-      relations: ['creator'],
-    });
-  }
+  async getUserSingleWorkspace(
+    workspaceId: string,
+    req: AuthenticatedRequest,
+  ): Promise<GetUserWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
 
-  /**
-   * Find workspace by ID
-   */
-  async findById(id: string): Promise<Workspace> {
+    // Get workspace from public schema
     const workspace = await this.workspaceRepo.findOne({
-      where: { id },
-      relations: ['creator'],
+      where: { id: workspaceId },
     });
 
     if (!workspace) {
-      throw customError.notFound('Workspace not found');
+      throw customError.notFound('No workspace with this Id was found');
     }
 
-    return workspace;
+    if (!workspace.isActive) {
+      throw customError.notFound('This workspace is not active');
+    }
+
+    // Check if user is a member of this workspace
+    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      const [member] = await this.dataSource.query(
+        `SELECT 1 FROM "${schemaName}".members 
+       WHERE user_id = $1 AND is_active = true 
+       LIMIT 1`,
+        [user.id],
+      );
+
+      if (!member) {
+        throw customError.forbidden('You are not a member of this workspace');
+      }
+    } catch (error) {
+      // If it's already a custom error, rethrow it
+      if (error.statusCode) {
+        throw error;
+      }
+      // Otherwise, schema might not exist or be accessible
+      this.logger.warn(
+        `Failed to check membership in schema ${schemaName}: ${error.message}`,
+      );
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    // Get workspace with safe user fields
+    const workspaceWithSafeFields =
+      await this.findWorkspaceWithSafeFields(workspaceId);
+
+    if (!workspaceWithSafeFields) {
+      throw customError.notFound('Workspace not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+
+    return {
+      workspace: workspaceWithSafeFields,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace fetched successfully',
+    };
   }
 
   /**
@@ -267,51 +276,10 @@ export class WorkspacesService {
       };
     }
     // Query workspaces with safe user fields
-    const { In } = await import('typeorm');
-    const workspaces = await this.workspaceRepo.find({
-      where: {
-        slug: In(workspaceSlugs), // TypeORM In operator
-        isActive: true,
-      },
-      relations: ['creator', 'owner'],
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        description: true,
-        logoUrl: true,
-        plan: true,
-        isActive: true,
-        settings: true,
-        createdBy: true,
-        ownerId: true,
-        createdAt: true,
-        updatedAt: true,
-        creator: {
-          id: true,
-          email: true,
-          fullName: true,
-          avatarUrl: true,
-          isEmailVerified: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        owner: {
-          id: true,
-          email: true,
-          fullName: true,
-          avatarUrl: true,
-          isEmailVerified: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
+    const workspaces = await this.getMultipleWorkspacesWithSafeFields(
+      workspaceSlugs,
+      true,
+    );
 
     const tokens = await this.tokenManager.signTokens(user, req);
 
@@ -324,6 +292,31 @@ export class WorkspacesService {
     };
   }
 
+  /**
+   * Find workspace by slug
+   */
+  async findBySlug(slug: string): Promise<Workspace | null> {
+    return this.workspaceRepo.findOne({
+      where: { slug },
+      relations: ['creator'],
+    });
+  }
+
+  /**
+   * Find workspace by ID
+   */
+  async findById(id: string): Promise<Workspace> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id },
+      relations: ['creator'],
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    return workspace;
+  }
   /**
    * Update workspace
    */
@@ -487,6 +480,111 @@ export class WorkspacesService {
   // ============================================
   // PRIVATE HELPER METHODS
   // ============================================
+
+  /**
+   * Get workspace with safe user fields (excludes sensitive data)
+   * @param identifier - Workspace ID or slug
+   * @param bySlug - If true, searches by slug; if false, searches by ID
+   * @returns Workspace with safe user fields or null if not found
+   */
+  private async findWorkspaceWithSafeFields(
+    identifier: string,
+    bySlug: boolean = false,
+  ): Promise<Workspace | null> {
+    const whereCondition = bySlug ? { slug: identifier } : { id: identifier };
+
+    return this.workspaceRepo.findOne({
+      where: whereCondition,
+      relations: ['creator', 'owner'],
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        logoUrl: true,
+        plan: true,
+        isActive: true,
+        settings: true,
+        createdBy: true,
+        ownerId: true,
+        createdAt: true,
+        updatedAt: true,
+        creator: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+          isEmailVerified: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        owner: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+          isEmailVerified: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+    });
+  }
+
+  /** * Get multiple workspaces with safe user fields * @param identifiers - Array of workspace IDs or slugs * @param bySlug - If true, searches by slug; if false, searches by ID * @returns Array of workspaces with safe user fields */ 
+  private async getMultipleWorkspacesWithSafeFields(
+    identifiers: string[],
+    bySlug: boolean = false,
+  ): Promise<Workspace[]> {
+    if (identifiers.length === 0) {
+      return [];
+    }
+    const { In } = await import('typeorm');
+    const whereCondition = bySlug
+      ? { slug: In(identifiers), isActive: true }
+      : { id: In(identifiers), isActive: true };
+    return this.workspaceRepo.find({
+      where: whereCondition,
+      relations: ['creator', 'owner'],
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        logoUrl: true,
+        plan: true,
+        isActive: true,
+        settings: true,
+        createdBy: true,
+        ownerId: true,
+        createdAt: true,
+        updatedAt: true,
+        creator: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+          isEmailVerified: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        owner: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+          isEmailVerified: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      order: { createdAt: 'DESC' },
+    });
+  }
 
   /**
    * Create workspace schema in database
