@@ -43,7 +43,7 @@ export class WorkspacesController {
   create(
     @Body() createDto: CreateWorkspaceDto,
     @Req() req: AuthenticatedRequest,
-  ): Promise<Workspace> {
+  ): Promise<{ workspace: Workspace | null; accessToken: string; refreshToken: string; message: string }> {
     return this.workspaceService.create(req, createDto);
   }
 

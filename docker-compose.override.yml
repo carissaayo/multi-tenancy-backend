@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     container_name: multi_tenancy_api_dev
@@ -10,6 +8,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Enable polling for file watching in Docker (Windows compatibility)
+      - CHOKIDAR_USING_POLLING=true
+      - WATCHPACK_POLLING=true
+      - NESTJS_WATCH_POLLING=true  
     depends_on:
       postgres:
         condition: service_healthy
@@ -24,7 +27,7 @@ services:
       - ./tsconfig.json:/app/tsconfig.json
       - ./nest-cli.json:/app/nest-cli.json
       - /app/node_modules     # Persist container node_modules
-      - /app/dist             # Persist compiled TS output
+      - /app/dist             # Persist compiled TS output         # Persist compiled TS output
     command: npm run start:dev
     restart: unless-stopped
 

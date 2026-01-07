@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
@@ -11,6 +8,7 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspacePlan } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
+import { TokenManager } from 'src/core/security/services/token-manager.service';
 
 @Injectable()
 export class WorkspacesService {
@@ -22,6 +20,7 @@ export class WorkspacesService {
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   /**
@@ -34,7 +33,12 @@ export class WorkspacesService {
   async create(
     req: AuthenticatedRequest,
     createDto: CreateWorkspaceDto,
-  ): Promise<Workspace> {
+  ): Promise<{
+    workspace: Workspace | null;
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+  }> {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
@@ -107,12 +111,56 @@ export class WorkspacesService {
 
       // 10. Commit transaction
       await queryRunner.commitTransaction();
+      const savedWorkspace = await this.workspaceRepo.findOne({
+        where: { id: workspace.id },
+        relations: ['creator', 'owner'],
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          description: true,
+          logoUrl: true,
+          plan: true,
+          isActive: true,
+          settings: true,
+          createdBy: true,
+          ownerId: true,
+          createdAt: true,
+          updatedAt: true,
+          creator: {
+            id: true,
+            email: true,
+            fullName: true,
+            avatarUrl: true,
+            isEmailVerified: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          owner: {
+            id: true,
+            email: true,
+            fullName: true,
+            avatarUrl: true,
+            isEmailVerified: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      });
 
       this.logger.log(
         `✅ Workspace created: ${workspace.slug} by user ${user.id}`,
       );
+      const tokens = await this.tokenManager.signTokens(user, req);
 
-      return workspace;
+      return {
+        workspace: savedWorkspace,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken || '',
+        message: 'Workspace created successfully',
+      };
     } catch (error) {
       // Rollback on error
       await queryRunner.rollbackTransaction();
@@ -315,8 +363,9 @@ export class WorkspacesService {
     fileCount: number;
     storageUsed: number;
   }> {
-    const workspace = await this.findById(workspaceId);
-    const schemaName = `workspace_${workspace.slug}`;
+      const workspace = await this.findById(workspaceId);
+      const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+      const schemaName = `workspace_${sanitizedSlug}`;
 
     const [memberCount] = await this.dataSource.query(
       `SELECT COUNT(*) as count FROM "${schemaName}".members WHERE is_active = true`,
@@ -355,7 +404,8 @@ export class WorkspacesService {
     slug: string,
     queryRunner: any,
   ): Promise<void> {
-    const schemaName = `workspace_${slug}`;
+    const sanitizedSlug = this.sanitizeSlugForSQL(slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
 
     // Create schema
     await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
@@ -462,6 +512,14 @@ export class WorkspacesService {
   }
 
   /**
+   * Sanitize slug for use in SQL identifiers
+   * Replaces hyphens and other special characters with underscores
+   */
+  private sanitizeSlugForSQL(slug: string): string {
+    // Replace hyphens with underscores for SQL identifier compatibility
+    return slug.replace(/-/g, '_');
+  }
+  /**
    * Add creator as owner member
    */
   private async addOwnerMember(
@@ -470,7 +528,8 @@ export class WorkspacesService {
     userId: string,
     queryRunner: any,
   ): Promise<void> {
-    const schemaName = `workspace_${slug}`;
+      const sanitizedSlug = this.sanitizeSlugForSQL(slug);
+      const schemaName = `workspace_${sanitizedSlug}`;
 
     const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
 
@@ -496,7 +555,8 @@ export class WorkspacesService {
     creatorUserId: string,
     queryRunner: any,
   ): Promise<void> {
-    const schemaName = `workspace_${slug}`;
+    const sanitizedSlug = this.sanitizeSlugForSQL(slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
 
     // Get member ID
     const [member] = await queryRunner.query(
@@ -581,7 +641,8 @@ export class WorkspacesService {
 
     if (!workspace) return false;
 
-    const schemaName = `workspace_${workspace.slug}`;
+    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
       const [result] = await this.dataSource.query(
@@ -614,7 +675,8 @@ export class WorkspacesService {
     if (workspace.createdBy === userId) return true;
 
     // Check if user is admin
-    const schemaName = `workspace_${workspace.slug}`;
+    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
       const [result] = await this.dataSource.query(

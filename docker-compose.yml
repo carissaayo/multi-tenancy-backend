@@ -1,13 +1,18 @@
 services:
   api:
-    container_name: multi_tenancy_api
+    container_name: multi_tenancy_api_dev
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Enable polling for file watching in Docker (Windows compatibility)
+      - CHOKIDAR_USING_POLLING=true
+      - WATCHPACK_POLLING=true
+      - NESTJS_WATCH_POLLING=true
     depends_on:
       postgres:
         condition: service_healthy
@@ -16,16 +21,34 @@ services:
     networks:
       - multi_tenancy-network
     volumes:
-      - ./package.json:/app/package.json
-      - ./package-lock.json:/app/package-lock.json
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./nest-cli.json:/app/nest-cli.json
-      - ./src:/app/src
+      # Only persist node_modules and dist to prevent overwriting
       - /app/node_modules
       - /app/dist
     command: npm run start:dev
     restart: unless-stopped
-    
+    develop:
+      watch:
+        # Sync source files for fast updates (no rebuild needed)
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules/
+        # Sync config files
+        - action: sync
+          path: ./tsconfig.json
+          target: /app/tsconfig.json
+        - action: sync
+          path: ./nest-cli.json
+          target: /app/nest-cli.json
+        # Rebuild container when dependencies change
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./package-lock.json
+        - action: rebuild
+          path: ./Dockerfile.dev
+
   postgres:
     image: postgres:15
     container_name: multi_tenancy_postgres
@@ -33,7 +56,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: multi_tenancy  # This creates the database
+      POSTGRES_DB: multi_tenancy
     ports:
       - "5432:5432"
     volumes:
@@ -57,24 +80,11 @@ services:
     networks:
       - multi_tenancy-network
     command: redis-server --appendonly yes
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: multi_tenancy_pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "5050:80"
-    networks:
-      - multi_tenancy-network
-    depends_on:
-      - postgres
-      
+
 networks:
   multi_tenancy-network:
     driver: bridge
-    
+
 volumes:
   postgres_data:
-  redis_data: 
+  redis_data:
