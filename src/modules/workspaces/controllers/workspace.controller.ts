@@ -21,7 +21,7 @@ import { WorkspacesService } from '../services/workspace.service';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
-import { WorkspacePlan } from '../interfaces/workspace.interface';
+import { GetUserWorkspacesResponse, WorkspacePlan } from '../interfaces/workspace.interface';
 
 
 
@@ -36,6 +36,7 @@ import { WorkspacePlan } from '../interfaces/workspace.interface';
 export class WorkspacesController {
   constructor(private readonly workspaceService: WorkspacesService) {}
 
+  // Create a new workspace
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Create a new workspace' })
@@ -43,18 +44,27 @@ export class WorkspacesController {
   create(
     @Body() createDto: CreateWorkspaceDto,
     @Req() req: AuthenticatedRequest,
-  ): Promise<{ workspace: Workspace | null; accessToken: string; refreshToken: string; message: string }> {
+  ): Promise<{
+    workspace: Workspace | null;
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+  }> {
     return this.workspaceService.create(req, createDto);
   }
 
-  @Get('my')
+  // Get authenticated user's workspaces
+  @Get('')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all workspaces for authenticated user' })
   @ApiResponse({ status: 200, description: 'List of user workspaces' })
-  getUserWorkspaces(@Req() req: AuthenticatedRequest): Promise<Workspace[]> {
-    return this.workspaceService.getUserWorkspaces(req.userId);
+  getUserWorkspaces(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<GetUserWorkspacesResponse> {
+    return this.workspaceService.getUserWorkspaces(req);
   }
 
+  // Get workspace by ID
   @Get(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get workspace by ID' })
@@ -63,14 +73,15 @@ export class WorkspacesController {
     return this.workspaceService.findById(id);
   }
 
-//   @Get('slug/:slug')
-//   @ApiBearerAuth('access-token')
-//   @ApiOperation({ summary: 'Get workspace by slug' })
-//   @ApiResponse({ status: 200, description: 'Workspace details' })
-//   getBySlug(@Param('slug') slug: string): Promise<Workspace> {
-//     return this.workspaceService.findBySlug(slug);
-//   }
+  //   @Get('slug/:slug')
+  //   @ApiBearerAuth('access-token')
+  //   @ApiOperation({ summary: 'Get workspace by slug' })
+  //   @ApiResponse({ status: 200, description: 'Workspace details' })
+  //   getBySlug(@Param('slug') slug: string): Promise<Workspace> {
+  //     return this.workspaceService.findBySlug(slug);
+  //   }
 
+  // Update workspace details
   @Patch(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update workspace details' })
@@ -83,6 +94,7 @@ export class WorkspacesController {
     return this.workspaceService.update(workspaceId, req.userId, updateDto);
   }
 
+  // Deactivate (soft delete) a workspace
   @Patch(':id/deactivate')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Deactivate (soft delete) a workspace' })
@@ -97,6 +109,7 @@ export class WorkspacesController {
     return this.workspaceService.deactivate(workspaceId, req.userId);
   }
 
+  // Permanently delete a workspace
   @Delete(':id')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Permanently delete a workspace' })
@@ -108,6 +121,7 @@ export class WorkspacesController {
     return this.workspaceService.permanentlyDelete(workspaceId, req.userId);
   }
 
+  // Update workspace plan (upgrade/downgrade)
   @Patch(':id/plan')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update workspace plan (upgrade/downgrade)' })
@@ -120,6 +134,7 @@ export class WorkspacesController {
     return this.workspaceService.updatePlan(workspaceId, req.userId, newPlan);
   }
 
+  // Get workspace statistics
   @Get(':id/stats')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get workspace statistics' })

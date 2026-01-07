@@ -5,7 +5,7 @@ import { Workspace } from '../entities/workspace.entity';
 import { User } from 'src/modules/users/entities/user.entity';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
-import { WorkspacePlan } from '../interfaces/workspace.interface';
+import { GetUserWorkspacesResponse, WorkspacePlan } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
@@ -203,7 +203,12 @@ export class WorkspacesService {
   /**
    * Get all workspaces for a user
    */
-  async getUserWorkspaces(userId: string): Promise<Workspace[]> {
+  async getUserWorkspaces(req: AuthenticatedRequest): Promise<GetUserWorkspacesResponse> {
+
+      const user = await this.userRepo.findOne({ where: { id: req.userId } });
+      if (!user) {
+        throw customError.notFound('User not found');
+      }
     // Get all workspaces where user is a member
     const result = await this.dataSource.query(
       `
@@ -224,13 +229,20 @@ export class WorkspacesService {
     const workspaces: Workspace[] = [];
 
     for (const workspace of result) {
-      const isMember = await this.isUserMember(workspace.id, userId);
+      const isMember = await this.isUserMember(workspace.id, user.id);
       if (isMember) {
         workspaces.push(workspace);
       }
     }
 
-    return workspaces;
+    const tokens = await this.tokenManager.signTokens(user, req);
+
+    return {
+      workspaces: workspaces,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspaces fetched successfully',
+    };
   }
 
   /**
