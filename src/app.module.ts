@@ -8,6 +8,7 @@ import { SecurityModule } from './core/security/security.module';
 import appConfig from './config/config';
 import { validateEnv } from './config/config.validation';
 import { AuthModule } from './modules/auth/auth.module';
+import { WorkspaceModule } from './modules/workspaces/workspace.module';
 
 
 @Module({
@@ -21,7 +22,8 @@ import { AuthModule } from './modules/auth/auth.module';
 
     DatabaseModule,
     SecurityModule,
-    AuthModule
+    AuthModule,
+    WorkspaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
