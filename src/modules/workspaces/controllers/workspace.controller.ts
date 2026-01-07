@@ -8,6 +8,8 @@ import {
   Patch,
   Delete,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,6 +22,8 @@ import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
 import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, UpdateWorkspaceResponse, WorkspacePlan } from '../interfaces/workspace.interface';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { customError } from 'src/core/error-handler/custom-errors';
 
 
 
@@ -91,6 +95,25 @@ export class WorkspacesController {
       req,
       updateDto,
     );
+  }
+
+  @Patch(':id/logo')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload workspace logo' })
+  @ApiResponse({
+    status: 200,
+    description: 'Workspace logo updated successfully',
+  })
+  @UseInterceptors(FileInterceptor('logo')) 
+  updateLogo(
+    @Param('id') workspaceId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<UpdateWorkspaceResponse> {
+    if (!file) {
+      throw customError.badRequest('No file provided');
+    }
+    return this.workspaceService.updateWorkspaceLogo(workspaceId, req, file);
   }
 
   // Deactivate (soft delete) a workspace

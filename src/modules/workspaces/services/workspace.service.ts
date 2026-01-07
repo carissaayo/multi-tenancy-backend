@@ -14,6 +14,7 @@ import {
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 
 @Injectable()
 export class WorkspacesService {
@@ -26,6 +27,7 @@ export class WorkspacesService {
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly tokenManager: TokenManager,
+    private storageService: AWSStorageService,
   ) {}
 
   /**
@@ -327,7 +329,7 @@ export class WorkspacesService {
     updateDto: UpdateWorkspaceDto,
   ): Promise<UpdateWorkspaceResponse> {
     console.log(workspaceId);
-    
+
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
@@ -341,7 +343,6 @@ export class WorkspacesService {
         'Only workspace owners and admins can update workspace',
       );
     }
-    
 
     // Update workspace
     Object.assign(workspace, updateDto);
@@ -364,6 +365,84 @@ export class WorkspacesService {
     };
   }
 
+  /**
+   * Upload and update workspace logo
+   */
+  async updateWorkspaceLogo(
+    workspaceId: string,
+    req: AuthenticatedRequest,
+    file: Express.Multer.File,
+  ): Promise<UpdateWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    // Check permissions (owner/admin only)
+    const canUpdate = await this.canUserManageWorkspace(workspaceId,  user.id);
+    if (!canUpdate) {
+      throw customError.forbidden('Insufficient permissions');
+    }
+
+    // Delete old logo if exists (parse key from URL)
+    if (workspace.logoUrl) {
+      try {
+        const oldKey = this.storageService.parseS3Url(workspace.logoUrl);
+        await this.storageService.deleteFile(oldKey, workspaceId);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete old logo for workspace ${workspaceId}: ${error.message}`,
+        );
+        // Don't fail the update if deletion fails
+      }
+    }
+
+    // Upload new logo to S3
+    const uploadedFile = await this.storageService.uploadFile(file, {
+      workspaceId,
+      userId: user.id,
+      folder: 'logos',
+      maxSizeInMB: 5, // 5MB max for logos
+      allowedMimeTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'image/gif',
+        'image/webp',
+      ],
+      makePublic: true, // Logos should be publicly accessible
+    });
+
+    // Update workspace with new logo URL
+    workspace.logoUrl = uploadedFile.url;
+    workspace.updatedAt = new Date();
+
+    await this.workspaceRepo.save(workspace);
+
+    this.logger.log(
+      `Workspace logo updated: ${workspace.slug} by user ${user.id}`,
+    );
+
+    // Return workspace with safe user fields
+    const updatedWorkspace= await this.findWorkspaceWithSafeFields(workspaceId);
+    if (!updatedWorkspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      workspace:updatedWorkspace,
+      message:"Workspace Logo has been updated",
+      accessToken:tokens.accessToken,
+      refreshToken:tokens.refreshToken || '',
+    }
+  }
   /**
    * Soft delete workspace (deactivate)
    */

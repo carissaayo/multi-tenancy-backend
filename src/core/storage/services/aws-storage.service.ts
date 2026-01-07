@@ -27,7 +27,7 @@ export interface UploadedFile {
 }
 
 @Injectable()
-export class StorageService {
+export class AWSStorageService {
   private s3Client: S3Client;
   private bucketName: string;
   private cdnDomain?: string;

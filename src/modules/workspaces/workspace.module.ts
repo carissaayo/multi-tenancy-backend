@@ -6,6 +6,7 @@ import { WorkspacesController } from './controllers/workspace.controller';
 import { SecurityModule } from 'src/core/security/security.module';
 import { UserModule } from '../users/user.module';
 import { MemberModule } from '../members/member.module';
+import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Workspace]),
@@ -13,7 +14,7 @@ import { MemberModule } from '../members/member.module';
     UserModule,
     forwardRef(() => MemberModule),
   ],
-  providers: [WorkspacesService],
+  providers: [WorkspacesService,AWSStorageService],
   controllers: [WorkspacesController],
   exports: [WorkspacesService],
 })
