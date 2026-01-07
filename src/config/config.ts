@@ -1,30 +1,46 @@
+import { EnvVars } from './config.validation';
+
+// Typed helper that only allows access to validated env vars
+function getEnvVar<K extends keyof EnvVars>(key: K): EnvVars[K] | undefined {
+  return process.env[key] as EnvVars[K] | undefined;
+}
+
+// Helper to get required env var
+function requireEnvVar<K extends keyof EnvVars>(key: K): EnvVars[K] {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Required environment variable ${key} is missing`);
+  }
+  return value as EnvVars[K];
+}
+
 const config = () => {
   return {
     app: {
-      nodeEnv: process.env.NODE_ENV || 'development',
-      port: parseInt(process.env.PORT || '8000', 10),
-      name: process.env.APP_NAME || 'App',
+      nodeEnv: getEnvVar('NODE_ENV') || 'development',
+      port: parseInt(getEnvVar('PORT')?.toString() || '8000', 10),
+      name: requireEnvVar('APP_NAME'),
     },
     database: {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'multi_tenancy',
+      host: requireEnvVar('DB_HOST'),
+      port: parseInt(getEnvVar('DB_PORT')?.toString() || '5432', 10),
+      username: requireEnvVar('DB_USER'),
+      password: requireEnvVar('DB_PASSWORD'),
+      database: requireEnvVar('DB_NAME'),
     },
     jwt: {
-      access_token_secret: process.env.ACCESS_TOKEN_SECRET || 'change-me',
-      refresh_token_secret: process.env.REFRESH_TOKEN_SECRET || 'change-me',
-      duration10m: process.env.JWT_DURATION_10M || '10m',
-      duration1h: process.env.JWT_DURATION_1H || '1h',
-      duration1d: process.env.JWT_DURATION_1D || '1d',
-      duration7d: process.env.JWT_DURATION_7D || '7d',
+      access_token_secret: requireEnvVar('ACCESS_TOKEN_SECRET'),
+      refresh_token_secret: requireEnvVar('REFRESH_TOKEN_SECRET'),
+      duration10m: requireEnvVar('JWT_DURATION_10M'),
+      duration1h: requireEnvVar('JWT_DURATION_1H'),
+      duration1d: requireEnvVar('JWT_DURATION_1D'),
+      duration7d: requireEnvVar('JWT_DURATION_7D'),
     },
     aws: {
-      region: process.env.AWS_REGION,
-      access_key_id: process.env.AWS_ACCESS_KEY_ID,
-      secret_access_key: process.env.AWS_SECRET_ACCESS_KEY,
-      bucket_name: process.env.AWS_BUCKET_NAME,
+      region: getEnvVar('AWS_REGION'),
+      access_key_id: getEnvVar('AWS_ACCESS_KEY_ID'),
+      secret_access_key: getEnvVar('AWS_SECRET_ACCESS_KEY'),
+      bucket_name: getEnvVar('AWS_BUCKET_NAME'),
     },
   };
 };

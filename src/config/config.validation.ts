@@ -30,6 +30,10 @@ export const envSchema = z.object({
   JWT_DURATION_1H: z.string().min(1, 'JWT_DURATION_1H is required'),
   JWT_DURATION_1D: z.string().min(1, 'JWT_DURATION_1D is required'),
   JWT_DURATION_7D: z.string().min(1, 'JWT_DURATION_7D is required'),
+  AWS_REGION: z.string().min(1, 'AWS_REGION is required'),
+  AWS_ACCESS_KEY_ID: z.string().min(1, 'AWS_ACCESS_KEY_ID is required'),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1, 'AWS_SECRET_ACCESS_KEY is required'),
+  AWS_BUCKET_NAME: z.string().min(1, 'AWS_BUCKET_NAME is required'),
 });
 
 // Infer the TypeScript type from the schema
