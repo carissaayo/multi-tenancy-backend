@@ -13,11 +13,11 @@ import { User } from 'src/modules/users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]), // Still needed for direct repository injection in AuthService
+    TypeOrmModule.forFeature([User]), 
     SecurityModule,
     WorkspaceModule,
     MemberModule,
-    UserModule, // Add this to get UsersService
+    UserModule, 
   ],
   controllers: [AuthController],
   providers: [AuthService],

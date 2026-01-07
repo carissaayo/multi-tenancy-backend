@@ -1,5 +1,5 @@
 
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { WorkspaceMember, WorkspaceMemberEntity } from '../entities/member.entity';
@@ -13,6 +13,7 @@ export class MemberService {
     private readonly dataSource: DataSource,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
   ) {}
 
