@@ -7,6 +7,10 @@ import { Workspace } from '../entities/workspace.entity';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
 import { User } from 'src/modules/users/entities/user.entity';
+import { WorkspaceQueryService } from './workspace-query.service';
+import { customError } from 'src/core/error-handler/custom-errors';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { GetUserWorkspaceResponse } from '../interfaces/workspace.interface';
 
 @Injectable()
 export class WorkspaceMembershipService {
@@ -15,7 +19,12 @@ export class WorkspaceMembershipService {
   constructor(
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+
     private readonly dataSource: DataSource,
+    private readonly workspaceQueryService: WorkspaceQueryService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   /**
@@ -27,7 +36,7 @@ export class WorkspaceMembershipService {
     userId: string,
     queryRunner: any,
   ): Promise<void> {
-    const sanitizedSlug = this.sanitizeSlugForSQL(slug);
+    const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(slug);
     const schemaName = `workspace_${sanitizedSlug}`;
 
     const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
@@ -56,7 +65,9 @@ export class WorkspaceMembershipService {
 
     if (!workspace) return false;
 
-    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
@@ -90,7 +101,9 @@ export class WorkspaceMembershipService {
     if (workspace.createdBy === userId) return true;
 
     // Check if user is admin
-    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
@@ -142,7 +155,9 @@ export class WorkspaceMembershipService {
     }
 
     // Check if user is a member of this workspace
-    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
+    const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
@@ -170,7 +185,7 @@ export class WorkspaceMembershipService {
 
     // Get workspace with safe user fields
     const workspaceWithSafeFields =
-      await this.findWorkspaceWithSafeFields(workspaceId);
+      await this.workspaceQueryService.findWorkspaceWithSafeFields(workspaceId);
 
     if (!workspaceWithSafeFields) {
       throw customError.notFound('Workspace not found');
@@ -188,7 +203,7 @@ export class WorkspaceMembershipService {
   /**
    * Get max workspaces allowed for user
    */
-   getMaxWorkspacesForUser(user: User): number {
+  getMaxWorkspacesForUser(user: User): number {
     // This could be based on user's subscription
     // For now, simple logic:
     return 10; // Default limit
