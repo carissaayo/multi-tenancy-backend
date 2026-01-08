@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEmail, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsEmail, MinLength, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { MatchesProperty } from 'src/core/validators/matches-property';
 
@@ -94,8 +94,11 @@ export class ChangePasswordDTO {
 }
 
 export class SelectWorkspaceDTO {
-  @ApiProperty({ example: '123456' })
+  @ApiProperty({
+    example: '4872fe39-d206-4108-b705-77cff45ab63e',
+    description: 'Valid UUID v4 format',
+  })
+  @IsUUID('4', { message: 'Workspace ID must be a valid UUID' })
   @IsNotEmpty({ message: 'Workspace ID is required' })
-  @IsString()
   workspaceId!: string;
 }

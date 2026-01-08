@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import bcrypt from 'bcryptjs';
+import { validate as isUUID } from 'uuid';
 
 
 import { User } from "../users/entities/user.entity";
@@ -86,9 +87,12 @@ export class AuthService {
     };
   }
 
-  // Update the selectWorkspace method in auth.service.ts
+  /* ---------------- SELECT WORKSPACE ---------------- */
   async selectWorkspace(dto: SelectWorkspaceDTO, req: AuthenticatedRequest) {
     const { workspaceId } = dto;
+    if (!isUUID(workspaceId)) {
+      throw customError.badRequest('Invalid workspace ID');
+    }
     const user = await this.userService.findById(req.userId);
 
     if (!user) {
