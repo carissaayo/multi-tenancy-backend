@@ -7,9 +7,6 @@ import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import {
   GetUserWorkspacesResponse,
-  GetUserWorkspaceResponse,
-  WorkspacePlan,
-  UpdateWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';

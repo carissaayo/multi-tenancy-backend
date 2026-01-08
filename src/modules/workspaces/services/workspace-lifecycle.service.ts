@@ -162,10 +162,10 @@ export class WorkspaceLifecycleService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-    const workspace = await this.findById(workspaceId);
+    const workspace = await this.workspaceQueryService.findById(workspaceId);
 
     // Check user is owner or admin
-    const canUpdate = await this.canUserManageWorkspace(workspaceId, user.id);
+    const canUpdate = await this.workspaceMembershipService.canUserManageWorkspace(workspaceId, user.id);
     if (!canUpdate) {
       throw customError.forbidden(
         'Only workspace owners and admins can update workspace',
@@ -177,7 +177,7 @@ export class WorkspaceLifecycleService {
     workspace.updatedAt = new Date();
 
     const savedWorkspace = await this.workspaceRepo.save(workspace);
-    const workspaceWithSafeFields = await this.findWorkspaceWithSafeFields(
+    const workspaceWithSafeFields = await this.workspaceQueryService.findWorkspaceWithSafeFields(
       savedWorkspace.id,
     );
     if (!workspaceWithSafeFields) {
