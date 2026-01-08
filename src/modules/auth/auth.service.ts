@@ -122,6 +122,8 @@ export class AuthService {
       message: 'Workspace context established',
     };
   }
+
+  
   private async validatePassword(user: User, password: string) {
     const isValid = await bcrypt.compare(password, user.passwordHash);
 

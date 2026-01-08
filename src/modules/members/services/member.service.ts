@@ -44,16 +44,33 @@ export class MemberService {
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
-      // Get repository for the tenant schema
-      const memberRepo = this.dataSource.getRepository(WorkspaceMemberEntity);
+      // Use direct query instead of repository to ensure we're querying the correct schema
+      const [member] = await this.dataSource.query(
+        `SELECT * FROM "${schemaName}".members 
+       WHERE user_id = $1 AND is_active = true 
+       LIMIT 1`,
+        [userId],
+      );
 
-      const member = await memberRepo.findOne({
-        where: { userId, isActive: true },
-      });
+      if (!member) {
+        return null;
+      }
 
-      return member;
+      // Map the result to WorkspaceMember format
+      return {
+        id: member.id,
+        userId: member.user_id,
+        role: member.role,
+        permissions: member.permissions,
+        isActive: member.is_active,
+        joinedAt: member.joined_at,
+      } as WorkspaceMember;
+    } catch (error) {
+      // Log the error for debugging
+      console.error(`Error querying members in schema ${schemaName}:`, error);
+      return null;
     } finally {
-      // Reset search path (optional, as it's request-scoped in middleware)
+      // Reset search path
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
