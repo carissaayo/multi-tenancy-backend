@@ -13,6 +13,7 @@ import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-reques
 import { TokenManager } from 'src/core/security/services/token-manager.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceQueryService } from './workspace-query.service';
+import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 
 @Injectable()
 export class WorkspaceLifecycleService {
@@ -27,6 +28,7 @@ export class WorkspaceLifecycleService {
     private readonly tokenManager: TokenManager,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceQueryService: WorkspaceQueryService,
+    private readonly storageService: AWSStorageService,
   ) {}
 
   /**
@@ -165,7 +167,11 @@ export class WorkspaceLifecycleService {
     const workspace = await this.workspaceQueryService.findById(workspaceId);
 
     // Check user is owner or admin
-    const canUpdate = await this.workspaceMembershipService.canUserManageWorkspace(workspaceId, user.id);
+    const canUpdate =
+      await this.workspaceMembershipService.canUserManageWorkspace(
+        workspaceId,
+        user.id,
+      );
     if (!canUpdate) {
       throw customError.forbidden(
         'Only workspace owners and admins can update workspace',
@@ -177,9 +183,10 @@ export class WorkspaceLifecycleService {
     workspace.updatedAt = new Date();
 
     const savedWorkspace = await this.workspaceRepo.save(workspace);
-    const workspaceWithSafeFields = await this.workspaceQueryService.findWorkspaceWithSafeFields(
-      savedWorkspace.id,
-    );
+    const workspaceWithSafeFields =
+      await this.workspaceQueryService.findWorkspaceWithSafeFields(
+        savedWorkspace.id,
+      );
     if (!workspaceWithSafeFields) {
       throw customError.notFound('Workspace not found');
     }
@@ -193,6 +200,89 @@ export class WorkspaceLifecycleService {
     };
   }
 
+  /**
+   * Upload and update workspace logo
+   */
+  async updateWorkspaceLogo(
+    workspaceId: string,
+    req: AuthenticatedRequest,
+    file: Express.Multer.File,
+  ): Promise<UpdateWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    // Check permissions (owner/admin only)
+    const canUpdate =
+      await this.workspaceMembershipService.canUserManageWorkspace(
+        workspaceId,
+        user.id,
+      );
+    if (!canUpdate) {
+      throw customError.forbidden('Insufficient permissions');
+    }
+
+    // Delete old logo if exists
+    if (workspace.logoUrl) {
+      try {
+        const oldKey = this.storageService.parseS3Url(workspace.logoUrl);
+        await this.storageService.deleteFile(oldKey, workspaceId);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete old logo for workspace ${workspaceId}: ${error.message}`,
+        );
+      }
+    }
+
+    // Upload new logo to S3
+    const uploadedFile = await this.storageService.uploadFile(file, {
+      workspaceId,
+      userId: user.id,
+      folder: 'logos',
+      maxSizeInMB: 5,
+      allowedMimeTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'image/gif',
+        'image/webp',
+      ],
+      makePublic: true,
+    });
+
+    // Update workspace with new logo URL
+    workspace.logoUrl = uploadedFile.url;
+    workspace.updatedAt = new Date();
+
+    await this.workspaceRepo.save(workspace);
+
+    this.logger.log(
+      `Workspace logo updated: ${workspace.slug} by user ${user.id}`,
+    );
+
+    // Return workspace with safe user fields
+    const updatedWorkspace =
+      await this.workspaceQueryService.findWorkspaceWithSafeFields(workspaceId);
+    if (!updatedWorkspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      workspace: updatedWorkspace,
+      message: 'Workspace Logo has been updated',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+  }
   /**
    * Soft delete workspace (deactivate)
    */

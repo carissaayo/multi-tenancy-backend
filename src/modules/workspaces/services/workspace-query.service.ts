@@ -258,5 +258,45 @@ export class WorkspaceQueryService {
     return slug.replace(/-/g, '_');
   }
 
+  /**
+   * Get workspace statistics
+   */
+  async getWorkspaceStats(workspaceId: string): Promise<{
+    memberCount: number;
+    channelCount: number;
+    messageCount: number;
+    fileCount: number;
+    storageUsed: number;
+  }> {
+    const workspace = await this.findById(workspaceId);
+    const sanitizedSlug = this.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
 
+    const [memberCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM "${schemaName}".members WHERE is_active = true`,
+    );
+
+    const [channelCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM "${schemaName}".channels`,
+    );
+
+    const [messageCount] = await this.dataSource.query(
+      `SELECT COUNT(*) as count FROM "${schemaName}".messages`,
+    );
+
+    const [fileStats] = await this.dataSource.query(
+      `SELECT COUNT(*) as count, COALESCE(SUM(file_size), 0) as total_size 
+       FROM "${schemaName}".files`,
+    );
+
+    return {
+      memberCount: parseInt(memberCount.count),
+      channelCount: parseInt(channelCount.count),
+      messageCount: parseInt(messageCount.count),
+      fileCount: parseInt(fileStats.count),
+      storageUsed: parseInt(fileStats.total_size) / (1024 * 1024), // MB
+    };
+  }
 }

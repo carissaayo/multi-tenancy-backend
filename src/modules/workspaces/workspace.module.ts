@@ -1,21 +1,36 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Workspace } from './entities/workspace.entity';
-import { WorkspacesService } from './services/workspace.service';
-import { WorkspacesController } from './controllers/workspace.controller';
+
 import { SecurityModule } from 'src/core/security/security.module';
 import { UserModule } from '../users/user.module';
 import { MemberModule } from '../members/member.module';
+
+import { WorkspacesService } from './services/workspace.service';
+import { WorkspaceQueryService } from './services/workspace-query.service';
+import { WorkspaceMembershipService } from './services/workspace-membership.service';
+import { WorkspaceLifecycleService } from './services/workspace-lifecycle.service';
 import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
+
+import { WorkspacesController } from './controllers/workspace.controller';
+
+import { Workspace } from './entities/workspace.entity';
+import { User } from '../users/entities/user.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Workspace]),
+    TypeOrmModule.forFeature([Workspace, User]),
     SecurityModule,
     UserModule,
     forwardRef(() => MemberModule),
   ],
-  providers: [WorkspacesService,AWSStorageService],
+  providers: [
+    WorkspacesService,
+    WorkspaceQueryService,
+    WorkspaceMembershipService,
+    WorkspaceLifecycleService,
+    AWSStorageService,
+  ],
   controllers: [WorkspacesController],
-  exports: [WorkspacesService],
+  exports: [WorkspacesService], 
 })
 export class WorkspaceModule {}
