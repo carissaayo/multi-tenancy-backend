@@ -17,8 +17,8 @@ import { TokenManager } from 'src/core/security/services/token-manager.service';
 import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 
 @Injectable()
-export class WorkspacesService {
-  private readonly logger = new Logger(WorkspacesService.name);
+export class WorkspaceQueryService {
+  private readonly logger = new Logger(WorkspaceQueryService.name);
 
   constructor(
     @InjectRepository(Workspace)
@@ -54,75 +54,6 @@ export class WorkspacesService {
       where: { slug },
       relations: ['creator'],
     });
-  }
-
-  /**
-   * Get a single workspace for a user (with membership check)
-   */
-  async getUserSingleWorkspace(
-    workspaceId: string,
-    req: AuthenticatedRequest,
-  ): Promise<GetUserWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-
-    // Get workspace from public schema
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: workspaceId },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('No workspace with this Id was found');
-    }
-
-    if (!workspace.isActive) {
-      throw customError.notFound('This workspace is not active');
-    }
-
-    // Check if user is a member of this workspace
-    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
-    const schemaName = `workspace_${sanitizedSlug}`;
-
-    try {
-      const [member] = await this.dataSource.query(
-        `SELECT 1 FROM "${schemaName}".members 
-       WHERE user_id = $1 AND is_active = true 
-       LIMIT 1`,
-        [user.id],
-      );
-
-      if (!member) {
-        throw customError.forbidden('You are not a member of this workspace');
-      }
-    } catch (error) {
-      // If it's already a custom error, rethrow it
-      if (error.statusCode) {
-        throw error;
-      }
-      // Otherwise, schema might not exist or be accessible
-      this.logger.warn(
-        `Failed to check membership in schema ${schemaName}: ${error.message}`,
-      );
-      throw customError.forbidden('You are not a member of this workspace');
-    }
-
-    // Get workspace with safe user fields
-    const workspaceWithSafeFields =
-      await this.findWorkspaceWithSafeFields(workspaceId);
-
-    if (!workspaceWithSafeFields) {
-      throw customError.notFound('Workspace not found');
-    }
-    const tokens = await this.tokenManager.signTokens(user, req);
-
-    return {
-      workspace: workspaceWithSafeFields,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || '',
-      message: 'Workspace fetched successfully',
-    };
   }
 
   /**
@@ -215,7 +146,7 @@ export class WorkspacesService {
    * @param bySlug - If true, searches by slug; if false, searches by ID
    * @returns Workspace with safe user fields or null if not found
    */
-  public async findWorkspaceWithSafeFields(
+  async findWorkspaceWithSafeFields(
     identifier: string,
     bySlug: boolean = false,
   ): Promise<Workspace | null> {
@@ -262,7 +193,7 @@ export class WorkspacesService {
   }
 
   /** * Get multiple workspaces with safe user fields * @param identifiers - Array of workspace IDs or slugs * @param bySlug - If true, searches by slug; if false, searches by ID * @returns Array of workspaces with safe user fields */
-  private async getMultipleWorkspacesWithSafeFields(
+  async getMultipleWorkspacesWithSafeFields(
     identifiers: string[],
     bySlug: boolean = false,
   ): Promise<Workspace[]> {
@@ -313,4 +244,22 @@ export class WorkspacesService {
       order: { createdAt: 'DESC' },
     });
   }
+  /**
+   * Validate slug format
+   */
+  public async isValidSlug(slug: string): Promise<boolean> {
+    const slugRegex = /^[a-z0-9-]+$/;
+    return slugRegex.test(slug) && slug.length >= 3 && slug.length <= 50;
+  }
+
+  /**
+   * Sanitize slug for use in SQL identifiers
+   * Replaces hyphens and other special characters with underscores
+   */
+  public sanitizeSlugForSQL(slug: string): string {
+    // Replace hyphens with underscores for SQL identifier compatibility
+    return slug.replace(/-/g, '_');
+  }
+
+
 }
