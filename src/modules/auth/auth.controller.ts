@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Req,
+  Param,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   RegisterDto,
   RequestResetPasswordDTO,
   ResetPasswordDTO,
+  SelectWorkspaceDTO,
   VerifyEmailDTO,
 } from './auth.dto';
 import { AuthService } from './auth.service';
@@ -81,5 +83,14 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.authService.changePassword(changePasswordDto, req);
+  }
+
+  @Post('select-workspace')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Select workspace' })
+  @ApiResponse({ status: 200, description: 'Workspace selected successfully' })
+  selectWorkspace(
+    @Body() selectWorkspaceDto: SelectWorkspaceDTO, @Req() req: AuthenticatedRequest) {
+    return this.authService.selectWorkspace(selectWorkspaceDto, req);
   }
 }

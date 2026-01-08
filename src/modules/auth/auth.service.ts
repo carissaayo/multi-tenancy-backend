@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 import { User } from "../users/entities/user.entity";
 import { TokenManager } from "src/core/security/services/token-manager.service";
-import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, VerifyEmailDTO } from "./auth.dto";
+import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, SelectWorkspaceDTO, VerifyEmailDTO } from "./auth.dto";
 import { customError } from "src/core/error-handler/custom-errors";
 import { generateOtp } from "src/utils/util";
 import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
@@ -19,7 +19,7 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-    private readonly userService: UsersService, 
+    private readonly userService: UsersService,
     private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
   ) {}
@@ -87,7 +87,8 @@ export class AuthService {
   }
 
   // Update the selectWorkspace method in auth.service.ts
-  async selectWorkspace(workspaceId: string, req: AuthenticatedRequest) {
+  async selectWorkspace(dto: SelectWorkspaceDTO, req: AuthenticatedRequest) {
+    const { workspaceId } = dto;
     const user = await this.userService.findById(req.userId);
 
     if (!user) {

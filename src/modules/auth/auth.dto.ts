@@ -92,3 +92,10 @@ export class ChangePasswordDTO {
   @IsNotEmpty({ message: 'Please confirm your new password' })
   confirmNewPassword!: string;
 }
+
+export class SelectWorkspaceDTO {
+  @ApiProperty({ example: '123456' })
+  @IsNotEmpty({ message: 'Workspace ID is required' })
+  @IsString()
+  workspaceId!: string;
+}
