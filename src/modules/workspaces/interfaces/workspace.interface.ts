@@ -4,7 +4,18 @@ export enum WorkspacePlan {
   PRO = 'pro',
   ENTERPRISE = 'enterprise',
 }
+export enum WorkspaceInvitationStatus {
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  EXPIRED = 'expired',
+  REVOKED = 'revoked',
+}
 
+export enum WorkspaceInvitationRole {
+  MEMBER = 'member',
+  ADMIN = 'admin',
+  GUEST = 'guest',
+}
 export interface GetUserWorkspacesResponse {
   workspaces: Workspace[];
   accessToken: string;
@@ -26,3 +37,5 @@ export interface UpdateWorkspaceResponse {
   refreshToken: string;
   message: string;
 }
+
+

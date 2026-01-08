@@ -15,10 +15,11 @@ import { WorkspacesController } from './controllers/workspace.controller';
 
 import { Workspace } from './entities/workspace.entity';
 import { User } from '../users/entities/user.entity';
+import { WorkspaceInvitation } from './entities/workspace_initations.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Workspace, User]),
+    TypeOrmModule.forFeature([Workspace, User, WorkspaceInvitation]),
     SecurityModule,
     UserModule,
     forwardRef(() => MemberModule),
@@ -31,6 +32,6 @@ import { User } from '../users/entities/user.entity';
     AWSStorageService,
   ],
   controllers: [WorkspacesController],
-  exports: [WorkspacesService], 
+  exports: [WorkspacesService],
 })
 export class WorkspaceModule {}
