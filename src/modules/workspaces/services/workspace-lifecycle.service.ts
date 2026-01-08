@@ -197,7 +197,7 @@ export class WorkspaceLifecycleService {
    * Soft delete workspace (deactivate)
    */
   async deactivate(workspaceId: string, userId: string): Promise<void> {
-    const workspace = await this.findById(workspaceId);
+    const workspace = await this.workspaceQueryService.findById(workspaceId);
 
     // Only owner can deactivate
     if (workspace.createdBy !== userId) {
@@ -218,7 +218,7 @@ export class WorkspaceLifecycleService {
    * Permanently delete workspace (dangerous!)
    */
   async permanentlyDelete(workspaceId: string, userId: string): Promise<void> {
-    const workspace = await this.findById(workspaceId);
+    const workspace = await this.workspaceQueryService.findById(workspaceId);
 
     // Only owner can delete
     if (workspace.createdBy !== userId) {
