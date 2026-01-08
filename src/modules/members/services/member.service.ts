@@ -1,8 +1,10 @@
-
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { WorkspaceMember, WorkspaceMemberEntity } from '../entities/member.entity';
+import {
+  WorkspaceMember,
+  WorkspaceMemberEntity,
+} from '../entities/member.entity';
 import { Workspace } from '../../workspaces/entities/workspace.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
@@ -35,7 +37,10 @@ export class MemberService {
     }
 
     // Switch to the workspace's tenant schema
-    const schemaName = `workspace_${workspace.slug}`;
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
@@ -60,17 +65,18 @@ export class MemberService {
   async findMemberWithWorkspace(
     workspaceId: string,
     userId: string,
-  ): Promise<{ member: Partial<WorkspaceMember>; workspace: Workspace } | null> {
-   const workspace =
-     await this.workspacesService.findWorkspaceWithSafeFields(workspaceId);
-
+  ): Promise<{
+    member: Partial<WorkspaceMember>;
+    workspace: Workspace;
+  } | null> {
+    const workspace =
+      await this.workspacesService.findWorkspaceWithSafeFields(workspaceId);
 
     if (!workspace) {
       return null;
     }
 
-     const member = await this.findMember(workspaceId, userId);
-
+    const member = await this.findMember(workspaceId, userId);
 
     if (!member) {
       return null;
@@ -78,7 +84,7 @@ export class MemberService {
 
     // Attach workspace to member for convenience (similar to your commented code)
     return {
-    member: this.getSafeMemberFields(member as WorkspaceMember),
+      member: this.getSafeMemberFields(member as WorkspaceMember),
       workspace,
     };
   }
@@ -132,7 +138,10 @@ export class MemberService {
     }
 
     // Switch to workspace schema
-    const schemaName = `workspace_${workspace.slug}`;
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
@@ -173,7 +182,11 @@ export class MemberService {
       throw customError.notFound('Workspace not found');
     }
 
-    const schemaName = `workspace_${workspace.slug}`;
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
