@@ -800,7 +800,7 @@ export class WorkspacesService {
    * Sanitize slug for use in SQL identifiers
    * Replaces hyphens and other special characters with underscores
    */
-  private sanitizeSlugForSQL(slug: string): string {
+  public sanitizeSlugForSQL(slug: string): string {
     // Replace hyphens with underscores for SQL identifier compatibility
     return slug.replace(/-/g, '_');
   }
