@@ -22,6 +22,7 @@ import { ChannelMemberEntity } from '../../modules/channels/entities/channel-mem
 import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from '../../modules/reactions/entities/reaction.entity';
+import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_initations.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -36,6 +37,7 @@ export const AppDataSource = new DataSource({
     // Public schema entities
     User,
     Workspace,
+    WorkspaceInvitation,
     FeatureFlag,
     UsageMetric,
     RefreshToken,

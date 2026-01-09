@@ -18,6 +18,7 @@ import { UsageMetric } from '../usage/entities/usage.entity';
 import { WorkspaceMemberEntity } from 'src/modules/members/entities/member.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
 import { RefreshToken } from '../security/entities/refresh-token.entity';
+import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_initations.entity';
 
 
 @Global()
@@ -41,10 +42,10 @@ import { RefreshToken } from '../security/entities/refresh-token.entity';
             // Public schema entities (decorator-based)
             User,
             Workspace,
+            WorkspaceInvitation,
             FeatureFlag,
             UsageMetric,
             RefreshToken,
-
             // Tenant schema entities (EntitySchema)
             WorkspaceMemberEntity,
             ChannelEntity,
