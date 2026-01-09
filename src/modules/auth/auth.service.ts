@@ -29,7 +29,7 @@ export class AuthService {
 
   /* ---------------- REGISTER ---------------- */
   async register(dto: RegisterDto) {
-    const { email, password, confirmPassword, fullName } = dto;
+    const { email, password, confirmPassword, fullName, phoneNumber } = dto;
 
     if (password !== confirmPassword) {
       throw customError.conflict('Passwords do not match');
@@ -42,7 +42,13 @@ export class AuthService {
     if (existingUser) {
       throw customError.conflict('Email already in use');
     }
+ const existingPhone = await this.userRepo.findOne({
+   where: { phoneNumber: dto.phoneNumber },
+ });
 
+ if (existingPhone) {
+    throw customError.conflict('Phone number already in use');
+  }
     const passwordHash = await bcrypt.hash(password, 12);
     const emailCode = generateOtp('numeric', 8);
 
@@ -50,6 +56,7 @@ export class AuthService {
       email: email.toLowerCase(),
       passwordHash,
       fullName,
+      phoneNumber,
       emailCode,
     });
 

@@ -20,16 +20,7 @@ export class UsersService {
     if (existing) {
       throw customError.badRequest('Email already registered');
     }
-
-      if (dto.phoneNumber) {
-        const existingPhone = await this.userRepo.findOne({
-          where: { phoneNumber: dto.phoneNumber },
-        });
-
-        if (existingPhone) {
-          throw customError.badRequest('Phone number already registered');
-        }
-      }
+      
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     const user = this.userRepo.create({
