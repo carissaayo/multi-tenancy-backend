@@ -43,7 +43,7 @@ export class WorkspaceInviteController {
     return this.workspaceService.inviteByEmail(workspaceId, req, inviteDto);
   }
 
-  @Post()
+  @Patch('accept')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Send workspace invitation' })
   @ApiResponse({
@@ -51,8 +51,7 @@ export class WorkspaceInviteController {
     description: 'Workspace invitation sent successfully',
   })
   acceptInvitation(
-    @Param('token') token: string,
-    @Param('userId') userId: string,
+    @Query('token') token: string,
   ) {
     return this.workspaceService.acceptInvitation(token);
   }
