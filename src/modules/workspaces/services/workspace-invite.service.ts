@@ -118,6 +118,8 @@ export class WorkspaceInviteService {
       expiresAt,
       token,
       role: role ?? WorkspaceInvitationRole.MEMBER,
+      sentToId: existingUser.id,
+      sentTo: existingUser,
     });
     await this.workspaceInvitationRepo.save(invitation);
 
