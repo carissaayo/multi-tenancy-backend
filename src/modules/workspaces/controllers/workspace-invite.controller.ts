@@ -31,14 +31,29 @@ export class WorkspaceInviteController {
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Send workspace invitation' })
-  @ApiResponse({ status: 201, description: 'Workspace invitation sent successfully' })
+  @ApiResponse({
+    status: 201,
+    description: 'Workspace invitation sent successfully',
+  })
   sendInvitation(
     @Param('id') workspaceId: string,
     @Req() req: AuthenticatedRequest,
     @Body() inviteDto: WorkspaceInviteDto,
   ) {
-    return this.workspaceService.inviteByEmail(workspaceId,req, inviteDto);
+    return this.workspaceService.inviteByEmail(workspaceId, req, inviteDto);
   }
 
- 
+  @Post()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Send workspace invitation' })
+  @ApiResponse({
+    status: 201,
+    description: 'Workspace invitation sent successfully',
+  })
+  acceptInvitation(
+    @Param('token') token: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.workspaceService.acceptInvitation(token);
+  }
 }

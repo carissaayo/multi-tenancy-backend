@@ -148,7 +148,7 @@ export class WorkspaceInviteService {
     };
   }
 
-  async acceptInvitation(token: string, userId: string) {
+  async acceptInvitation(token: string,) {
     const invitation = await this.workspaceInvitationRepo.findOne({
       where: { token, status: WorkspaceInvitationStatus.PENDING },
       relations: ['workspace'],
@@ -164,7 +164,7 @@ export class WorkspaceInviteService {
       throw customError.badRequest('This invitation has expired');
     }
 
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const user = await this.userRepo.findOne({ where: { id: invitation.sentToId as string } });
     if (!user) {
       throw customError.notFound('User not found');
     }
@@ -190,7 +190,7 @@ export class WorkspaceInviteService {
     // Mark invitation as accepted
     invitation.status = WorkspaceInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
-    invitation.acceptedBy = userId;
+    invitation.acceptedBy = user.id;
     await this.workspaceInvitationRepo.save(invitation);
 
     // Send welcome email
