@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { WorkspaceInvitation } from '../entities/workspace_initations.entity';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
@@ -9,6 +9,7 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { Workspace } from '../entities/workspace.entity';
 import { MemberService } from 'src/modules/members/services/member.service';
 import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
+import { EmailService } from 'src/core/email/services/email.service';
 
 @Injectable()
 export class WorkspaceInviteService {
@@ -19,7 +20,9 @@ export class WorkspaceInviteService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
+    private readonly emailService: EmailService,
   ) {}
   async inviteByEmail(
     workspaceId: string,
@@ -41,7 +44,7 @@ export class WorkspaceInviteService {
       throw customError.notFound('No workspace found with this id');
     }
 
-    const canInvite = await this.hasInvitePermission(workspaceId, req.userId);
+    const canInvite = await this.hasInvitePermission(workspaceId, req.userId, workspace);
 
     if (!canInvite) {
       throw customError.forbidden(
@@ -52,13 +55,27 @@ export class WorkspaceInviteService {
       where: {
         workspaceId,
         email,
+        expiresAt: MoreThan(new Date()),
       },
     });
+
     if (existingInvitation) {
       throw customError.badRequest(
         'This email is already invited to this workspace',
       );
     }
+
+    const invitation = this.workspaceInvitationRepo.create({
+      workspaceId,
+      email,
+      invitedBy: req.userId,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    });
+    await this.workspaceInvitationRepo.save(invitation);
+    await this.emailService.sendWorkspaceInvitation(email, workspace.name, invitation.expiresAt);
+    return {
+      message: 'Invitation sent successfully',
+    };
   }
 
   async acceptInvite(token: string, userId: string) {}
@@ -69,14 +86,30 @@ export class WorkspaceInviteService {
 
   /**
    * Check if user has permission to invite members
+   * User must be either:
+   * 1. The workspace owner, OR
+   * 2. A member with MEMBER_INVITE permission (admin/owner role)
    */
   private async hasInvitePermission(
     workspaceId: string,
     userId: string,
+    workspace: Workspace,
   ): Promise<boolean> {
+    // Check if user is the workspace owner
+    if (workspace.createdBy === userId || workspace.ownerId === userId) {
+      this.logger.debug(
+        `User ${userId} is the owner of workspace ${workspaceId}`,
+      );
+      return true;
+    }
+
+    // Check if user is a member of the workspace
     const member = await this.memberService.findMember(workspaceId, userId);
 
     if (!member || !member.isActive) {
+      this.logger.warn(
+        `User ${userId} is not a member of workspace ${workspaceId}`,
+      );
       return false;
     }
 
@@ -88,6 +121,14 @@ export class WorkspaceInviteService {
     // Also check if user is owner or admin (they should have invite permission)
     const isOwnerOrAdmin = member.role === 'owner' || member.role === 'admin';
 
-    return hasPermission || isOwnerOrAdmin;
+    const canInvite = hasPermission || isOwnerOrAdmin;
+
+    if (!canInvite) {
+      this.logger.warn(
+        `User ${userId} does not have invite permission in workspace ${workspaceId}`,
+      );
+    }
+
+    return canInvite;
   }
 }

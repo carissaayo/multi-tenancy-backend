@@ -25,6 +25,7 @@ export class WorkspaceMembershipService {
     private readonly dataSource: DataSource,
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly tokenManager: TokenManager,
+    
   ) {}
 
   /**

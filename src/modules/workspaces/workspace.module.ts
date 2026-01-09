@@ -8,6 +8,7 @@ import { MemberModule } from '../members/member.module';
 import { WorkspacesService } from './services/workspace.service';
 import { WorkspaceQueryService } from './services/workspace-query.service';
 import { WorkspaceMembershipService } from './services/workspace-membership.service';
+import { WorkspaceInviteService } from './services/workspace-invite.service';
 import { WorkspaceLifecycleService } from './services/workspace-lifecycle.service';
 import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 
@@ -29,6 +30,7 @@ import { WorkspaceInvitation } from './entities/workspace_initations.entity';
     WorkspaceQueryService,
     WorkspaceMembershipService,
     WorkspaceLifecycleService,
+    WorkspaceInviteService,
     AWSStorageService,
   ],
   controllers: [WorkspacesController],
