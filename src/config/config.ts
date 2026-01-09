@@ -42,6 +42,9 @@ const config = () => {
       secret_access_key: getEnvVar('AWS_SECRET_ACCESS_KEY'),
       bucket_name: getEnvVar('AWS_BUCKET_NAME'),
     },
+    frontend: {
+      url: getEnvVar('FRONTEND_URL') || 'http://localhost:8000',
+    },
   };
 };
 

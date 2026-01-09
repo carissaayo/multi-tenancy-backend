@@ -17,9 +17,12 @@ import { WorkspacesController } from './controllers/workspace.controller';
 import { Workspace } from './entities/workspace.entity';
 import { User } from '../users/entities/user.entity';
 import { WorkspaceInvitation } from './entities/workspace_initations.entity';
+import { ConfigModule } from '@nestjs/config';
+import { EmailService } from 'src/core/email/services/email.service';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forFeature([Workspace, User, WorkspaceInvitation]),
     SecurityModule,
     UserModule,
@@ -32,6 +35,7 @@ import { WorkspaceInvitation } from './entities/workspace_initations.entity';
     WorkspaceLifecycleService,
     WorkspaceInviteService,
     AWSStorageService,
+    EmailService,
   ],
   controllers: [WorkspacesController],
   exports: [WorkspacesService],

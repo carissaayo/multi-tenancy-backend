@@ -1,6 +1,9 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
+import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
+
 import { WorkspaceInvitation } from '../entities/workspace_initations.entity';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
@@ -14,6 +17,7 @@ import { EmailService } from 'src/core/email/services/email.service';
 @Injectable()
 export class WorkspaceInviteService {
   private readonly logger = new Logger(WorkspaceInviteService.name);
+  private readonly INIVTE_EXPIRY_DAYS=1;
   constructor(
     @InjectRepository(WorkspaceInvitation)
     private readonly workspaceInvitationRepo: Repository<WorkspaceInvitation>,
@@ -23,6 +27,7 @@ export class WorkspaceInviteService {
     @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
     private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
   async inviteByEmail(
     workspaceId: string,
@@ -65,14 +70,24 @@ export class WorkspaceInviteService {
       );
     }
 
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * this.INIVTE_EXPIRY_DAYS);
     const invitation = this.workspaceInvitationRepo.create({
       workspaceId,
       email,
       invitedBy: req.userId,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      expiresAt,
+      token,
     });
     await this.workspaceInvitationRepo.save(invitation);
-    await this.emailService.sendWorkspaceInvitation(email, workspace.name, invitation.expiresAt);
+    
+    const frontendUrl = this.configService.get<string>('frontend.url') || 'http://localhost:8000';
+    const inviteLink = `${frontendUrl}/accept-invite?token=${token}`;
+    
+  
+    const inviterName = user.fullName || user.email;
+ 
+    await this.emailService.sendWorkspaceInvitation(email, workspace.name, inviterName, inviteLink, expiresAt.toISOString());
     return {
       message: 'Invitation sent successfully',
     };
