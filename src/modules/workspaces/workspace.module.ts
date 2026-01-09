@@ -1,5 +1,6 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 
 import { SecurityModule } from 'src/core/security/security.module';
 import { UserModule } from '../users/user.module';
@@ -11,14 +12,14 @@ import { WorkspaceMembershipService } from './services/workspace-membership.serv
 import { WorkspaceInviteService } from './services/workspace-invite.service';
 import { WorkspaceLifecycleService } from './services/workspace-lifecycle.service';
 import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
+import { EmailService } from 'src/core/email/services/email.service';
 
+import { WorkspaceInviteController } from './controllers/workspace-invite.controller';
 import { WorkspacesController } from './controllers/workspace.controller';
 
 import { Workspace } from './entities/workspace.entity';
 import { User } from '../users/entities/user.entity';
 import { WorkspaceInvitation } from './entities/workspace_initations.entity';
-import { ConfigModule } from '@nestjs/config';
-import { EmailService } from 'src/core/email/services/email.service';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { EmailService } from 'src/core/email/services/email.service';
     AWSStorageService,
     EmailService,
   ],
-  controllers: [WorkspacesController],
+  controllers: [WorkspacesController, WorkspaceInviteController],
   exports: [WorkspacesService],
 })
 export class WorkspaceModule {}
