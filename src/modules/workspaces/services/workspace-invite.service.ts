@@ -14,6 +14,8 @@ import { MemberService } from 'src/modules/members/services/member.service';
 import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
 import { EmailService } from 'src/core/email/services/email.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { WorkspaceInvitationRole, WorkspaceInvitationStatus } from '../interfaces/workspace.interface';
+import { WorkspaceMembershipService } from './workspace-membership.service';
 
 @Injectable()
 export class WorkspaceInviteService {
@@ -25,6 +27,7 @@ export class WorkspaceInviteService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    private readonly workspaceMembershipService: WorkspaceMembershipService,
     @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
     private readonly emailService: EmailService,
@@ -53,6 +56,15 @@ export class WorkspaceInviteService {
       throw customError.notFound('No workspace found with this id');
     }
 
+    const isInviterAMember = await this.workspaceMembershipService.isUserMember(
+      workspaceId,
+      user.id,
+    );
+    if (isInviterAMember) {
+      throw customError.badRequest(
+        'You can only send invitations of the channels you are a member of',
+      );
+    }
     const canInvite = await this.hasInvitePermission(
       workspaceId,
       req.userId,
@@ -70,11 +82,12 @@ export class WorkspaceInviteService {
       throw customError.badRequest('No existing found with this email');
     }
 
-    const member = await this.memberService.findMember(
+    // Check if already a member
+    const existingMember = await this.workspaceMembershipService.isUserMember(
       workspaceId,
       existingUser.id,
     );
-    if (member) {
+    if (existingMember) {
       throw customError.badRequest(
         'This user is already a member of this workspace',
       );
@@ -133,7 +146,109 @@ export class WorkspaceInviteService {
     };
   }
 
-  async acceptInvite(token: string, userId: string) {}
+  async acceptInvitation(token: string, userId: string) {
+    const invitation = await this.workspaceInvitationRepo.findOne({
+      where: { token, status: WorkspaceInvitationStatus.PENDING },
+      relations: ['workspace'],
+    });
+
+    if (!invitation) {
+      throw customError.notFound('Invalid or expired invitation');
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      invitation.status = WorkspaceInvitationStatus.EXPIRED;
+      await this.workspaceInvitationRepo.save(invitation);
+      throw customError.badRequest('This invitation has expired');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    // Check if user's email matches invitation email
+    if (user.email !== invitation.email) {
+      throw customError.forbidden(
+        'This invitation was sent to a different email address',
+      );
+    }
+
+    // Check if already a member
+    const existingMember = await this.workspaceMembershipService.isUserMember(
+      invitation.workspaceId,
+      user.id,
+    );
+    if (existingMember) {
+      throw customError.badRequest(
+        'This user is already a member of this workspace',
+      );
+    }
+
+    // Mark invitation as accepted
+    invitation.status = WorkspaceInvitationStatus.ACCEPTED;
+    invitation.acceptedAt = new Date();
+    await this.workspaceInvitationRepo.save(invitation);
+
+    // Send welcome email
+    const workspace = invitation.workspace;
+    const inviterId = invitation.invitedBy;
+    if (inviterId) {
+      throw customError.badRequest('InviterId not found');
+    }
+    const inviter = await this.userRepo.findOne({
+      where: { id: inviterId as string },
+    });
+
+    if (!inviter) {
+      throw customError.notFound('Inviter not found');
+    }
+
+    const isInviterAMember = await this.workspaceMembershipService.isUserMember(
+      workspace.id,
+      inviter.id,
+    );
+    if (!isInviterAMember) {
+      throw customError.badRequest(
+        'The inviter is not a member of the workspace',
+      );
+    }
+
+    const canInvite = await this.hasInvitePermission(
+      workspace.id,
+      inviter.id,
+      workspace,
+    );
+
+    if (!canInvite) {
+      throw customError.forbidden(
+        'The inviter do not have the permissions to invite users to the workspace.',
+      );
+    }
+
+    await this.workspaceMembershipService.addMemberToWorkspace(
+      workspace.id,
+      user.id,
+      WorkspaceInvitationRole.MEMBER,
+    );
+
+    const frontendUrl =
+      this.configService.get<string>('frontend.url') || 'http://localhost:8000';
+    const workspaceUrl = `${frontendUrl}/workspace/${workspace.id}`;
+
+    await this.emailService.sendWelcomeToWorkspace(
+      user.email,
+      user.fullName || user.email,
+      workspace.name,
+      workspaceUrl,
+      inviter ? `${inviter.fullName}` : undefined,
+    );
+
+    return {
+      message: 'You have successfully joined the workspace',
+      workspace,
+    };
+  }
 
   async revokeInvite(inviteId: string, requesterId: string) {}
 

@@ -17,6 +17,7 @@ import { AWSStorageService } from 'src/core/storage/services/aws-storage.service
 import { WorkspaceQueryService } from './workspace-query.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceLifecycleService } from './workspace-lifecycle.service';
+import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 /**
  * Facade service that provides a single entry point for workspace operations.
@@ -81,11 +82,11 @@ export class WorkspacesService {
     req: AuthenticatedRequest,
     file: Express.Multer.File,
   ): Promise<UpdateWorkspaceResponse> {
-  return this.workspaceLifecycleService.updateWorkspaceLogo(
-    workspaceId,
-    req,
-    file,
-  );
+    return this.workspaceLifecycleService.updateWorkspaceLogo(
+      workspaceId,
+      req,
+      file,
+    );
   }
 
   /**
@@ -195,7 +196,10 @@ export class WorkspacesService {
   /**
    * Check if user is member of workspace
    */
-  async isUserMember(workspaceId: string, userId: string): Promise<boolean> {
+  async isUserMember(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceMember | null> {
     return this.workspaceMembershipService.isUserMember(workspaceId, userId);
   }
 
@@ -234,7 +238,7 @@ export class WorkspacesService {
     fileCount: number;
     storageUsed: number;
   }> {
-   return this.workspaceQueryService.getWorkspaceStats(workspaceId);
+    return this.workspaceQueryService.getWorkspaceStats(workspaceId);
   }
 
   /**
