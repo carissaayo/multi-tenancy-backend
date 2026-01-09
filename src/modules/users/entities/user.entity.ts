@@ -20,6 +20,15 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'full_name' })
   fullName: string | null;
 
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    unique: true,
+    name: 'phone_number',
+  })
+  phoneNumber: string | null;
+  
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'avatar_url' })
   avatarUrl: string | null;
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'email_code' })
@@ -45,7 +54,12 @@ export class User {
   @Column({ type: 'int', default: 0, name: 'failed_login_attempts' })
   failedLoginAttempts: number;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'password_reset_code' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'password_reset_code',
+  })
   passwordResetCode: string | null;
 
   @Column({ type: 'timestamp', nullable: true, name: 'reset_password_expires' })
