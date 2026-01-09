@@ -9,7 +9,7 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { GetUserWorkspaceResponse } from '../interfaces/workspace.interface';
+import { GetUserWorkspaceResponse, WorkspaceInvitationRole } from '../interfaces/workspace.interface';
 import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 @Injectable()
@@ -65,7 +65,7 @@ export class WorkspaceMembershipService {
   async addMemberToWorkspace(
     workspaceId: string,
     userId: string,
-    role: 'owner' | 'admin' | 'member' | 'guest' = 'member',
+    role: WorkspaceInvitationRole,
   ): Promise<WorkspaceMember> {
 
     const workspace = await this.workspaceRepo.findOne({
@@ -94,7 +94,8 @@ export class WorkspaceMembershipService {
     }
 
     // Get permissions for the role
-    const rolePermissions = RolePermissions[role] || RolePermissions.member;
+    const rolePermissions =
+      RolePermissions[role as string] || RolePermissions.member;
     const permissions = rolePermissions.map((p) => p.toString());
 
     // Sanitize slug and get schema name
@@ -112,7 +113,7 @@ export class WorkspaceMembershipService {
       VALUES ($1, $2, $3::jsonb, true, NOW())
       RETURNING id, user_id, role, permissions, is_active, joined_at
       `,
-        [userId, role, JSON.stringify(permissions)],
+        [userId, role as string, JSON.stringify(permissions)],
       );
 
       if (!result || result.length === 0) {

@@ -60,9 +60,9 @@ export class WorkspaceInviteService {
       workspaceId,
       user.id,
     );
-    if (isInviterAMember) {
-      throw customError.badRequest(
-        'You can only send invitations of the channels you are a member of',
+    if (!isInviterAMember) {
+      throw customError.forbidden(
+        'You must be a member of this workspace to send invitations',
       );
     }
     const canInvite = await this.hasInvitePermission(
@@ -79,7 +79,7 @@ export class WorkspaceInviteService {
 
     const existingUser = await this.userRepo.findOne({ where: { email } });
     if (!existingUser) {
-      throw customError.badRequest('No existing found with this email');
+      throw customError.badRequest('No user found with this email');
     }
 
     // Check if already a member
@@ -97,6 +97,7 @@ export class WorkspaceInviteService {
         workspaceId,
         email,
         expiresAt: MoreThan(new Date()),
+        status: WorkspaceInvitationStatus.PENDING,
       },
     });
 
@@ -116,7 +117,7 @@ export class WorkspaceInviteService {
       invitedBy: req.userId,
       expiresAt,
       token,
-      role:role || WorkspaceInvitationRole.MEMBER,
+      role: role ?? WorkspaceInvitationRole.MEMBER,
     });
     await this.workspaceInvitationRepo.save(invitation);
 
@@ -189,12 +190,13 @@ export class WorkspaceInviteService {
     // Mark invitation as accepted
     invitation.status = WorkspaceInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
+    invitation.acceptedBy = userId;
     await this.workspaceInvitationRepo.save(invitation);
 
     // Send welcome email
     const workspace = invitation.workspace;
     const inviterId = invitation.invitedBy;
-    if (inviterId) {
+    if (!inviterId) {
       throw customError.badRequest('InviterId not found');
     }
     const inviter = await this.userRepo.findOne({
@@ -205,32 +207,12 @@ export class WorkspaceInviteService {
       throw customError.notFound('Inviter not found');
     }
 
-    const isInviterAMember = await this.workspaceMembershipService.isUserMember(
-      workspace.id,
-      inviter.id,
-    );
-    if (!isInviterAMember) {
-      throw customError.badRequest(
-        'The inviter is not a member of the workspace',
-      );
-    }
-
-    const canInvite = await this.hasInvitePermission(
-      workspace.id,
-      inviter.id,
-      workspace,
-    );
-
-    if (!canInvite) {
-      throw customError.forbidden(
-        'The inviter do not have the permissions to invite users to the workspace.',
-      );
-    }
+   
 
     await this.workspaceMembershipService.addMemberToWorkspace(
       workspace.id,
       user.id,
-      invitation.role || WorkspaceInvitationRole.MEMBER,
+      (invitation.role ?? WorkspaceInvitationRole.MEMBER)
     );
 
     const frontendUrl =
