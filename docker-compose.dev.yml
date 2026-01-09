@@ -43,7 +43,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: multi_tenancy
     ports:
-      - "5432:5432"
+      - "5433:5432" # Change to 5433 to avoid conflict with other services
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

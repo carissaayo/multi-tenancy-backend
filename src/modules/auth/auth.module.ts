@@ -7,6 +7,8 @@ import { MemberModule } from '../members/member.module';
 import { UserModule } from '../users/user.module';
 
 import { AuthService } from './auth.service';
+import { EmailService } from 'src/core/email/services/email.service';
+
 import { AuthController } from './auth.controller';
 
 import { User } from 'src/modules/users/entities/user.entity';
@@ -20,7 +22,7 @@ import { User } from 'src/modules/users/entities/user.entity';
     UserModule, 
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, EmailService],
   exports: [AuthService],
 })
 export class AuthModule {}

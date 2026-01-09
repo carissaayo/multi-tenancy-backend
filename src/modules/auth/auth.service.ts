@@ -14,6 +14,7 @@ import { AuthenticatedRequest } from "src/core/security/interfaces/custom-reques
 import { UsersService } from "../users/services/user.service";
 import { MemberService } from "../members/services/member.service";
 import { WorkspaceMember } from "../members/entities/member.entity";
+import { EmailService } from "src/core/email/services/email.service";
 
 @Injectable()
 export class AuthService {
@@ -23,6 +24,7 @@ export class AuthService {
     private readonly userService: UsersService,
     private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
+    private readonly emailService: EmailService,
   ) {}
 
   /* ---------------- REGISTER ---------------- */
@@ -53,7 +55,7 @@ export class AuthService {
 
     await this.userRepo.save(user);
 
-    // await this.emailService.sendVerificationEmail(user.email, emailCode);
+    await this.emailService.sendVerificationEmail(user.email, emailCode);
 
     return {
       message: 'Registration successful. Verify your email.',
