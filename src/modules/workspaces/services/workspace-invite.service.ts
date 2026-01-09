@@ -39,7 +39,7 @@ export class WorkspaceInviteService {
     req: AuthenticatedRequest,
     inviteDto: WorkspaceInviteDto,
   ) {
-    const { email } = inviteDto;
+    const { email,role } = inviteDto;
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
     if (!user) {
@@ -116,6 +116,7 @@ export class WorkspaceInviteService {
       invitedBy: req.userId,
       expiresAt,
       token,
+      role:role || WorkspaceInvitationRole.MEMBER,
     });
     await this.workspaceInvitationRepo.save(invitation);
 
@@ -229,7 +230,7 @@ export class WorkspaceInviteService {
     await this.workspaceMembershipService.addMemberToWorkspace(
       workspace.id,
       user.id,
-      WorkspaceInvitationRole.MEMBER,
+      invitation.role || WorkspaceInvitationRole.MEMBER,
     );
 
     const frontendUrl =
