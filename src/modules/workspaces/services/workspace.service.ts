@@ -28,7 +28,6 @@ export class WorkspacesService {
   constructor(
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
-    @InjectRepository(User)
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceLifecycleService: WorkspaceLifecycleService,
