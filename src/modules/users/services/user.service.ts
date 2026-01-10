@@ -21,7 +21,7 @@ export class UsersService {
     if (existing) {
       throw customError.badRequest('Email already registered');
     }
-      
+
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     const user = this.userRepo.create({
@@ -33,17 +33,29 @@ export class UsersService {
     return this.userRepo.save(user);
   }
 
-  async updateUser(req: AuthenticatedRequest, updateDto: UpdateUserDto):Promise<{ user: Partial<User>, message: string }> {
+  async updateUser(
+    req: AuthenticatedRequest,
+    updateDto: UpdateUserDto,
+  ): Promise<{ user: Partial<User>; message: string }> {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
     }
 
-    if(!user.isActive){
-      throw customError.forbidden('Your account is suspended, reach out to support for assistance');
+    if (!user.isActive) {
+      throw customError.forbidden(
+        'Your account is suspended, reach out to support for assistance',
+      );
     }
-    Object.assign(user, updateDto);
-    user.updatedAt = new Date();
+
+    if (updateDto.fullName !== undefined) user.fullName = updateDto.fullName;
+    if (updateDto.phoneNumber !== undefined)
+      user.phoneNumber = updateDto.phoneNumber;
+    if (updateDto.bio !== undefined) user.bio = updateDto.bio;
+    if (updateDto.city !== undefined) user.city = updateDto.city;
+    if (updateDto.state !== undefined) user.state = updateDto.state;
+    if (updateDto.country !== undefined) user.country = updateDto.country;
+
     const updatedUser = await this.userRepo.save(user);
     const normalizedUser = this.getUserProfile(updatedUser);
     return {
@@ -79,7 +91,6 @@ export class UsersService {
     return this.userRepo.findOne({ where: { id } });
   }
 
-
   getUserProfile(user: User): Partial<User> {
     return {
       id: user.id,
@@ -87,6 +98,10 @@ export class UsersService {
       fullName: user.fullName,
       phoneNumber: user.phoneNumber,
       avatarUrl: user.avatarUrl,
+      bio: user.bio,
+      city: user.city,
+      state: user.state,
+      country: user.country,
       isEmailVerified: user.isEmailVerified,
       isActive: user.isActive,
       lastLoginAt: user.lastLoginAt,
