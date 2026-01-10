@@ -12,8 +12,6 @@ import {
   UpdateWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { TokenManager } from 'src/core/security/services/token-manager.service';
-import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceLifecycleService } from './workspace-lifecycle.service';
@@ -31,10 +29,6 @@ export class WorkspacesService {
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-    private readonly dataSource: DataSource,
-    private readonly tokenManager: TokenManager,
-    private readonly storageService: AWSStorageService,
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceLifecycleService: WorkspaceLifecycleService,

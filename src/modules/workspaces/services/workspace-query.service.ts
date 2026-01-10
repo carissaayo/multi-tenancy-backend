@@ -3,15 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
 import { User } from 'src/modules/users/entities/user.entity';
-import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
+
 import { customError } from 'src/core/error-handler/custom-errors';
 import {
   GetUserWorkspacesResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
-import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
 
 @Injectable()
 export class WorkspaceQueryService {
@@ -24,7 +22,6 @@ export class WorkspaceQueryService {
     private readonly userRepo: Repository<User>,
     private readonly dataSource: DataSource,
     private readonly tokenManager: TokenManager,
-    private storageService: AWSStorageService,
   ) {}
 
   /**
