@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository, DataSource } from 'typeorm';
 import { Workspace } from '../entities/workspace.entity';
 import { User } from 'src/modules/users/entities/user.entity';
@@ -29,6 +30,7 @@ export class WorkspaceLifecycleService {
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly storageService: AWSStorageService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -50,6 +52,24 @@ export class WorkspaceLifecycleService {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
+    }
+
+    // Determine the plan (defaults to FREE if not specified)
+    const workspacePlan = createDto.plan || WorkspacePlan.FREE;
+
+    // Check free plan limit if creating a free workspace
+    const MAX_FREE_WORKSPACES =
+      this.configService.get<number>('workspace.maxFreeWorkspaces') || 2;
+
+    if (workspacePlan === WorkspacePlan.FREE) {
+      const freeWorkspaceCount =
+        await this.workspaceMembershipService.countUserFreeWorkspaces(user.id);
+
+      if (freeWorkspaceCount >= MAX_FREE_WORKSPACES) {
+        throw customError.forbidden(
+          `You have reached the maximum limit of ${MAX_FREE_WORKSPACES} free workspaces. Please upgrade to a paid plan to create more workspaces.`,
+        );
+      }
     }
 
     // 2. Check workspace limit per user

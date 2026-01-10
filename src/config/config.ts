@@ -45,6 +45,9 @@ const config = () => {
     frontend: {
       url: getEnvVar('FRONTEND_URL') || 'http://localhost:8000',
     },
+    workspace: {
+      maxFreeWorkspaces: parseInt(getEnvVar('MAX_FREE_WORKSPACES')?.toString() || '2', 10),
+    },
   };
 };
 

@@ -35,6 +35,7 @@ export const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().min(1, 'AWS_SECRET_ACCESS_KEY is required'),
   AWS_BUCKET_NAME: z.string().min(1, 'AWS_BUCKET_NAME is required'),
   FRONTEND_URL: z.string().min(1, 'FRONTEND_URL is required'),
+  MAX_FREE_WORKSPACES: z.string().regex(/^\d+$/, 'MAX_FREE_WORKSPACES must be a number').transform(Number),
 });
 
 // Infer the TypeScript type from the schema

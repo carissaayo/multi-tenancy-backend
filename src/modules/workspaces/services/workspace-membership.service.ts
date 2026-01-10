@@ -9,7 +9,7 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { GetUserWorkspaceResponse, WorkspaceInvitationRole } from '../interfaces/workspace.interface';
+import { GetUserWorkspaceResponse, WorkspaceInvitationRole, WorkspacePlan } from '../interfaces/workspace.interface';
 import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 @Injectable()
@@ -67,7 +67,6 @@ export class WorkspaceMembershipService {
     userId: string,
     role: WorkspaceInvitationRole,
   ): Promise<WorkspaceMember> {
-
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
     });
@@ -117,7 +116,9 @@ export class WorkspaceMembershipService {
       );
 
       if (!result || result.length === 0) {
-        throw customError.internalServerError('Failed to add member to workspace');
+        throw customError.internalServerError(
+          'Failed to add member to workspace',
+        );
       }
 
       const member = result[0];
@@ -152,7 +153,9 @@ export class WorkspaceMembershipService {
         throw customError.internalServerError('Workspace schema not found');
       }
 
-      throw customError.internalServerError('Failed to add member to workspace');
+      throw customError.internalServerError(
+        'Failed to add member to workspace',
+      );
     }
   }
   /**
@@ -323,6 +326,18 @@ export class WorkspaceMembershipService {
     };
   }
 
+  /**
+   * Count free plan workspaces owned by user
+   */
+  async countUserFreeWorkspaces(userId: string): Promise<number> {
+    return this.workspaceRepo.count({
+      where: {
+        createdBy: userId,
+        isActive: true,
+        plan: WorkspacePlan.FREE,
+      },
+    });
+  }
   /**
    * Get max workspaces allowed for user
    */
