@@ -31,9 +31,7 @@ export class User {
 
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'bio' })
   bio: string | null;
-
-  @Column({ type: 'varchar', length: 500, nullable: true, name: 'street' })
-  street: string | null;
+  
 
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'city' })
   city: string | null;

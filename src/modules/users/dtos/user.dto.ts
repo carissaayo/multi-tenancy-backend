@@ -20,7 +20,6 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
-
   @IsOptional()
   @IsString()
   fullName?: string;
@@ -31,5 +30,22 @@ export class UpdateUserDto {
     message: 'Phone number must be in valid international format',
   })
   phoneNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  bio?: string;
+
   
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
 }
