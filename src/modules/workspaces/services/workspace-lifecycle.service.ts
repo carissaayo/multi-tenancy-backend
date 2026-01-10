@@ -247,9 +247,11 @@ export class WorkspaceLifecycleService {
         workspaceId,
         user.id,
       );
-    if (!canUpdate) {
-      throw customError.forbidden('Insufficient permissions');
-    }
+  if (!canUpdate) {
+    throw customError.forbidden(
+      'Only workspace owners and admins can update workspace',
+    );
+  }
 
     // Delete old logo if exists
     if (workspace.logoUrl) {
