@@ -258,4 +258,11 @@ export class WorkspacesService {
       );
     }
   }
+
+  /**
+   * Count free plan workspaces owned by user
+   */
+  async countUserFreeWorkspaces(userId: string): Promise<number> {
+    return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
+  }
 }
