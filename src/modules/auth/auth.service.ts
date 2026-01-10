@@ -1,20 +1,27 @@
-import { Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { validate as isUUID } from 'uuid';
 
-
-import { User } from "../users/entities/user.entity";
-import { TokenManager } from "src/core/security/services/token-manager.service";
-import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, SelectWorkspaceDTO, VerifyEmailDTO } from "./auth.dto";
-import { customError } from "src/core/error-handler/custom-errors";
-import { generateOtp } from "src/utils/util";
-import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
-import { UsersService } from "../users/services/user.service";
-import { MemberService } from "../members/services/member.service";
-import { WorkspaceMember } from "../members/entities/member.entity";
-import { EmailService } from "src/core/email/services/email.service";
+import { User } from '../users/entities/user.entity';
+import { TokenManager } from 'src/core/security/services/token-manager.service';
+import {
+  ChangePasswordDTO,
+  LoginDto,
+  RegisterDto,
+  RequestResetPasswordDTO,
+  ResetPasswordDTO,
+  SelectWorkspaceDTO,
+  VerifyEmailDTO,
+} from './auth.dto';
+import { customError } from 'src/core/error-handler/custom-errors';
+import { generateOtp } from 'src/utils/util';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { UsersService } from '../users/services/user.service';
+import { MemberService } from '../members/services/member.service';
+import { WorkspaceMember } from '../members/entities/member.entity';
+import { EmailService } from 'src/core/email/services/email.service';
 
 @Injectable()
 export class AuthService {
@@ -42,13 +49,13 @@ export class AuthService {
     if (existingUser) {
       throw customError.conflict('Email already in use');
     }
- const existingPhone = await this.userRepo.findOne({
-   where: { phoneNumber: dto.phoneNumber },
- });
+    const existingPhone = await this.userRepo.findOne({
+      where: { phoneNumber: dto.phoneNumber },
+    });
 
- if (existingPhone) {
-    throw customError.conflict('Phone number already in use');
-  }
+    if (existingPhone) {
+      throw customError.conflict('Phone number already in use');
+    }
     const passwordHash = await bcrypt.hash(password, 12);
     const emailCode = generateOtp('numeric', 8);
 
@@ -88,10 +95,10 @@ export class AuthService {
     const tokens = await this.tokenManager.signTokens(user, req, {
       loginType: true,
     });
-
+    const userProfile = this.userService.getUserProfile(user);
     return {
       ...tokens,
-      // profile: GET_PROFILE(user),
+      profile: userProfile,
       message: 'Signed in successfully',
     };
   }
@@ -132,7 +139,6 @@ export class AuthService {
     };
   }
 
-  
   private async validatePassword(user: User, password: string) {
     const isValid = await bcrypt.compare(password, user.passwordHash);
 

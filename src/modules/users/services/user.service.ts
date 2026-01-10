@@ -58,4 +58,18 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id } });
   }
+  getUserProfile(user: User): Partial<User> {
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber,
+      avatarUrl: user.avatarUrl,
+      isEmailVerified: user.isEmailVerified,
+      isActive: user.isActive,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
 }
