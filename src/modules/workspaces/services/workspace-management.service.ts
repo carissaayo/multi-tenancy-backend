@@ -9,12 +9,8 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import {
-  GetUserWorkspaceResponse,
-  WorkspaceInvitationRole,
-  WorkspacePlan,
-} from '../interfaces/workspace.interface';
-import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
+import { WorkspaceInvitationRole } from '../interfaces/workspace.interface';
+
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
 
@@ -51,9 +47,15 @@ export class WorkspaceManagementService {
   }> {
     const { targetUserId, newRole } = changeMemberRoleDto;
 
-    const user=await this.userRepo.findOne({ where: { id: req.userId } });
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+
     if (!user) {
       throw customError.notFound('User not found');
+    }
+    if (!user.isActive) {
+      throw customError.forbidden(
+        'Your account is suspended, reach out to support for assistance',
+      );
     }
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
@@ -65,16 +67,16 @@ export class WorkspaceManagementService {
     if (!workspace.isActive) {
       throw customError.badRequest('Workspace is not active');
     }
-    // Get requester's member record
+
     const requester = await this.workspaceMembershipService.isUserMember(
       workspaceId,
       user.id,
     );
+
     if (!requester) {
       throw customError.forbidden('You are not a member of this workspace');
     }
 
-    // Get target member's record
     const targetMember = await this.workspaceMembershipService.isUserMember(
       workspaceId,
       targetUserId,
@@ -85,45 +87,37 @@ export class WorkspaceManagementService {
       );
     }
 
-    // Verify target member is active
-    if (!targetMember.isActive) {
-      throw customError.badRequest('Target member is not active');
-    }
-
-    // Permission checks
     const isRequesterOwner =
       workspace.ownerId === user.id || workspace.createdBy === user.id;
-    const isRequesterAdmin = requester.role === 'admin';
+    const isRequesterAdmin =
+      requester.role === 'admin' || requester.role === 'owner';
     const isTargetOwner =
       workspace.ownerId === targetUserId ||
       workspace.createdBy === targetUserId;
     const isTargetAdmin = targetMember.role === 'admin';
+    const isTargetOwnerRole = targetMember.role === 'owner';
 
-    // Cannot change owner's role
-    if (isTargetOwner) {
+    // Cannot change workspace owner's role OR anyone with 'owner' role in members table
+    if (isTargetOwner || isTargetOwnerRole) {
       throw customError.forbidden(
         'Cannot change the role of the workspace owner',
       );
     }
-
-    // Cannot change your own role
+    
     if (user.id === targetUserId) {
-      throw customError.forbidden('You cannot change your own role');   
+      throw customError.forbidden('You cannot change your own role');
     }
-
-    // Validate that newRole is valid and not 'owner' (not allowed via this method)
-    if (
-      !Object.values(WorkspaceInvitationRole).includes(newRole) ||
-      (newRole as string) === 'owner'
-    ) {
+    
+    if (!Object.values(WorkspaceInvitationRole).includes(newRole)) {
       throw customError.badRequest(
-        'Invalid role. Owner role cannot be set via role change.',
+        'Invalid role. Only admin, member, and guest roles can be changed.',
       );
     }
-
-    // Only owner can promote to admin or change admin roles (including demoting admins)
+    
     if (
-      (newRole === WorkspaceInvitationRole.ADMIN || isTargetAdmin) &&
+      (newRole === WorkspaceInvitationRole.ADMIN ||
+        isTargetAdmin ||
+        isTargetOwnerRole) &&
       !isRequesterOwner
     ) {
       throw customError.forbidden(
@@ -149,7 +143,6 @@ export class WorkspaceManagementService {
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-      // Update member role in workspace schema
       const result = await this.dataSource.query(
         `
       UPDATE "${schemaName}".members
@@ -164,8 +157,6 @@ export class WorkspaceManagementService {
         throw customError.internalServerError('Failed to update member role');
       }
 
-      const updatedMember = result[0];
-
       this.logger.log(
         `Member role changed: user ${targetUserId} → ${newRole} in workspace ${workspaceId} by ${user.id}`,
       );
@@ -176,7 +167,6 @@ export class WorkspaceManagementService {
         refreshToken: tokens.refreshToken || '',
         message: 'Member role has been updated successfully',
       };
-      
     } catch (error) {
       this.logger.error(
         `Error changing member role in workspace ${workspaceId}: ${error.message}`,
