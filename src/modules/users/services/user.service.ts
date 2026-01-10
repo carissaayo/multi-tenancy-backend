@@ -4,7 +4,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "../entities/user.entity";
 import { Repository } from "typeorm";
 import { customError } from "src/core/error-handler/custom-errors";
-import { CreateUserDto } from "../user.dto";
+import { CreateUserDto, UpdateUserDto } from "../dtos/user.dto";
+import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
 @Injectable()
 export class UsersService {
   constructor(
@@ -30,6 +31,10 @@ export class UsersService {
     });
 
     return this.userRepo.save(user);
+  }
+
+  async updateUser(req: AuthenticatedRequest, updateDto: UpdateUserDto) {
+
   }
 
   async validateCredentials(email: string, password: string): Promise<User> {
@@ -58,6 +63,8 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id } });
   }
+
+
   getUserProfile(user: User): Partial<User> {
     return {
       id: user.id,

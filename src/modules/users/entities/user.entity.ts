@@ -28,7 +28,22 @@ export class User {
     name: 'phone_number',
   })
   phoneNumber: string | null;
-  
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'bio' })
+  bio: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'street' })
+  street: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'city' })
+  city: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'state' })
+  state: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'country' })
+  country: string | null;
+
   @Column({ type: 'varchar', length: 500, nullable: true, name: 'avatar_url' })
   avatarUrl: string | null;
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'email_code' })
