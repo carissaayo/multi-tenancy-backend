@@ -9,6 +9,8 @@ import appConfig from './config/config';
 import { validateEnv } from './config/config.validation';
 import { AuthModule } from './modules/auth/auth.module';
 import { WorkspaceModule } from './modules/workspaces/workspace.module';
+import { APP_GUARD } from '@nestjs/core';
+import { EmailVerificationGuard } from './core/security/guards/email-verification.guard';
 
 
 @Module({
@@ -17,7 +19,7 @@ import { WorkspaceModule } from './modules/workspaces/workspace.module';
       isGlobal: true,
       envFilePath: '.env',
       load: [appConfig, databaseConfig],
-      validate: validateEnv, 
+      validate: validateEnv,
     }),
 
     DatabaseModule,
@@ -26,6 +28,12 @@ import { WorkspaceModule } from './modules/workspaces/workspace.module';
     WorkspaceModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: EmailVerificationGuard,
+    },
+  ],
 })
 export class AppModule {}
