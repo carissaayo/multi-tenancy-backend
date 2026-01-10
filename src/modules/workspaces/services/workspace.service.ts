@@ -264,4 +264,33 @@ export class WorkspacesService {
   async countUserFreeWorkspaces(userId: string): Promise<number> {
     return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
   }
+  
+  normalizedWorkspaceData(workspace: Workspace) {
+    return {
+      id: workspace.id,
+      slug: workspace.slug,
+      name: workspace.name,
+      description: workspace.description,
+      logoUrl: workspace.logoUrl,
+      plan: workspace.plan,
+      isActive: workspace.isActive,
+      settings: workspace.settings,
+      createdBy: workspace.createdBy,
+      creator: workspace.creator
+        ? {
+            fullName: workspace.creator.fullName,
+            avatarUrl: workspace.creator.avatarUrl,
+          }
+        : null,
+      ownerId: workspace.ownerId,
+      owner: workspace.owner
+        ? {
+            fullName: workspace.owner.fullName,
+            avatarUrl: workspace.owner.avatarUrl,
+          }
+        : null,
+      createdAt: workspace.createdAt,
+      updatedAt: workspace.updatedAt,
+    };
+  }
 }

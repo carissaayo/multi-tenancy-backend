@@ -125,6 +125,7 @@ export class AuthService {
       throw customError.forbidden('Not a member of this workspace');
     }
 
+    
     // Issue workspace-scoped token
     const accessToken = this.tokenManager.signWorkspaceToken(
       user,

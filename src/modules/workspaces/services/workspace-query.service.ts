@@ -266,9 +266,7 @@ export class WorkspaceQueryService {
     storageUsed: number;
   }> {
     const workspace = await this.findById(workspaceId);
-    const sanitizedSlug = this.sanitizeSlugForSQL(
-      workspace.slug,
-    );
+    const sanitizedSlug = this.sanitizeSlugForSQL(workspace.slug);
     const schemaName = `workspace_${sanitizedSlug}`;
 
     const [memberCount] = await this.dataSource.query(
@@ -296,4 +294,6 @@ export class WorkspaceQueryService {
       storageUsed: parseInt(fileStats.total_size) / (1024 * 1024), // MB
     };
   }
+
+
 }

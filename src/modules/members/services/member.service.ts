@@ -84,7 +84,7 @@ export class MemberService {
     userId: string,
   ): Promise<{
     member: Partial<WorkspaceMember>;
-    workspace: Workspace;
+    workspace: ReturnType<typeof this.workspacesService.normalizedWorkspaceData>;
   } | null> {
     const workspace =
       await this.workspacesService.findWorkspaceWithSafeFields(workspaceId);
@@ -99,10 +99,12 @@ export class MemberService {
       return null;
     }
 
+    const normalizedWorkspace = this.workspacesService.normalizedWorkspaceData(workspace);
+
     // Attach workspace to member for convenience (similar to your commented code)
     return {
       member: this.getSafeMemberFields(member as WorkspaceMember),
-      workspace,
+      workspace: normalizedWorkspace,
     };
   }
 
