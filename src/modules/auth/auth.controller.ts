@@ -53,6 +53,15 @@ export class AuthController {
     return this.authService.verifyEmail(verifyEmailDto, req);
   }
 
+  @Post('resend-verification-email')
+  @AllowUnverified()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Resend verification email' })
+  @ApiResponse({ status: 200, description: 'Verification email sent' })
+  resendVerificationEmail(@Req() req: AuthenticatedRequest) {
+    return this.authService.resendVerificationEmail(req);
+  }
+
   @Post('request-password-reset')
   @Public()
   @ApiOperation({ summary: 'Request password reset' })

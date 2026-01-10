@@ -181,6 +181,21 @@ export class AuthService {
     return { message: 'Email verified successfully' };
   }
 
+  async resendVerificationEmail(req: AuthenticatedRequest) {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    if (user.isEmailVerified) {
+      throw customError.badRequest('You have already verified your email address');
+    }
+    const emailCode = generateOtp('numeric', 8);
+    user.emailCode = emailCode;
+    await this.userRepo.save(user);
+    await this.emailService.sendVerificationEmail(user.email, emailCode);
+    return { message: 'Verification email sent' };
+  }
+
   /* ---------------- REQUEST RESET PASSWORD ---------------- */
   async requestResetPassword(dto: RequestResetPasswordDTO) {
     const user = await this.userRepo.findOne({
