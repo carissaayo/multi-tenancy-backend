@@ -346,4 +346,14 @@ export class WorkspaceMembershipService {
     // For now, simple logic:
     return 10; // Default limit
   }
+
+  getMemberProfile(member: WorkspaceMember): Partial<WorkspaceMember> {
+    return {
+      id: member.id,
+      userId: member.userId,
+      role: member.role,
+      isActive: member.isActive,
+      joinedAt: member.joinedAt,
+    };
+  }
 }

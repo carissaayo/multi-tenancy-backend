@@ -1,17 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+
+import { WorkspaceMembershipService } from './workspace-membership.service';
+import { WorkspaceQueryService } from './workspace-query.service';
+import { TokenManager } from 'src/core/security/services/token-manager.service';
+
 import { Workspace } from '../entities/workspace.entity';
+import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
+import { User } from 'src/modules/users/entities/user.entity';
 
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
-import { TokenManager } from 'src/core/security/services/token-manager.service';
-import { User } from 'src/modules/users/entities/user.entity';
-import { WorkspaceQueryService } from './workspace-query.service';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceInvitationRole } from '../interfaces/workspace.interface';
 
-import { WorkspaceMembershipService } from './workspace-membership.service';
 import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
 
 @Injectable()
@@ -44,6 +47,7 @@ export class WorkspaceManagementService {
     accessToken: string;
     refreshToken: string;
     message: string;
+    member: Partial<WorkspaceMember>;
   }> {
     const { targetUserId, newRole } = changeMemberRoleDto;
 
@@ -161,10 +165,14 @@ export class WorkspaceManagementService {
         `Member role changed: user ${targetUserId} → ${newRole} in workspace ${workspaceId} by ${user.id}`,
       );
 
+      const updatedMember=result[0];
+
+      const memberProfile = this.workspaceMembershipService.getMemberProfile(updatedMember);
       const tokens = await this.tokenManager.signTokens(user, req);
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken || '',
+        member: memberProfile,
         message: 'Member role has been updated successfully',
       };
     } catch (error) {

@@ -17,12 +17,14 @@ import { WorkspaceManagementService } from '../services/workspace-management.ser
 import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
 
 @ApiTags('Workspace Management')
-@Controller('workspaces/:id/management')
-export class WorkspaceInviteController {
-  constructor(private readonly workspaceManagementService: WorkspaceManagementService) {}
+@Controller('workspaces/management')
+export class WorkspaceManagementController {
+  constructor(
+    private readonly workspaceManagementService: WorkspaceManagementService,
+  ) {}
 
-  // Update member role 
-  @Patch('members/role')
+  // Update member role
+  @Patch(':id/members/role')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update member role' })
   @ApiResponse({
@@ -40,6 +42,4 @@ export class WorkspaceInviteController {
       req,
     );
   }
-
- 
 }
