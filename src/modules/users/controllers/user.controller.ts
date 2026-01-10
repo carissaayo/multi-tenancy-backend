@@ -1,4 +1,4 @@
-import { Controller, Body, Req, Param, Patch } from '@nestjs/common';
+import { Controller, Body, Req, Param, Patch, Get } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -28,5 +28,17 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return this.usersService.updateUser(req, updateUserDto);
+  }
+
+  // Get user
+  @Get('')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get user' })
+  @ApiResponse({
+    status: 200,
+    description: 'User has been retrieved successfully',
+  })
+  getUser(@Req() req: AuthenticatedRequest) {
+    return this.usersService.getUser(req);
   }
 }

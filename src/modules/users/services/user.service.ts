@@ -64,6 +64,26 @@ export class UsersService {
     };
   }
 
+
+  async getUser(req: AuthenticatedRequest): Promise<{ user: Partial<User>; message: string }> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    
+    if (!user.isActive) {
+      throw customError.forbidden(
+        'Your account is suspended, reach out to support for assistance',
+      );
+    }
+    const normalizedUser = this.getUserProfile(user);
+    return {
+      user: normalizedUser,
+      message: 'User retrieved successfully',
+    };
+  }
+
   async validateCredentials(email: string, password: string): Promise<User> {
     const user = await this.userRepo.findOne({
       where: { email: email.toLowerCase(), isActive: true },
