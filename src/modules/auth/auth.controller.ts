@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  Req,
-  Param,
-} from '@nestjs/common';
+import { Controller, Post, Body, Req, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -23,11 +17,11 @@ import {
 } from './auth.dto';
 import { AuthService } from './auth.service';
 import { Public } from 'src/core/security/decorators/public.decorator';
+import { AllowUnverified } from 'src/core/security/decorators/allow-unverified.decorator';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 
 @ApiTags('Authentication')
 @Controller('auth')
-
 export class AuthController {
   constructor(private authService: AuthService) {}
 
@@ -48,6 +42,7 @@ export class AuthController {
   }
 
   @Post('verify-email')
+  @AllowUnverified()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Verify user email' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
@@ -75,6 +70,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @AllowUnverified()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Change user password' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
@@ -90,7 +86,9 @@ export class AuthController {
   @ApiOperation({ summary: 'Select workspace' })
   @ApiResponse({ status: 200, description: 'Workspace selected successfully' })
   selectWorkspace(
-    @Body() selectWorkspaceDto: SelectWorkspaceDTO, @Req() req: AuthenticatedRequest) {
+    @Body() selectWorkspaceDto: SelectWorkspaceDTO,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.authService.selectWorkspace(selectWorkspaceDto, req);
   }
 }

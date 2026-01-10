@@ -9,6 +9,7 @@ import {
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { UsersService } from '../services/user.service';
 import { UpdateUserDto } from '../dtos/user.dto';
+import { AllowUnverified } from 'src/core/security/decorators/allow-unverified.decorator';
 
 @ApiTags('Users')
 @Controller('users')
@@ -17,6 +18,7 @@ export class UsersController {
 
   // Update user
   @Patch('')
+  @AllowUnverified()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({
@@ -32,6 +34,7 @@ export class UsersController {
 
   // Get user
   @Get('')
+  @AllowUnverified()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get user' })
   @ApiResponse({

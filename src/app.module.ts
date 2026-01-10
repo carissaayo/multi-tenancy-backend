@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { WorkspaceModule } from './modules/workspaces/workspace.module';
 import { APP_GUARD } from '@nestjs/core';
 import { EmailVerificationGuard } from './core/security/guards/email-verification.guard';
+import { UserModule } from './modules/users/user.module';
 
 
 @Module({
@@ -25,6 +26,7 @@ import { EmailVerificationGuard } from './core/security/guards/email-verificatio
     DatabaseModule,
     SecurityModule,
     AuthModule,
+    UserModule,
     WorkspaceModule,
   ],
   controllers: [AppController],
