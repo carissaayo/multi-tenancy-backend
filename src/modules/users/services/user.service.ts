@@ -33,8 +33,23 @@ export class UsersService {
     return this.userRepo.save(user);
   }
 
-  async updateUser(req: AuthenticatedRequest, updateDto: UpdateUserDto) {
+  async updateUser(req: AuthenticatedRequest, updateDto: UpdateUserDto):Promise<{ user: Partial<User>, message: string }> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
 
+    if(!user.isActive){
+      throw customError.forbidden('Your account is suspended, reach out to support for assistance');
+    }
+    Object.assign(user, updateDto);
+    user.updatedAt = new Date();
+    const updatedUser = await this.userRepo.save(user);
+    const normalizedUser = this.getUserProfile(updatedUser);
+    return {
+      user: normalizedUser,
+      message: 'User updated successfully',
+    };
   }
 
   async validateCredentials(email: string, password: string): Promise<User> {
