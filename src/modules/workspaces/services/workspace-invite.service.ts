@@ -35,10 +35,13 @@ export class WorkspaceInviteService {
     private readonly tokenManager: TokenManager,
   ) {}
   async inviteByEmail(
-    workspaceId: string,
     req: AuthenticatedRequest,
     inviteDto: WorkspaceInviteDto,
   ) {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      throw customError.badRequest('Workspace Id is missing');
+    }
     const { email,role } = inviteDto;
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 

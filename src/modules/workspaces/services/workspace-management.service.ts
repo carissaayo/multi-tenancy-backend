@@ -40,7 +40,6 @@ export class WorkspaceManagementService {
    * Admins can only change regular members' roles (not other admins or owner)
    */
   async changeMemberRole(
-    workspaceId: string,
     changeMemberRoleDto: ChangeMemberRoleDto,
     req: AuthenticatedRequest,
   ): Promise<{
@@ -49,6 +48,10 @@ export class WorkspaceManagementService {
     message: string;
     member: Partial<WorkspaceMember>;
   }> {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      throw customError.badRequest('Workspace Id is missing');
+    }
     const { targetUserId, newRole } = changeMemberRoleDto;
 
     const user = await this.userRepo.findOne({ where: { id: req.userId } });

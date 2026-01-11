@@ -23,7 +23,7 @@ import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 
 @ApiTags('Workspace Invitations')
-@Controller('workspaces/:id/invitations')
+@Controller('workspaces/invitations')
 export class WorkspaceInviteController {
   constructor(private readonly workspaceService: WorkspaceInviteService) {}
 
@@ -36,11 +36,10 @@ export class WorkspaceInviteController {
     description: 'Workspace invitation sent successfully',
   })
   sendInvitation(
-    @Param('id') workspaceId: string,
     @Req() req: AuthenticatedRequest,
     @Body() inviteDto: WorkspaceInviteDto,
   ) {
-    return this.workspaceService.inviteByEmail(workspaceId, req, inviteDto);
+    return this.workspaceService.inviteByEmail( req, inviteDto);
   }
 
   @Patch('accept')

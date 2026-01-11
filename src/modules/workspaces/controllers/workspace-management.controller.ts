@@ -24,7 +24,7 @@ export class WorkspaceManagementController {
   ) {}
 
   // Update member role
-  @Patch(':id/members/role')
+  @Patch('members/role')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update member role' })
   @ApiResponse({
@@ -32,12 +32,10 @@ export class WorkspaceManagementController {
     description: 'Member role has been updated successfully',
   })
   updateMemberRole(
-    @Param('id') workspaceId: string,
     @Req() req: AuthenticatedRequest,
     @Body() changeMemberRoleDto: ChangeMemberRoleDto,
   ) {
     return this.workspaceManagementService.changeMemberRole(
-      workspaceId,
       changeMemberRoleDto,
       req,
     );
