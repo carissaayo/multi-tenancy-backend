@@ -17,7 +17,7 @@ import { WorkspaceManagementService } from '../services/workspace-management.ser
 import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
 
 @ApiTags('Workspace Management')
-@Controller('workspaces/management')
+@Controller('management')
 export class WorkspaceManagementController {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService,

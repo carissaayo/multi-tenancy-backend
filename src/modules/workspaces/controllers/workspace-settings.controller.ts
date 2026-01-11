@@ -32,7 +32,7 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspaceSettingService } from '../services/workspace-setting.service';
 
 @ApiTags('Workspace Settings')
-@Controller('workspace/settings')
+@Controller('settings')
 export class WorkspaceSettingsController {
   constructor(private readonly workspaceSettingService: WorkspaceSettingService) {}
 

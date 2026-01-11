@@ -23,7 +23,7 @@ import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 
 @ApiTags('Workspace Invitations')
-@Controller('workspaces/invitations')
+@Controller('invitations')
 export class WorkspaceInviteController {
   constructor(private readonly workspaceService: WorkspaceInviteService) {}
 

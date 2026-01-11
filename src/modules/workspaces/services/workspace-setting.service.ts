@@ -36,12 +36,8 @@ export class WorkspaceSettingService {
   async getUserSingleWorkspace(
     req: AuthenticatedRequest,
   ): Promise<GetUserWorkspaceResponse> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
     return this.workspaceMembershipService.getUserSingleWorkspace(
-      workspaceId,
+      req.workspaceId,
       req,
     );
   }
@@ -53,12 +49,9 @@ export class WorkspaceSettingService {
     req: AuthenticatedRequest,
     updateDto: UpdateWorkspaceDto,
   ): Promise<UpdateWorkspaceResponse> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
+
     return this.workspaceLifecycleService.updateWorkspaceProperties(
-      workspaceId,
+      req.workspaceId,
       req,
       updateDto,
     );
@@ -71,12 +64,8 @@ export class WorkspaceSettingService {
     req: AuthenticatedRequest,
     file: Express.Multer.File,
   ): Promise<UpdateWorkspaceResponse> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
     return this.workspaceLifecycleService.updateWorkspaceLogo(
-      workspaceId,
+      req.workspaceId,
       req,
       file,
     );
@@ -86,23 +75,15 @@ export class WorkspaceSettingService {
    * Soft delete workspace (deactivate)
    */
   async deactivate(req: AuthenticatedRequest): Promise<void> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
-    return this.workspaceLifecycleService.deactivate(workspaceId, req.userId);
+    return this.workspaceLifecycleService.deactivate(req.workspaceId, req.userId);
   }
 
   /**
    * Permanently delete workspace
    */
   async permanentlyDelete(req: AuthenticatedRequest): Promise<void> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
     return this.workspaceLifecycleService.permanentlyDelete(
-      workspaceId,
+      req.workspaceId,
       req.userId,
     );
   }
@@ -119,11 +100,7 @@ export class WorkspaceSettingService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
-    const workspace = await this.workspaceQueryService.findById(workspaceId);
+    const workspace = await this.workspaceQueryService.findById(req.workspaceId);
 
     // Only owner can change plan
     if (workspace.createdBy !== user.id) {
@@ -179,10 +156,7 @@ export class WorkspaceSettingService {
     fileCount: number;
     storageUsed: number;
   }> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
-    return this.workspaceQueryService.getWorkspaceStats(workspaceId);
+   
+    return this.workspaceQueryService.getWorkspaceStats(req.workspaceId);
   }
 }

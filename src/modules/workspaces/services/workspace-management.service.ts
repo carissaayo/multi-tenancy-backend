@@ -48,10 +48,7 @@ export class WorkspaceManagementService {
     message: string;
     member: Partial<WorkspaceMember>;
   }> {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
+    
     const { targetUserId, newRole } = changeMemberRoleDto;
 
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
@@ -59,13 +56,9 @@ export class WorkspaceManagementService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-    if (!user.isActive) {
-      throw customError.forbidden(
-        'Your account is suspended, reach out to support for assistance',
-      );
-    }
+ 
     const workspace = await this.workspaceRepo.findOne({
-      where: { id: workspaceId },
+      where: { id: req.workspaceId },
     });
 
     if (!workspace) {
@@ -76,7 +69,7 @@ export class WorkspaceManagementService {
     }
 
     const requester = await this.workspaceMembershipService.isUserMember(
-      workspaceId,
+      workspace.id,
       user.id,
     );
 
@@ -85,7 +78,7 @@ export class WorkspaceManagementService {
     }
 
     const targetMember = await this.workspaceMembershipService.isUserMember(
-      workspaceId,
+      workspace.id,
       targetUserId,
     );
     if (!targetMember) {
@@ -165,7 +158,7 @@ export class WorkspaceManagementService {
       }
 
       this.logger.log(
-        `Member role changed: user ${targetUserId} → ${newRole} in workspace ${workspaceId} by ${user.id}`,
+        `Member role changed: user ${targetUserId} → ${newRole} in workspace ${workspace.id} by ${user.id}`,
       );
 
       const updatedMember=result[0];
@@ -180,7 +173,7 @@ export class WorkspaceManagementService {
       };
     } catch (error) {
       this.logger.error(
-        `Error changing member role in workspace ${workspaceId}: ${error.message}`,
+        `Error changing member role in workspace ${workspace.id}: ${error.message}`,
       );
 
       if (error.statusCode) {

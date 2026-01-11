@@ -14,7 +14,10 @@ import { MemberService } from 'src/modules/members/services/member.service';
 import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
 import { EmailService } from 'src/core/email/services/email.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
-import { WorkspaceInvitationRole, WorkspaceInvitationStatus } from '../interfaces/workspace.interface';
+import {
+  WorkspaceInvitationRole,
+  WorkspaceInvitationStatus,
+} from '../interfaces/workspace.interface';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 
 @Injectable()
@@ -38,11 +41,7 @@ export class WorkspaceInviteService {
     req: AuthenticatedRequest,
     inviteDto: WorkspaceInviteDto,
   ) {
-    const workspaceId = req.workspaceId;
-    if (!workspaceId) {
-      throw customError.badRequest('Workspace Id is missing');
-    }
-    const { email,role } = inviteDto;
+    const { email, role } = inviteDto;
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
     if (!user) {
@@ -52,7 +51,7 @@ export class WorkspaceInviteService {
       throw customError.badRequest('You cannot invite yourself');
     }
     const workspace = await this.workspaceRepo.findOne({
-      where: { id: workspaceId },
+      where: { id: req.workspaceId },
     });
 
     if (!workspace) {
@@ -60,7 +59,7 @@ export class WorkspaceInviteService {
     }
 
     const isInviterAMember = await this.workspaceMembershipService.isUserMember(
-      workspaceId,
+      workspace.id,
       user.id,
     );
     if (!isInviterAMember) {
@@ -69,7 +68,7 @@ export class WorkspaceInviteService {
       );
     }
     const canInvite = await this.hasInvitePermission(
-      workspaceId,
+      workspace.id,
       req.userId,
       workspace,
     );
@@ -87,7 +86,7 @@ export class WorkspaceInviteService {
 
     // Check if already a member
     const existingMember = await this.workspaceMembershipService.isUserMember(
-      workspaceId,
+      workspace.id,
       existingUser.id,
     );
     if (existingMember) {
@@ -97,7 +96,7 @@ export class WorkspaceInviteService {
     }
     const existingInvitation = await this.workspaceInvitationRepo.findOne({
       where: {
-        workspaceId,
+        workspaceId: workspace.id,
         email,
         expiresAt: MoreThan(new Date()),
         status: WorkspaceInvitationStatus.PENDING,
@@ -115,7 +114,7 @@ export class WorkspaceInviteService {
       Date.now() + 1000 * 60 * 60 * 24 * this.INIVTE_EXPIRY_DAYS,
     );
     const invitation = this.workspaceInvitationRepo.create({
-      workspaceId,
+      workspaceId: workspace.id,
       email,
       invitedBy: req.userId,
       expiresAt,
@@ -153,7 +152,7 @@ export class WorkspaceInviteService {
     };
   }
 
-  async acceptInvitation(token: string,) {
+  async acceptInvitation(token: string) {
     const invitation = await this.workspaceInvitationRepo.findOne({
       where: { token, status: WorkspaceInvitationStatus.PENDING },
       relations: ['workspace'],
@@ -169,7 +168,9 @@ export class WorkspaceInviteService {
       throw customError.badRequest('This invitation has expired');
     }
 
-    const user = await this.userRepo.findOne({ where: { id: invitation.sentToId as string } });
+    const user = await this.userRepo.findOne({
+      where: { id: invitation.sentToId as string },
+    });
     if (!user) {
       throw customError.notFound('User not found');
     }
@@ -212,12 +213,10 @@ export class WorkspaceInviteService {
       throw customError.notFound('Inviter not found');
     }
 
-   
-
     await this.workspaceMembershipService.addMemberToWorkspace(
       workspace.id,
       user.id,
-      (invitation.role ?? WorkspaceInvitationRole.MEMBER)
+      invitation.role ?? WorkspaceInvitationRole.MEMBER,
     );
 
     const frontendUrl =
