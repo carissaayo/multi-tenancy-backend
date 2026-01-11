@@ -51,7 +51,7 @@ export class WorkspaceInviteService {
       throw customError.badRequest('You cannot invite yourself');
     }
     const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId },
+      where: { id: req.workspaceId! },
     });
 
     if (!workspace) {

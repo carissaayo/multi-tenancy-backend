@@ -37,7 +37,7 @@ export class WorkspaceSettingService {
     req: AuthenticatedRequest,
   ): Promise<GetUserWorkspaceResponse> {
     return this.workspaceMembershipService.getUserSingleWorkspace(
-      req.workspaceId,
+      req.workspaceId!,
       req,
     );
   }
@@ -51,7 +51,7 @@ export class WorkspaceSettingService {
   ): Promise<UpdateWorkspaceResponse> {
 
     return this.workspaceLifecycleService.updateWorkspaceProperties(
-      req.workspaceId,
+      req.workspaceId!,
       req,
       updateDto,
     );
@@ -65,7 +65,7 @@ export class WorkspaceSettingService {
     file: Express.Multer.File,
   ): Promise<UpdateWorkspaceResponse> {
     return this.workspaceLifecycleService.updateWorkspaceLogo(
-      req.workspaceId,
+      req.workspaceId!,
       req,
       file,
     );
@@ -75,7 +75,7 @@ export class WorkspaceSettingService {
    * Soft delete workspace (deactivate)
    */
   async deactivate(req: AuthenticatedRequest): Promise<void> {
-    return this.workspaceLifecycleService.deactivate(req.workspaceId, req.userId);
+    return this.workspaceLifecycleService.deactivate(req.workspaceId!, req.userId);
   }
 
   /**
@@ -83,7 +83,7 @@ export class WorkspaceSettingService {
    */
   async permanentlyDelete(req: AuthenticatedRequest): Promise<void> {
     return this.workspaceLifecycleService.permanentlyDelete(
-      req.workspaceId,
+      req.workspaceId!,
       req.userId,
     );
   }
@@ -100,7 +100,7 @@ export class WorkspaceSettingService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-    const workspace = await this.workspaceQueryService.findById(req.workspaceId);
+    const workspace = await this.workspaceQueryService.findById(req.workspaceId!);
 
     // Only owner can change plan
     if (workspace.createdBy !== user.id) {
@@ -157,6 +157,6 @@ export class WorkspaceSettingService {
     storageUsed: number;
   }> {
    
-    return this.workspaceQueryService.getWorkspaceStats(req.workspaceId);
+    return this.workspaceQueryService.getWorkspaceStats(req.workspaceId!);
   }
 }

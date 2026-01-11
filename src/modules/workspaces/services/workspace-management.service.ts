@@ -58,7 +58,7 @@ export class WorkspaceManagementService {
     }
  
     const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId },
+      where: { id: req.workspaceId! },
     });
 
     if (!workspace) {

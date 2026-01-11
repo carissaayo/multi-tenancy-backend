@@ -17,6 +17,6 @@ export interface AuthenticatedRequest extends Request {
   workspace?: Workspace; // Current workspace context
   workspaceMember?: WorkspaceMember; // User's membership in this workspace
   workspaceMemberRole?: string; // Role of user in this workspace
-  workspaceId: string;
+  workspaceId?: string;
 }
 
