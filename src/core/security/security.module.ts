@@ -48,6 +48,7 @@ import { EmailVerificationGuard } from './guards/email-verification.guard';
     TokenManager,
     RateLimitHandler,
     RedisRateLimiter,
+    TenantResolverMiddleware,
     {
       provide: APP_GUARD,
       useClass: EmailVerificationGuard,
@@ -58,8 +59,8 @@ import { EmailVerificationGuard } from './guards/email-verification.guard';
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      // .apply(TenantResolverMiddleware)
-      // .forRoutes('*')
+      .apply(TenantResolverMiddleware)
+      .forRoutes('*')
       .apply(SecurityMiddleware)
       .forRoutes('*');
   }
