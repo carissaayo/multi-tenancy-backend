@@ -6,7 +6,6 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import { customError } from 'src/core/error-handler/custom-errors';
 import {
-  GetUserWorkspacesResponse,
   GetUserWorkspaceResponse,
   WorkspacePlan,
   UpdateWorkspaceResponse,
@@ -15,7 +14,7 @@ import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-reques
 import { WorkspaceQueryService } from './workspace-query.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceLifecycleService } from './workspace-lifecycle.service';
-import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
+
 
 @Injectable()
 export class WorkspaceSettingService {

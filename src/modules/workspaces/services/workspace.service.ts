@@ -1,33 +1,23 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Workspace } from '../entities/workspace.entity';
-import { User } from 'src/modules/users/entities/user.entity';
-import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
-import { customError } from 'src/core/error-handler/custom-errors';
-import {
-  GetUserWorkspacesResponse,
-  GetUserWorkspaceResponse,
-  WorkspacePlan,
-  UpdateWorkspaceResponse,
-} from '../interfaces/workspace.interface';
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { Injectable } from '@nestjs/common';
+
 import { WorkspaceQueryService } from './workspace-query.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceLifecycleService } from './workspace-lifecycle.service';
+
+import { Workspace } from '../entities/workspace.entity';
 import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
-/**
- * Facade service that provides a single entry point for workspace operations.
- * Delegates to specialized services for better separation of concerns.
- */
+import { CreateWorkspaceDto } from '../dtos/workspace.dto';
+
+import {
+  GetUserWorkspacesResponse,
+  GetUserWorkspaceResponse,
+} from '../interfaces/workspace.interface';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+
 @Injectable()
 export class WorkspacesService {
-  private readonly logger = new Logger(WorkspacesService.name);
-
   constructor(
-    @InjectRepository(Workspace)
-    private readonly workspaceRepo: Repository<Workspace>,
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceLifecycleService: WorkspaceLifecycleService,
@@ -50,83 +40,6 @@ export class WorkspacesService {
     message: string;
   }> {
     return this.workspaceLifecycleService.create(req, createDto);
-  }
-
-  /**
-   * Update workspace properties
-   */
-  async updateWorkspaceProperties(
-    workspaceId: string,
-    req: AuthenticatedRequest,
-    updateDto: UpdateWorkspaceDto,
-  ): Promise<UpdateWorkspaceResponse> {
-    return this.workspaceLifecycleService.updateWorkspaceProperties(
-      workspaceId,
-      req,
-      updateDto,
-    );
-  }
-
-  /**
-   * Upload and update workspace logo
-   */
-  async updateWorkspaceLogo(
-    workspaceId: string,
-    req: AuthenticatedRequest,
-    file: Express.Multer.File,
-  ): Promise<UpdateWorkspaceResponse> {
-    return this.workspaceLifecycleService.updateWorkspaceLogo(
-      workspaceId,
-      req,
-      file,
-    );
-  }
-
-  /**
-   * Soft delete workspace (deactivate)
-   */
-  async deactivate(workspaceId: string, userId: string): Promise<void> {
-    return this.workspaceLifecycleService.deactivate(workspaceId, userId);
-  }
-
-  /**
-   * Permanently delete workspace
-   */
-  async permanentlyDelete(workspaceId: string, userId: string): Promise<void> {
-    return this.workspaceLifecycleService.permanentlyDelete(
-      workspaceId,
-      userId,
-    );
-  }
-
-  /**
-   * Update workspace plan (upgrade/downgrade)
-   */
-  async updatePlan(
-    workspaceId: string,
-    userId: string,
-    newPlan: WorkspacePlan,
-  ): Promise<Workspace> {
-    const workspace = await this.workspaceQueryService.findById(workspaceId);
-
-    // Only owner can change plan
-    if (workspace.createdBy !== userId) {
-      throw customError.forbidden('Only workspace owner can change plan');
-    }
-
-    // Validate plan downgrade doesn't exceed limits
-    if (newPlan === 'free' && workspace.plan !== 'free') {
-      await this.validatePlanDowngrade(workspace);
-    }
-
-    workspace.plan = newPlan;
-    workspace.updatedAt = new Date();
-
-    await this.workspaceRepo.save(workspace);
-
-    this.logger.log(`Workspace plan updated: ${workspace.slug} → ${newPlan}`);
-
-    return workspace;
   }
 
   // ============================================
@@ -219,43 +132,6 @@ export class WorkspacesService {
    */
   public sanitizeSlugForSQL(slug: string): string {
     return this.workspaceQueryService.sanitizeSlugForSQL(slug);
-  }
-
-  /**
-   * Get workspace statistics
-   */
-  async getWorkspaceStats(workspaceId: string): Promise<{
-    memberCount: number;
-    channelCount: number;
-    messageCount: number;
-    fileCount: number;
-    storageUsed: number;
-  }> {
-    return this.workspaceQueryService.getWorkspaceStats(workspaceId);
-  }
-
-  /**
-   * Validate workspace can be downgraded to free plan
-   */
-  private async validatePlanDowngrade(workspace: Workspace): Promise<void> {
-    const stats = await this.getWorkspaceStats(workspace.id);
-
-    const freeLimits = {
-      maxMembers: 10,
-      maxStorageMB: 5 * 1024, // 5GB
-    };
-
-    if (stats.memberCount > freeLimits.maxMembers) {
-      throw customError.badRequest(
-        `Cannot downgrade: Free plan allows max ${freeLimits.maxMembers} members`,
-      );
-    }
-
-    if (stats.storageUsed > freeLimits.maxStorageMB) {
-      throw customError.badRequest(
-        `Cannot downgrade: Storage exceeds free plan limit`,
-      );
-    }
   }
 
   /**

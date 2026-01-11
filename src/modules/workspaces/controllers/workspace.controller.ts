@@ -5,11 +5,6 @@ import {
   Req,
   Get,
   Param,
-  Patch,
-  Delete,
-  Query,
-  UseInterceptors,
-  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,14 +13,10 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { WorkspacesService } from '../services/workspace.service';
-import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
+import { CreateWorkspaceDto} from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
-import { GetUserWorkspaceResponse, GetUserWorkspacesResponse, UpdateWorkspaceResponse, WorkspacePlan } from '../interfaces/workspace.interface';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { customError } from 'src/core/error-handler/custom-errors';
-
-
+import { GetUserWorkspaceResponse, GetUserWorkspacesResponse} from '../interfaces/workspace.interface';
 
 @ApiTags('Workspaces')
 @Controller('workspaces')
@@ -72,96 +63,4 @@ export class WorkspacesController {
     return this.workspaceService.getUserSingleWorkspace(id, req);
   }
 
-  //   @Get('slug/:slug')
-  //   @ApiBearerAuth('access-token')
-  //   @ApiOperation({ summary: 'Get workspace by slug' })
-  //   @ApiResponse({ status: 200, description: 'Workspace details' })
-  //   getBySlug(@Param('slug') slug: string): Promise<Workspace> {
-  //     return this.workspaceService.findBySlug(slug);
-  //   }
-
-  // Update workspace details
-  @Patch(':id')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update workspace properties excluding slug' })
-  @ApiResponse({ status: 200, description: 'Workspace updated successfully' })
-  update(
-    @Param('id') workspaceId: string,
-    @Body() updateDto: UpdateWorkspaceDto,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<UpdateWorkspaceResponse> {
-    return this.workspaceService.updateWorkspaceProperties(
-      workspaceId,
-      req,
-      updateDto,
-    );
-  }
-
-  @Patch(':id/logo')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Upload workspace logo' })
-  @ApiResponse({
-    status: 200,
-    description: 'Workspace logo updated successfully',
-  })
-  @UseInterceptors(FileInterceptor('logo')) 
-  updateLogo(
-    @Param('id') workspaceId: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<UpdateWorkspaceResponse> {
-    if (!file) {
-      throw customError.badRequest('No file provided');
-    }
-    return this.workspaceService.updateWorkspaceLogo(workspaceId, req, file);
-  }
-
-  // Deactivate (soft delete) a workspace
-  @Patch(':id/deactivate')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Deactivate (soft delete) a workspace' })
-  @ApiResponse({
-    status: 200,
-    description: 'Workspace deactivated successfully',
-  })
-  deactivate(
-    @Param('id') workspaceId: string,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<void> {
-    return this.workspaceService.deactivate(workspaceId, req.userId);
-  }
-
-  // Permanently delete a workspace
-  @Delete(':id')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Permanently delete a workspace' })
-  @ApiResponse({ status: 200, description: 'Workspace permanently deleted' })
-  permanentlyDelete(
-    @Param('id') workspaceId: string,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<void> {
-    return this.workspaceService.permanentlyDelete(workspaceId, req.userId);
-  }
-
-  // Update workspace plan (upgrade/downgrade)
-  @Patch(':id/plan')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Update workspace plan (upgrade/downgrade)' })
-  @ApiResponse({ status: 200, description: 'Workspace plan updated' })
-  updatePlan(
-    @Param('id') workspaceId: string,
-    @Query('plan') newPlan: WorkspacePlan,
-    @Req() req: AuthenticatedRequest,
-  ): Promise<Workspace> {
-    return this.workspaceService.updatePlan(workspaceId, req.userId, newPlan);
-  }
-
-  // Get workspace statistics
-  @Get(':id/stats')
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get workspace statistics' })
-  @ApiResponse({ status: 200, description: 'Workspace stats' })
-  getStats(@Param('id') workspaceId: string) {
-    return this.workspaceService.getWorkspaceStats(workspaceId);
-  }
 }

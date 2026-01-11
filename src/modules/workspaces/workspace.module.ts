@@ -22,6 +22,8 @@ import { User } from '../users/entities/user.entity';
 import { WorkspaceInvitation } from './entities/workspace_initations.entity';
 import { WorkspaceManagementService } from './services/workspace-management.service';
 import { WorkspaceManagementController } from './controllers/workspace-management.controller';
+import { WorkspaceSettingService } from './services/workspace-setting.service';
+import { WorkspaceSettingsController } from './controllers/workspace-settings.controller';
 
 @Module({
   imports: [
@@ -38,10 +40,16 @@ import { WorkspaceManagementController } from './controllers/workspace-managemen
     WorkspaceLifecycleService,
     WorkspaceInviteService,
     WorkspaceManagementService,
+    WorkspaceSettingService,
     AWSStorageService,
     EmailService,
   ],
-  controllers: [WorkspacesController, WorkspaceInviteController, WorkspaceManagementController],
+  controllers: [
+    WorkspacesController,
+    WorkspaceInviteController,
+    WorkspaceManagementController,
+    WorkspaceSettingsController,
+  ],
   exports: [WorkspacesService],
 })
 export class WorkspaceModule {}
