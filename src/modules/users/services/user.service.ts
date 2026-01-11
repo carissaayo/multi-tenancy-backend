@@ -66,12 +66,13 @@ export class UsersService {
 
 
   async getUser(req: AuthenticatedRequest): Promise<{ user: Partial<User>; message: string }> {
+
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
     }
 
-    
+    console.log(user.email,"email");
     if (!user.isActive) {
       throw customError.forbidden(
         'Your account is suspended, reach out to support for assistance',

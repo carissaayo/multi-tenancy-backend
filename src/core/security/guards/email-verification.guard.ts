@@ -16,8 +16,7 @@ export class EmailVerificationGuard implements CanActivate {
 
   constructor(private reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    // Check if route is public - if so, skip email verification check
+  canActivate(context: ExecutionContext): boolean {    // Check if route is public - if so, skip email verification check
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -27,29 +26,33 @@ export class EmailVerificationGuard implements CanActivate {
       return true;
     }
 
+    // Get user from request (set by authentication middleware)
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
+
+
+    if (!user) {
+      this.logger.debug(
+        'No user found - authentication middleware will handle authentication',
+      );
+      return true;
+    }
+
     // Check if route allows unverified users
     const allowUnverified = this.reflector.getAllAndOverride<boolean>(
       ALLOW_UNVERIFIED_KEY,
       [context.getHandler(), context.getClass()],
     );
 
+    // If route allows unverified users, skip email verification check
     if (allowUnverified) {
       this.logger.debug(
-        'Route allows unverified users, skipping verification check',
+        `Route allows unverified users, skipping email verification for user ${user.id}`,
       );
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
-    // If no user (shouldn't happen if auth middleware ran, but safety check)
-    if (!user) {
-      this.logger.warn('Email verification guard: No user found in request');
-      throw customError.unauthorized('Authentication required');
-    }
-
-    // Check if email is verified
+    // For routes that require email verification, check if email is verified
     if (!user.isEmailVerified) {
       this.logger.warn(
         `Email verification required: User ${user.id} attempted to access protected route without verified email`,

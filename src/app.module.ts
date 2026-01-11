@@ -32,10 +32,6 @@ import { UserModule } from './modules/users/user.module';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: EmailVerificationGuard,
-    },
   ],
 })
 export class AppModule {}

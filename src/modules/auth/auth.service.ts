@@ -169,6 +169,13 @@ export class AuthService {
       throw customError.badRequest('Invalid verification request');
     }
 
+    console.log(user.email,"email");
+    
+    // Temporary debugging - remove after fixing
+console.log('Stored code:', JSON.stringify(user.emailCode));
+console.log('Provided code:', JSON.stringify(dto.emailCode));
+console.log('Match:', user.emailCode === dto.emailCode);
+
     if (user.emailCode !== dto.emailCode) {
       throw customError.badRequest('Invalid verification code');
     }

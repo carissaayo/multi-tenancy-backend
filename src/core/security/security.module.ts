@@ -17,6 +17,8 @@ import { publicRoutes } from './constants/public-routes';
 import { RateLimitHandler } from './services/rate-limit-handler.service';
 import { RedisRateLimiter } from './services/radis-rate-limiter.service';
 import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middleware';
+import { APP_GUARD } from '@nestjs/core';
+import { EmailVerificationGuard } from './guards/email-verification.guard';
 
 @Module({
   imports: [
@@ -46,6 +48,10 @@ import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middlew
     TokenManager,
     RateLimitHandler,
     RedisRateLimiter,
+    {
+      provide: APP_GUARD,
+      useClass: EmailVerificationGuard,
+    },
   ],
   exports: [TokenManager, AuthHandler],
 })
@@ -55,6 +61,6 @@ export class SecurityModule implements NestModule {
       // .apply(TenantResolverMiddleware)
       // .forRoutes('*')
       .apply(SecurityMiddleware)
-      .forRoutes("*");
+      .forRoutes('*');
   }
 }
