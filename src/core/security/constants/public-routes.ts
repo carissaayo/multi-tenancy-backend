@@ -4,5 +4,5 @@ export const publicRoutes = [
   '/api/auth/request-password-reset',
   '/api/auth/password-reset',
   '/api/payment/paystack/webhook',
-  "/api/workspaces/:id/invitations/accept",
+  '/api/invitations/accept', 
 ];
