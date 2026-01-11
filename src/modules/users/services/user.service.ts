@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import bcrypt from 'bcryptjs';
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "../entities/user.entity";
@@ -6,11 +6,14 @@ import { Repository } from "typeorm";
 import { customError } from "src/core/error-handler/custom-errors";
 import { CreateUserDto, UpdateUserDto } from "../dtos/user.dto";
 import { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
+import { AWSStorageService } from "src/core/storage/services/aws-storage.service";
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly storageService: AWSStorageService,
   ) {}
 
   async create(dto: CreateUserDto) {
@@ -64,15 +67,72 @@ export class UsersService {
     };
   }
 
-
-  async getUser(req: AuthenticatedRequest): Promise<{ user: Partial<User>; message: string }> {
-
+  async updateUserAvatar(
+    req: AuthenticatedRequest,
+    file: Express.Multer.File,
+  ): Promise<{ user: Partial<User>; message: string }> {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
     }
 
-    console.log(user.email,"email");
+    // Delete old avatar if exists
+    if (  user.avatarUrl) {
+      try {
+        const oldKey = this.storageService.parseS3Url(user.avatarUrl);
+        await this.storageService.deleteFile(oldKey, user.id);
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete old avatar for user ${user.id}: ${error.message}`,
+        );
+      }
+    }
+    // Upload new logo to S3
+    const uploadedFile = await this.storageService.uploadFile(file, {
+      userId: user.id,
+      folder: 'avatars',
+      maxSizeInMB: 5,
+      allowedMimeTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'image/gif',
+        'image/webp',
+      ],
+      makePublic: true,
+    });
+    // Update workspace with new logo URL
+    user.avatarUrl = uploadedFile.url;
+    user.updatedAt = new Date();
+
+    await this.userRepo.save(user);
+
+    this.logger.log(
+      `Avatar updated: ${user.id} by user ${user.id}`,
+    );
+
+    // Return workspace with safe user fields
+    const updatedUser =
+      await this.userRepo.findOne({ where: { id: user.id } });
+    if (!updatedUser) {
+      throw customError.notFound('Avatar has been updated successfully but failed to fetch the updated user profile');
+    }
+
+    const normalizedUser = this.getUserProfile(updatedUser);
+    return {
+      user: normalizedUser,
+      message: 'Avatar has beenupdated successfully',
+    };
+  }
+  async getUser(
+    req: AuthenticatedRequest,
+  ): Promise<{ user: Partial<User>; message: string }> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    console.log(user.email, 'email');
     if (!user.isActive) {
       throw customError.forbidden(
         'Your account is suspended, reach out to support for assistance',

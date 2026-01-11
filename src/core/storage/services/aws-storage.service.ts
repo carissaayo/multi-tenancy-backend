@@ -11,7 +11,7 @@ import { randomUUID } from 'crypto';
 import { customError } from 'src/core/error-handler/custom-errors';
 
 export interface UploadOptions {
-  workspaceId: string;
+  workspaceId?: string;
   userId: string;
   folder?: string; // 'avatars', 'attachments', 'logos', etc.
   maxSizeInMB?: number;
@@ -78,7 +78,7 @@ export class AWSStorageService {
       Body: file.buffer,
       ContentType: file.mimetype,
       Metadata: {
-        workspaceId: options.workspaceId,
+        ...(options.workspaceId && { workspaceId: options.workspaceId }),
         userId: options.userId,
         originalName: file.originalname,
         uploadedAt: new Date().toISOString(),

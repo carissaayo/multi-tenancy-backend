@@ -13,12 +13,12 @@ import { TokenManager } from './services/token-manager.service';
 import { SecurityMiddleware } from './middlewares/security.middleware';
 import { User } from 'src/modules/users/entities/user.entity';
 import { RefreshToken } from './entities/refresh-token.entity'; 
-import { publicRoutes } from './constants/public-routes';
 import { RateLimitHandler } from './services/rate-limit-handler.service';
 import { RedisRateLimiter } from './services/radis-rate-limiter.service';
 import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middleware';
 import { APP_GUARD } from '@nestjs/core';
 import { EmailVerificationGuard } from './guards/email-verification.guard';
+import { ActiveUserGuard } from './guards/is-user-active.guard';
 
 @Module({
   imports: [
@@ -51,6 +51,10 @@ import { EmailVerificationGuard } from './guards/email-verification.guard';
     {
       provide: APP_GUARD,
       useClass: EmailVerificationGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ActiveUserGuard,
     },
   ],
   exports: [TokenManager, AuthHandler],
