@@ -125,7 +125,6 @@ export class AuthService {
       throw customError.forbidden('Not a member of this workspace');
     }
 
-    
     // Issue workspace-scoped token
     const accessToken = this.tokenManager.signWorkspaceToken(
       user,
@@ -165,16 +164,15 @@ export class AuthService {
   async verifyEmail(dto: VerifyEmailDTO, req: AuthenticatedRequest) {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
-    if (!user || user.isEmailVerified) {
-      throw customError.badRequest('Invalid verification request');
+    if (!user) {
+      throw customError.notFound('User not found');
     }
 
-    console.log(user.email,"email");
-    
-    // Temporary debugging - remove after fixing
-console.log('Stored code:', JSON.stringify(user.emailCode));
-console.log('Provided code:', JSON.stringify(dto.emailCode));
-console.log('Match:', user.emailCode === dto.emailCode);
+    if (user.isEmailVerified) {
+      throw customError.badRequest(
+        'You have already verified your email address',
+      );
+    }
 
     if (user.emailCode !== dto.emailCode) {
       throw customError.badRequest('Invalid verification code');
@@ -194,7 +192,9 @@ console.log('Match:', user.emailCode === dto.emailCode);
       throw customError.notFound('User not found');
     }
     if (user.isEmailVerified) {
-      throw customError.badRequest('You have already verified your email address');
+      throw customError.badRequest(
+        'You have already verified your email address',
+      );
     }
     const emailCode = generateOtp('numeric', 8);
     user.emailCode = emailCode;
