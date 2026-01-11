@@ -18,7 +18,7 @@ import { RedisRateLimiter } from './services/radis-rate-limiter.service';
 import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middleware';
 import { APP_GUARD } from '@nestjs/core';
 import { EmailVerificationGuard } from './guards/email-verification.guard';
-import { ActiveUserGuard } from './guards/is-user-active.guard';
+
 
 @Module({
   imports: [
@@ -51,10 +51,6 @@ import { ActiveUserGuard } from './guards/is-user-active.guard';
     {
       provide: APP_GUARD,
       useClass: EmailVerificationGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ActiveUserGuard,
     },
   ],
   exports: [TokenManager, AuthHandler],
