@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
 import { publicRoutes } from '../constants/public-routes';
+import { workspaceOptionalRoutes } from '../constants/public-routes';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
 
 @Injectable()
@@ -116,23 +117,15 @@ export class TenantResolverMiddleware implements NestMiddleware {
   }
 
   private isWorkspaceOptionalRoute(path: string): boolean {
-    // Routes that don't require workspace subdomain
-    // These are workspace-agnostic operations
-    const workspaceOptionalRoutes = [
-      '/api/workspaces', // POST (create), GET (list user workspaces)
-    ];
+    const pathWithoutQuery = path.split('?')[0];
 
     return workspaceOptionalRoutes.some((route) => {
-      // Match exact route or routes that start with it (excluding routes with :id)
-      if (path === route || path === `${route}/`) {
-        return true;
-      }
-      // Don't match routes with IDs like /api/workspaces/:id/...
-      const pathWithoutQuery = path.split('?')[0];
-      return (
-        pathWithoutQuery.startsWith(`${route}/`) &&
-        !pathWithoutQuery.match(/\/[^\/]+\//)
-      ); // No additional path segments
+      // Convert route pattern to regex (e.g., '/api/workspaces/:id' -> '/api/workspaces/[^/]+')
+      const routePattern = route.replace(/:[^/]+/g, '[^/]+');
+      const regex = new RegExp('^' + routePattern + '/?$');
+
+      // Check if path matches the route pattern
+      return regex.test(pathWithoutQuery);
     });
   }
 }
