@@ -39,3 +39,8 @@ export interface UpdateWorkspaceResponse {
 }
 
 
+export interface NoDataWorkspaceResponse {
+  accessToken: string;
+  refreshToken: string;
+  message: string;
+}

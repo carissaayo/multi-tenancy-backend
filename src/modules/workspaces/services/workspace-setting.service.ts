@@ -9,6 +9,7 @@ import {
   GetUserWorkspaceResponse,
   WorkspacePlan,
   UpdateWorkspaceResponse,
+  NoDataWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceQueryService } from './workspace-query.service';
@@ -49,7 +50,6 @@ export class WorkspaceSettingService {
     req: AuthenticatedRequest,
     updateDto: UpdateWorkspaceDto,
   ): Promise<UpdateWorkspaceResponse> {
-
     return this.workspaceLifecycleService.updateWorkspaceProperties(
       req.workspaceId!,
       req,
@@ -74,8 +74,10 @@ export class WorkspaceSettingService {
   /**
    * Soft delete workspace (deactivate)
    */
-  async deactivate(req: AuthenticatedRequest): Promise<void> {
-    return this.workspaceLifecycleService.deactivate(req.workspaceId!, req.userId);
+  async deactivate(
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    return this.workspaceLifecycleService.deactivate(req);
   }
 
   /**
@@ -92,7 +94,6 @@ export class WorkspaceSettingService {
    * Update workspace plan (upgrade/downgrade)
    */
   async updatePlan(
-    
     req: AuthenticatedRequest,
     newPlan: WorkspacePlan,
   ): Promise<Workspace> {
@@ -100,7 +101,9 @@ export class WorkspaceSettingService {
     if (!user) {
       throw customError.notFound('User not found');
     }
-    const workspace = await this.workspaceQueryService.findById(req.workspaceId!);
+    const workspace = await this.workspaceQueryService.findById(
+      req.workspaceId!,
+    );
 
     // Only owner can change plan
     if (workspace.createdBy !== user.id) {
@@ -126,7 +129,9 @@ export class WorkspaceSettingService {
    * Validate workspace can be downgraded to free plan
    */
   private async validatePlanDowngrade(workspace: Workspace): Promise<void> {
-    const stats = await this.workspaceQueryService.getWorkspaceStats(workspace.id);
+    const stats = await this.workspaceQueryService.getWorkspaceStats(
+      workspace.id,
+    );
 
     const freeLimits = {
       maxMembers: 10,
@@ -156,7 +161,6 @@ export class WorkspaceSettingService {
     fileCount: number;
     storageUsed: number;
   }> {
-   
     return this.workspaceQueryService.getWorkspaceStats(req.workspaceId!);
   }
 }

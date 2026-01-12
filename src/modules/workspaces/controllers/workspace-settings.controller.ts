@@ -24,6 +24,7 @@ import { Workspace } from '../entities/workspace.entity';
 import {
   GetUserWorkspaceResponse,
   GetUserWorkspacesResponse,
+  NoDataWorkspaceResponse,
   UpdateWorkspaceResponse,
   WorkspacePlan,
 } from '../interfaces/workspace.interface';
@@ -34,22 +35,18 @@ import { WorkspaceSettingService } from '../services/workspace-setting.service';
 @ApiTags('Workspace Settings')
 @Controller('settings')
 export class WorkspaceSettingsController {
-  constructor(private readonly workspaceSettingService: WorkspaceSettingService) {}
-
-
+  constructor(
+    private readonly workspaceSettingService: WorkspaceSettingService,
+  ) {}
 
   // Get single workspace by ID
   @Get()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get workspace by ID (with membership check)' })
   @ApiResponse({ status: 200, description: 'Workspace details' })
-  getById(
-    
-    @Req() req: AuthenticatedRequest,
-  ): Promise<GetUserWorkspaceResponse> {
-    return this.workspaceSettingService.getUserSingleWorkspace( req);
+  getById(@Req() req: AuthenticatedRequest): Promise<GetUserWorkspaceResponse> {
+    return this.workspaceSettingService.getUserSingleWorkspace(req);
   }
-
 
   // Update workspace details
   @Patch()
@@ -60,7 +57,7 @@ export class WorkspaceSettingsController {
     @Body() updateDto: UpdateWorkspaceDto,
     @Req() req: AuthenticatedRequest,
   ): Promise<UpdateWorkspaceResponse> {
-    return this.workspaceSettingService.updateWorkspaceProperties(  
+    return this.workspaceSettingService.updateWorkspaceProperties(
       req,
       updateDto,
     );
@@ -81,10 +78,7 @@ export class WorkspaceSettingsController {
     if (!file) {
       throw customError.badRequest('No file provided');
     }
-    return this.workspaceSettingService.updateWorkspaceLogo(
-      req,
-      file,
-    );
+    return this.workspaceSettingService.updateWorkspaceLogo(req, file);
   }
 
   // Deactivate (soft delete) a workspace
@@ -97,7 +91,7 @@ export class WorkspaceSettingsController {
   })
   deactivate(
     @Req() req: AuthenticatedRequest,
-  ): Promise<void> {
+  ): Promise<NoDataWorkspaceResponse> {
     return this.workspaceSettingService.deactivate(req);
   }
 
@@ -106,12 +100,8 @@ export class WorkspaceSettingsController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Permanently delete a workspace' })
   @ApiResponse({ status: 200, description: 'Workspace permanently deleted' })
-  permanentlyDelete(
-    @Req() req: AuthenticatedRequest,
-  ): Promise<void> {
-    return this.workspaceSettingService.permanentlyDelete(
-      req,
-    );
+  permanentlyDelete(@Req() req: AuthenticatedRequest): Promise<void> {
+    return this.workspaceSettingService.permanentlyDelete(req);
   }
 
   // Update workspace plan (upgrade/downgrade)
@@ -123,10 +113,7 @@ export class WorkspaceSettingsController {
     @Query('plan') newPlan: WorkspacePlan,
     @Req() req: AuthenticatedRequest,
   ): Promise<Workspace> {
-    return this.workspaceSettingService.updatePlan(
-      req,
-      newPlan,
-    );
+    return this.workspaceSettingService.updatePlan(req, newPlan);
   }
 
   // Get workspace statistics

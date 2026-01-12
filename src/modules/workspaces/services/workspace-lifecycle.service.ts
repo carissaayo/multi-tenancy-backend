@@ -9,6 +9,7 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import {
   WorkspacePlan,
   UpdateWorkspaceResponse,
+  NoDataWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
@@ -247,11 +248,11 @@ export class WorkspaceLifecycleService {
         workspaceId,
         user.id,
       );
-  if (!canUpdate) {
-    throw customError.forbidden(
-      'Only workspace owners and admins can update workspace',
-    );
-  }
+    if (!canUpdate) {
+      throw customError.forbidden(
+        'Only workspace owners and admins can update workspace',
+      );
+    }
 
     // Delete old logo if exists
     if (workspace.logoUrl) {
@@ -308,11 +309,19 @@ export class WorkspaceLifecycleService {
   /**
    * Soft delete workspace (deactivate)
    */
-  async deactivate(workspaceId: string, userId: string): Promise<void> {
-    const workspace = await this.workspaceQueryService.findById(workspaceId);
+  async deactivate(
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceQueryService.findById(
+      req.workspaceId!,
+    );
 
     // Only owner can deactivate
-    if (workspace.createdBy !== userId) {
+    if (workspace.createdBy !== user.id) {
       throw customError.forbidden(
         'Only workspace owner can deactivate workspace',
       );
@@ -324,6 +333,12 @@ export class WorkspaceLifecycleService {
     await this.workspaceRepo.save(workspace);
 
     this.logger.log(`Workspace deactivated: ${workspace.slug}`);
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace deactivated successfully',
+    };
   }
 
   /**
