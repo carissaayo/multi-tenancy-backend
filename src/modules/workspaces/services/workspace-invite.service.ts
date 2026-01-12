@@ -15,6 +15,7 @@ import { PermissionsEnum } from 'src/core/security/interfaces/permission.interfa
 import { EmailService } from 'src/core/email/services/email.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
 import {
+  NoDataWorkspaceResponse,
   WorkspaceInvitationRole,
   WorkspaceInvitationStatus,
 } from '../interfaces/workspace.interface';
@@ -58,10 +59,6 @@ export class WorkspaceInviteService {
       throw customError.notFound('No workspace found with this id');
     }
 
-      if (!workspace.isActive) {
-        throw customError.badRequest('Workspace is not active');
-      }
-      
     const isInviterAMember = await this.memberService.isUserMember(
       workspace.id,
       user.id,
@@ -241,7 +238,47 @@ export class WorkspaceInviteService {
     };
   }
 
-  async revokeInvite(inviteId: string, requesterId: string) {}
+  async revokeInvite(
+    inviteId: string,
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const invitation = await this.workspaceInvitationRepo.findOne({
+      where: { id: inviteId },
+    });
+    if (!invitation) {
+      throw customError.notFound('Invitation not found');
+    }
+    if (invitation.status !== WorkspaceInvitationStatus.PENDING) {
+      throw customError.badRequest('Invitation can no longer be revoked');
+    }
+    if (invitation.expiresAt < new Date()) {
+      throw customError.badRequest('Invitation has already expired');
+    }
+    if (invitation.workspaceId !== req.workspaceId) {
+      throw customError.badRequest('Invitation is not for this workspace');
+    }
+    if (invitation.invitedBy !== user.id) {
+      throw customError.badRequest('You can only revoke invitations you sent');
+    }
+
+    invitation.revokedBy = user.id;
+    invitation.revokedByUser = user;
+    invitation.revokedAt = new Date();
+    invitation.status = WorkspaceInvitationStatus.REVOKED;
+    await this.workspaceInvitationRepo.save(invitation);
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      message: 'Invitation revoked successfully',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+  }
 
   async listPendingInvites(workspaceId: string) {}
 

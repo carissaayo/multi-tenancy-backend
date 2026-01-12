@@ -39,7 +39,21 @@ export class WorkspaceInviteController {
     @Req() req: AuthenticatedRequest,
     @Body() inviteDto: WorkspaceInviteDto,
   ) {
-    return this.workspaceService.inviteByEmail( req, inviteDto);
+    return this.workspaceService.inviteByEmail(req, inviteDto);
+  }
+
+  @Patch('revoke/:inviteId')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Revoke workspace invitation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Workspace invitation revoked successfully',
+  })
+  revokeInvitation(
+    @Req() req: AuthenticatedRequest,
+    @Param('inviteId') inviteId: string,
+  ) {
+    return this.workspaceService.revokeInvite(inviteId, req);
   }
 
   @Patch('accept')
@@ -49,9 +63,7 @@ export class WorkspaceInviteController {
     status: 201,
     description: 'Workspace invitation sent successfully',
   })
-  acceptInvitation(
-    @Query('token') token: string,
-  ) {
+  acceptInvitation(@Query('token') token: string) {
     return this.workspaceService.acceptInvitation(token);
   }
 }

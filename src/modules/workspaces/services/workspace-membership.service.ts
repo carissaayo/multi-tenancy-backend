@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 
@@ -22,9 +22,9 @@ export class WorkspaceMembershipService {
     private readonly workspaceRepo: Repository<Workspace>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-
     private readonly dataSource: DataSource,
     private readonly workspaceQueryService: WorkspaceQueryService,
+    @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
   ) {}

@@ -12,10 +12,11 @@ import { EmailService } from 'src/core/email/services/email.service';
 import { AuthController } from './auth.controller';
 
 import { User } from 'src/modules/users/entities/user.entity';
+import { Workspace } from '../workspaces/entities/workspace.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]), 
+    TypeOrmModule.forFeature([User,Workspace]), 
     SecurityModule,
     WorkspaceModule,
     MemberModule,

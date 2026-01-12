@@ -24,11 +24,12 @@ import { WorkspaceManagementService } from './services/workspace-management.serv
 import { WorkspaceManagementController } from './controllers/workspace-management.controller';
 import { WorkspaceSettingService } from './services/workspace-setting.service';
 import { WorkspaceSettingsController } from './controllers/workspace-settings.controller';
+import { WorkspaceMember } from 'src/core/security/decorators/workspace-member.decorator';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([Workspace, User, WorkspaceInvitation]),
+    TypeOrmModule.forFeature([Workspace, User, WorkspaceInvitation,WorkspaceMember]),
     SecurityModule,
     UserModule,
     forwardRef(() => MemberModule),

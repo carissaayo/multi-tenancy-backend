@@ -22,12 +22,15 @@ import { UsersService } from '../users/services/user.service';
 import { MemberService } from '../members/services/member.service';
 import { WorkspaceMember } from '../members/entities/member.entity';
 import { EmailService } from 'src/core/email/services/email.service';
+import { Workspace } from '../workspaces/entities/workspace.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Workspace)
+    private readonly workspaceRepo: Repository<Workspace>,
     private readonly userService: UsersService,
     private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
@@ -114,14 +117,18 @@ export class AuthService {
     if (!user) {
       throw customError.unauthorized('Invalid credentials');
     }
+    const workspace = await this.workspaceRepo.findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
 
     // Use member service to verify membership
-    const result = await this.memberService.findMemberWithWorkspace(
+    const result = await this.memberService.isUserMember(
       workspaceId,
       user.id,
     );
 
-    if (!result || !result.member) {
+    if (!result) {
       throw customError.forbidden('Not a member of this workspace');
     }
 
@@ -129,12 +136,12 @@ export class AuthService {
     const accessToken = this.tokenManager.signWorkspaceToken(
       user,
       workspaceId,
-      result.member as WorkspaceMember,
+      result,
     );
 
     return {
-      accessToken,
-      workspace: result.workspace,
+      accessToken,  
+      workspace: workspace,
       message: 'Workspace context established',
     };
   }
