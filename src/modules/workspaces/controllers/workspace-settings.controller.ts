@@ -95,6 +95,20 @@ export class WorkspaceSettingsController {
     return this.workspaceSettingService.deactivate(req);
   }
 
+  // Activate a workspace
+  @Patch('activate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Activate a workspace' })
+  @ApiResponse({
+    status: 200,
+    description: 'Workspace activated successfully',
+  })
+  activate(
+    @Req() req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    return this.workspaceSettingService.activate(req);
+  }
+
   // Permanently delete a workspace
   @Delete()
   @ApiBearerAuth('access-token')

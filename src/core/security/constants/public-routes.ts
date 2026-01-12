@@ -21,3 +21,8 @@ export const workspaceOptionalRoutes = [
   '/api/auth/verify-email',
   "/api/auth/resend-verification-email",
 ];
+
+
+export const allowDeactivatedWorkspaceRoutes = [
+  '/api/settings/activate', 
+];

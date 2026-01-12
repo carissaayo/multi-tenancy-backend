@@ -72,12 +72,21 @@ export class WorkspaceSettingService {
   }
 
   /**
-   * Soft delete workspace (deactivate)
+   * Deactivate workspace
    */
   async deactivate(
     req: AuthenticatedRequest,
   ): Promise<NoDataWorkspaceResponse> {
     return this.workspaceLifecycleService.deactivate(req);
+  }
+
+  /** 
+   * Activate workspace
+   */
+  async activate(
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    return this.workspaceLifecycleService.activate(req);
   }
 
   /**

@@ -3,7 +3,10 @@ import { Response, NextFunction } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
-import { publicRoutes } from '../constants/public-routes';
+import {
+  allowDeactivatedWorkspaceRoutes,
+  publicRoutes,
+} from '../constants/public-routes';
 import { workspaceOptionalRoutes } from '../constants/public-routes';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
 
@@ -62,12 +65,32 @@ export class TenantResolverMiddleware implements NestMiddleware {
         });
       }
 
-      // Lookup workspace
+      const allowsDeactivated = this.allowsDeactivatedWorkspace(
+        req.originalUrl,
+      );
+
+      // Lookup workspace - conditionally filter by isActive
       const workspace = await this.workspaceRepo.findOne({
-        where: { slug: workspaceSlug},
+        where: allowsDeactivated
+          ? { slug: workspaceSlug }
+          : { slug: workspaceSlug, isActive: true },
       });
 
       if (!workspace) {
+        // Check if workspace exists but is inactive (for better error message)
+        if (!allowsDeactivated) {
+          const inactiveWorkspace = await this.workspaceRepo.findOne({
+            where: { slug: workspaceSlug, isActive: false },
+          });
+          if (inactiveWorkspace) {
+            this.logger.warn(`Workspace ${workspaceSlug} is deactivated`);
+            return res.status(HttpStatus.FORBIDDEN).json({
+              success: false,
+              message: 'Workspace is deactivated',
+            });
+          }
+        }
+
         this.logger.warn(`Workspace not found: ${workspaceSlug}`);
         return res.status(HttpStatus.NOT_FOUND).json({
           success: false,
@@ -80,7 +103,7 @@ export class TenantResolverMiddleware implements NestMiddleware {
       req.workspaceId = workspace.id;
 
       this.logger.debug(
-        `Resolved workspace: ${workspace.slug} (${workspace.id})`,
+        `Resolved workspace: ${workspace.slug} (${workspace.id})${allowsDeactivated && !workspace.isActive ? ' [deactivated allowed]' : ''}`,
       );
       next();
     } catch (error) {
@@ -98,9 +121,8 @@ export class TenantResolverMiddleware implements NestMiddleware {
     // localhost or IP address (no subdomain)
     if (parts.length === 1 || hostname.includes('localhost')) {
       // For local dev, check if there's a subdomain before localhost
-      const localParts = hostname.split('.');
-      if (localParts.length > 1 && localParts[0] !== 'localhost') {
-        return localParts[0];
+      if (parts.length > 1 && parts[0] !== 'localhost') {
+        return parts[0];
       }
       return null;
     }
@@ -110,9 +132,11 @@ export class TenantResolverMiddleware implements NestMiddleware {
   }
 
   private isPublicRoute(path: string): boolean {
+    const pathWithoutQuery = path.split('?')[0];
+
     return publicRoutes.some((route) => {
-      const regex = new RegExp('^' + route.replace(/:[^/]+/g, '[^/]+') + '$');
-      return regex.test(path);
+      const regex = new RegExp('^' + route.replace(/:[^/]+/g, '[^/]+') + '/?$');
+      return regex.test(pathWithoutQuery);
     });
   }
 
@@ -121,6 +145,19 @@ export class TenantResolverMiddleware implements NestMiddleware {
 
     return workspaceOptionalRoutes.some((route) => {
       // Convert route pattern to regex (e.g., '/api/workspaces/:id' -> '/api/workspaces/[^/]+')
+      const routePattern = route.replace(/:[^/]+/g, '[^/]+');
+      const regex = new RegExp('^' + routePattern + '/?$');
+
+      // Check if path matches the route pattern
+      return regex.test(pathWithoutQuery);
+    });
+  }
+
+  private allowsDeactivatedWorkspace(path: string): boolean {
+    const pathWithoutQuery = path.split('?')[0];
+
+    return allowDeactivatedWorkspaceRoutes.some((route) => {
+      // Convert route pattern to regex (e.g., '/api/settings/activate' -> '/api/settings/activate')
       const routePattern = route.replace(/:[^/]+/g, '[^/]+');
       const regex = new RegExp('^' + routePattern + '/?$');
 

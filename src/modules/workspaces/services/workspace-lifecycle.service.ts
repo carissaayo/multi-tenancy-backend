@@ -307,7 +307,7 @@ export class WorkspaceLifecycleService {
     };
   }
   /**
-   * Soft delete workspace (deactivate)
+   * Deactivate workspace
    */
   async deactivate(
     req: AuthenticatedRequest,
@@ -323,7 +323,7 @@ export class WorkspaceLifecycleService {
       throw customError.notFound('Workspace not found');
     }
     if (!workspace.isActive) {
-      throw customError.conflict('Workspace is already deactivated');
+      throw customError.conflict('Workspace is currently deactivated');
     }
 
     // Only owner can deactivate
@@ -344,6 +344,47 @@ export class WorkspaceLifecycleService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
       message: 'Workspace deactivated successfully',
+    };
+  }
+
+  /**
+   * Activate workspace
+   */
+  async activate(
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceQueryService.findById(
+      req.workspaceId!,
+    );
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    if (workspace.isActive) {
+      throw customError.conflict('Workspace is currently active');
+    }
+
+    // Only owner can activate
+    if (workspace.createdBy !== user.id) {
+      throw customError.forbidden(
+        'Only workspace owner can activate workspace',
+      );
+    }
+
+    workspace.isActive = true;
+    workspace.updatedAt = new Date();
+
+    await this.workspaceRepo.save(workspace);
+
+    this.logger.log(`Workspace activated: ${workspace.slug}`);
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace activated successfully',
     };
   }
 
