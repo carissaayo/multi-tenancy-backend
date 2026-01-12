@@ -5,6 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { MemberService } from 'src/modules/members/services/member.service';
 
 import { Workspace } from '../entities/workspace.entity';
 import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
@@ -16,8 +17,8 @@ import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-reques
 import { WorkspaceInvitationRole } from '../interfaces/workspace.interface';
 
 import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
-
 @Injectable()
+
 export class WorkspaceManagementService {
   private readonly logger = new Logger(WorkspaceManagementService.name);
 
@@ -29,8 +30,9 @@ export class WorkspaceManagementService {
 
     private readonly dataSource: DataSource,
     private readonly workspaceQueryService: WorkspaceQueryService,
-    private readonly tokenManager: TokenManager,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
+    private readonly memberService: MemberService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   /**
@@ -68,7 +70,7 @@ export class WorkspaceManagementService {
       throw customError.badRequest('Workspace is not active');
     }
 
-    const requester = await this.workspaceMembershipService.isUserMember(
+    const requester = await this.memberService.isUserMember(
       workspace.id,
       user.id,
     );
@@ -77,7 +79,7 @@ export class WorkspaceManagementService {
       throw customError.forbidden('You are not a member of this workspace');
     }
 
-    const targetMember = await this.workspaceMembershipService.isUserMember(
+    const targetMember = await this.memberService.isUserMember(
       workspace.id,
       targetUserId,
     );
@@ -161,9 +163,19 @@ export class WorkspaceManagementService {
         `Member role changed: user ${targetUserId} → ${newRole} in workspace ${workspace.id} by ${user.id}`,
       );
 
-      const updatedMember=result[0];
+      const updatedMember = result[0];
+      // Map SQL result to WorkspaceMember format (snake_case -> camelCase)
+      const member: WorkspaceMember = {
+        id: updatedMember.id,
+        userId: updatedMember.user_id,
+        role: updatedMember.role,
+        permissions: updatedMember.permissions,
+        isActive: updatedMember.is_active,
+        joinedAt: updatedMember.joined_at,
+      } as WorkspaceMember;
 
-      const memberProfile = this.workspaceMembershipService.getMemberProfile(updatedMember);
+      const memberProfile =
+        this.workspaceMembershipService.getMemberProfile(member);
       const tokens = await this.tokenManager.signTokens(user, req);
       return {
         accessToken: tokens.accessToken,

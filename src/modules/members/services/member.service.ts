@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import {
@@ -8,26 +8,59 @@ import {
 import { Workspace } from '../../workspaces/entities/workspace.entity';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
+import { WorkspaceInvitationRole } from 'src/modules/workspaces/interfaces/workspace.interface';
+import { User } from 'src/modules/users/entities/user.entity';
+import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 
 @Injectable()
 export class MemberService {
+  private readonly logger = new Logger(MemberService.name);
   constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
     @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   /**
-   * Find a member in a specific workspace by user ID
-   * This switches to the workspace's tenant schema to query members
+   * Add creator as owner member
    */
-  async findMember(
+  async addOwnerMember(
+    workspaceId: string,
+    slug: string,
+    userId: string,
+    queryRunner: any,
+  ): Promise<void> {
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(slug);
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
+
+    await queryRunner.query(
+      `
+    INSERT INTO "${schemaName}".members
+      (user_id, role, permissions, is_active, joined_at)
+    VALUES ($1, 'owner', $2::jsonb, true, NOW())
+    `,
+      [userId, JSON.stringify(ownerPermissions)],
+    );
+
+    this.logger.log(
+      `Owner member added: user ${userId} → workspace ${workspaceId} (${schemaName})`,
+    );
+  }
+
+  /**
+   * Check if user is member of workspace
+   */
+  async isUserMember(
     workspaceId: string,
     userId: string,
   ): Promise<WorkspaceMember | null> {
-    // First, get the workspace to know which schema to query
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
     });
@@ -36,13 +69,11 @@ export class MemberService {
       throw customError.notFound('Workspace not found');
     }
 
-    // Switch to the workspace's tenant schema
     const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
       workspace.slug,
     );
     const schemaName = `workspace_${sanitizedSlug}`;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
-
     try {
       // Use direct query instead of repository to ensure we're querying the correct schema
       const [member] = await this.dataSource.query(
@@ -67,7 +98,10 @@ export class MemberService {
       } as WorkspaceMember;
     } catch (error) {
       // Log the error for debugging
-      console.error(`Error querying members in schema ${schemaName}:`, error);
+      this.logger.error(
+        `Error querying members in schema ${schemaName}:`,
+        error,
+      );
       return null;
     } finally {
       // Reset search path
@@ -76,69 +110,16 @@ export class MemberService {
   }
 
   /**
-   * Find member with workspace information
-   * Returns member with workspace attached for convenience
+   * Add a new user to workspace
+   * @param workspaceId - The workspace ID
+   * @param userId - The user ID to add
+   * @param role - The role to assign (defaults to 'member')
+   * @returns The created workspace member
    */
-  async findMemberWithWorkspace(
+  async addMemberToWorkspace(
     workspaceId: string,
     userId: string,
-  ): Promise<{
-    member: Partial<WorkspaceMember>;
-    workspace: ReturnType<typeof this.workspacesService.normalizedWorkspaceData>;
-  } | null> {
-    const workspace =
-      await this.workspacesService.findWorkspaceWithSafeFields(workspaceId);
-
-    if (!workspace) {
-      return null;
-    }
-
-    const member = await this.findMember(workspaceId, userId);
-
-    if (!member) {
-      return null;
-    }
-
-    const normalizedWorkspace = this.workspacesService.normalizedWorkspaceData(workspace);
-
-    // Attach workspace to member for convenience (similar to your commented code)
-    return {
-      member: this.getSafeMemberFields(member as WorkspaceMember),
-      workspace: normalizedWorkspace,
-    };
-  }
-
-  /**
-   * Get all workspaces a user is a member of
-   * This requires querying all workspace schemas, which is expensive
-   * Consider caching or maintaining a membership index in public schema
-   */
-  async getUserWorkspaces(userId: string): Promise<Workspace[]> {
-    // This is a simplified version - in production, you might want
-    // a membership index table in the public schema for performance
-    const workspaces = await this.workspaceRepo.find({
-      where: { isActive: true },
-    });
-
-    const userWorkspaces: Workspace[] = [];
-
-    for (const workspace of workspaces) {
-      const member = await this.findMember(workspace.id, userId);
-      if (member) {
-        userWorkspaces.push(workspace);
-      }
-    }
-
-    return userWorkspaces;
-  }
-
-  /**
-   * Add a user as a member to a workspace
-   */
-  async addMember(
-    workspaceId: string,
-    userId: string,
-    role: 'owner' | 'admin' | 'member' | 'guest' = 'member',
+    role: WorkspaceInvitationRole,
   ): Promise<WorkspaceMember> {
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
@@ -148,37 +129,89 @@ export class MemberService {
       throw customError.notFound('Workspace not found');
     }
 
-    // Check if already a member
-    const existing = await this.findMember(workspaceId, userId);
-    if (existing) {
+    if (!workspace.isActive) {
+      throw customError.badRequest('Workspace is not active');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    // Check if user is already a member
+    const existingMember = await this.isUserMember(workspaceId, userId);
+    if (existingMember) {
       throw customError.badRequest(
         'User is already a member of this workspace',
       );
     }
 
-    // Switch to workspace schema
+    // Get permissions for the role
+    const rolePermissions =
+      RolePermissions[role as string] || RolePermissions.member;
+    const permissions = rolePermissions.map((p) => p.toString());
+
+    // Sanitize slug and get schema name
     const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
       workspace.slug,
     );
     const schemaName = `workspace_${sanitizedSlug}`;
-    await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
-      const memberRepo = this.dataSource.getRepository(WorkspaceMemberEntity);
+      // Insert member into workspace-specific schema
+      const result = await this.dataSource.query(
+        `
+      INSERT INTO "${schemaName}".members
+        (user_id, role, permissions, is_active, joined_at)
+      VALUES ($1, $2, $3::jsonb, true, NOW())
+      RETURNING id, user_id, role, permissions, is_active, joined_at
+      `,
+        [userId, role as string, JSON.stringify(permissions)],
+      );
 
-      const member = memberRepo.create({
-        userId,
-        role,
-        isActive: true,
-        joinedAt: new Date(),
-      });
+      if (!result || result.length === 0) {
+        throw customError.internalServerError(
+          'Failed to add member to workspace',
+        );
+      }
 
-      return await memberRepo.save(member);
-    } finally {
-      await this.dataSource.query(`SET search_path TO public`);
+      const member = result[0];
+
+      this.logger.log(
+        `Member added: user ${userId} → workspace ${workspaceId} (${schemaName}) with role ${role}`,
+      );
+
+      // Map the result to WorkspaceMember format
+      return {
+        id: member.id,
+        userId: member.user_id,
+        role: member.role,
+        permissions: member.permissions,
+        isActive: member.is_active,
+        joinedAt: member.joined_at,
+      } as WorkspaceMember;
+    } catch (error) {
+      this.logger.error(
+        `Error adding member to workspace ${workspaceId}: ${error.message}`,
+      );
+
+      // Handle unique constraint violation (user already exists)
+      if (error.code === '23505') {
+        throw customError.badRequest(
+          'User is already a member of this workspace',
+        );
+      }
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError(
+        'Failed to add member to workspace',
+      );
     }
   }
-
   /**
    * Update member role
    */
@@ -187,7 +220,7 @@ export class MemberService {
     userId: string,
     role: 'owner' | 'admin' | 'member' | 'guest',
   ): Promise<WorkspaceMember> {
-    const member = await this.findMember(workspaceId, userId);
+    const member = await this.isUserMember(workspaceId, userId);
 
     if (!member) {
       throw customError.notFound('Member not found');
@@ -205,7 +238,6 @@ export class MemberService {
       workspace.slug,
     );
     const schemaName = `workspace_${sanitizedSlug}`;
-;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
@@ -221,15 +253,12 @@ export class MemberService {
    * Get member with safe fields only
    * Returns only public/safe member information
    */
-  private getSafeMemberFields(
-    member: WorkspaceMember,
-  ): Partial<WorkspaceMember> {
+  getMemberProfile(member: WorkspaceMember): Partial<WorkspaceMember> {
     return {
       id: member.id,
       userId: member.userId,
-      role: (member as any).role, // Include role if it exists
+      role: member.role,
       isActive: member.isActive,
-      permissions: member.permissions,
       joinedAt: member.joinedAt,
     };
   }

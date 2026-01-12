@@ -5,7 +5,6 @@ import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceLifecycleService } from './workspace-lifecycle.service';
 
 import { Workspace } from '../entities/workspace.entity';
-import { WorkspaceMember } from 'src/modules/members/entities/member.entity';
 
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 
@@ -99,15 +98,7 @@ export class WorkspacesService {
   // MEMBERSHIP OPERATIONS (delegated to WorkspaceMembershipService)
   // ============================================
 
-  /**
-   * Check if user is member of workspace
-   */
-  async isUserMember(
-    workspaceId: string,
-    userId: string,
-  ): Promise<WorkspaceMember | null> {
-    return this.workspaceMembershipService.isUserMember(workspaceId, userId);
-  }
+
 
   /**
    * Check if user can manage workspace (owner or admin)

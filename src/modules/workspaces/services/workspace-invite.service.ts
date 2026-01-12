@@ -58,7 +58,11 @@ export class WorkspaceInviteService {
       throw customError.notFound('No workspace found with this id');
     }
 
-    const isInviterAMember = await this.workspaceMembershipService.isUserMember(
+      if (!workspace.isActive) {
+        throw customError.badRequest('Workspace is not active');
+      }
+      
+    const isInviterAMember = await this.memberService.isUserMember(
       workspace.id,
       user.id,
     );
@@ -85,7 +89,7 @@ export class WorkspaceInviteService {
     }
 
     // Check if already a member
-    const existingMember = await this.workspaceMembershipService.isUserMember(
+    const existingMember = await this.memberService.isUserMember(
       workspace.id,
       existingUser.id,
     );
@@ -183,7 +187,7 @@ export class WorkspaceInviteService {
     }
 
     // Check if already a member
-    const existingMember = await this.workspaceMembershipService.isUserMember(
+    const existingMember = await this.memberService.isUserMember(
       invitation.workspaceId,
       user.id,
     );
@@ -213,7 +217,7 @@ export class WorkspaceInviteService {
       throw customError.notFound('Inviter not found');
     }
 
-    await this.workspaceMembershipService.addMemberToWorkspace(
+    await this.memberService.addMemberToWorkspace(
       workspace.id,
       user.id,
       invitation.role ?? WorkspaceInvitationRole.MEMBER,
@@ -261,7 +265,7 @@ export class WorkspaceInviteService {
     }
 
     // Check if user is a member of the workspace
-    const member = await this.memberService.findMember(workspaceId, userId);
+    const member = await this.memberService.isUserMember(workspaceId, userId);
 
     if (!member || !member.isActive) {
       this.logger.warn(

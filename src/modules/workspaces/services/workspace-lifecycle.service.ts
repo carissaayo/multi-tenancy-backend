@@ -16,6 +16,7 @@ import { TokenManager } from 'src/core/security/services/token-manager.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
 import { WorkspaceQueryService } from './workspace-query.service';
 import { AWSStorageService } from 'src/core/storage/services/aws-storage.service';
+import { MemberService } from 'src/modules/members/services/member.service';
 
 @Injectable()
 export class WorkspaceLifecycleService {
@@ -30,6 +31,7 @@ export class WorkspaceLifecycleService {
     private readonly tokenManager: TokenManager,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceQueryService: WorkspaceQueryService,
+    private readonly memberService: MemberService,
     private readonly storageService: AWSStorageService,
     private readonly configService: ConfigService,
   ) {}
@@ -130,7 +132,7 @@ export class WorkspaceLifecycleService {
       await this.createWorkspaceSchema(workspace.slug, queryRunner);
 
       // 8. Add creator as owner member
-      await this.workspaceMembershipService.addOwnerMember(
+      await this.memberService.addOwnerMember(
         workspace.id,
         workspace.slug,
         user.id,

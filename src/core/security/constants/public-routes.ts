@@ -20,6 +20,7 @@ export const workspaceOptionalRoutes = [
   '/api/auth/reset-password',
   '/api/auth/verify-email',
   "/api/auth/resend-verification-email",
+  "/api/auth/select-workspace",
 ];
 
 
