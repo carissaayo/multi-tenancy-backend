@@ -8,12 +8,11 @@ export const publicRoutes = [
 ];
 
 export const workspaceOptionalRoutes = [
-  '/api/workspaces', // POST (create), GET (list user workspaces)
-  '/api/workspaces/:id', // GET single workspace by ID
-  '/api/invitations', // POST (create invitation), GET (list invitations)
+  '/api/workspaces',
+  '/api/workspaces/:id', 
+  '/api/invitations', 
   '/api/users',
   '/api/users/avatar',
-  
   '/api/auth/password-reset',
   '/api/auth/request-password-reset',
   '/api/auth/verify-email',

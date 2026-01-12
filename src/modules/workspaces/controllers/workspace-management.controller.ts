@@ -2,7 +2,6 @@ import {
   Controller,
   Body,
   Req,
-  Param,
   Patch,
 } from '@nestjs/common';
 import {

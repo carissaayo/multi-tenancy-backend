@@ -121,9 +121,10 @@ export class UsersService {
     const normalizedUser = this.getUserProfile(updatedUser);
     return {
       user: normalizedUser,
-      message: 'Avatar has beenupdated successfully',
+      message: 'Avatar has been updated successfully',
     };
   }
+
   async getUser(
     req: AuthenticatedRequest,
   ): Promise<{ user: Partial<User>; message: string }> {
