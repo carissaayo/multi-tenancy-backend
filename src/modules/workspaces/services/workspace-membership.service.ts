@@ -64,6 +64,7 @@ export class WorkspaceMembershipService {
     }
   }
 
+
   /**
    * Count workspaces owned by user
    */

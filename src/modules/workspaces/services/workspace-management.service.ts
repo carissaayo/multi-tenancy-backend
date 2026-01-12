@@ -14,11 +14,10 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { WorkspaceInvitationRole } from '../interfaces/workspace.interface';
+import { NoDataWorkspaceResponse, WorkspaceInvitationRole } from '../interfaces/workspace.interface';
 
-import { ChangeMemberRoleDto } from '../dtos/workspace-management.dto';
+import { ChangeMemberRoleDto, RemoveUserFromWorkspaceDto } from '../dtos/workspace-management.dto';
 @Injectable()
-
 export class WorkspaceManagementService {
   private readonly logger = new Logger(WorkspaceManagementService.name);
 
@@ -50,7 +49,6 @@ export class WorkspaceManagementService {
     message: string;
     member: Partial<WorkspaceMember>;
   }> {
-    
     const { targetUserId, newRole } = changeMemberRoleDto;
 
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
@@ -58,7 +56,7 @@ export class WorkspaceManagementService {
     if (!user) {
       throw customError.notFound('User not found');
     }
- 
+
     const workspace = await this.workspaceRepo.findOne({
       where: { id: req.workspaceId! },
     });
@@ -105,17 +103,17 @@ export class WorkspaceManagementService {
         'Cannot change the role of the workspace owner',
       );
     }
-    
+
     if (user.id === targetUserId) {
       throw customError.forbidden('You cannot change your own role');
     }
-    
+
     if (!Object.values(WorkspaceInvitationRole).includes(newRole)) {
       throw customError.badRequest(
         'Invalid role. Only admin, member, and guest roles can be changed.',
       );
     }
-    
+
     if (
       (newRole === WorkspaceInvitationRole.ADMIN ||
         isTargetAdmin ||
@@ -194,5 +192,91 @@ export class WorkspaceManagementService {
 
       throw customError.internalServerError('Failed to change member role');
     }
+  }
+
+  /**
+   * Remove a user from a workspace
+   */
+  /**
+   * Remove a user from a workspace
+   */
+  async removeUserFromWorkspace(
+    dto: RemoveUserFromWorkspaceDto,
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
+    const { targetUserId } = dto;
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: req.workspaceId! },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+
+
+    const canManageWorkspace =
+      await this.workspaceMembershipService.canUserManageWorkspace(
+        workspace.id,
+        user.id,
+      );
+
+    if (!canManageWorkspace) {
+      throw customError.forbidden(
+        'You do not have permission to manage users in this workspace',
+      );
+    }
+
+    const targetMember = await this.memberService.isUserMember(
+      workspace.id,
+      targetUserId,
+    );
+    if (!targetMember) {
+      throw customError.notFound(
+        'Target user is not a member of this workspace',
+      );
+    }
+
+    // Cannot remove workspace owner
+    const isTargetOwner =
+      workspace.ownerId === targetUserId ||
+      workspace.createdBy === targetUserId;
+    if (isTargetOwner || targetMember.role === 'owner') {
+      throw customError.forbidden(
+        'You cannot remove the workspace owner from the workspace',
+      );
+    }
+
+    // Only the owner can remove admins
+    const isRequesterOwner =
+      workspace.ownerId === user.id || workspace.createdBy === user.id;
+    if (!isRequesterOwner && targetMember.role === 'admin') {
+      throw customError.forbidden(
+        'You do not have the permission to remove admins from the workspace',
+      );
+    }
+
+  
+    await this.memberService.removeMemberFromWorkspace(
+      workspace.id,
+      targetUserId,
+    );
+
+    this.logger.log(
+      `User ${targetUserId} removed from workspace ${workspace.id} by ${user.id}`,
+    );
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Member removed from workspace successfully',
+    };
   }
 }

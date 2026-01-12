@@ -10,3 +10,9 @@ export class ChangeMemberRoleDto {
   @IsNotEmpty()
   newRole: WorkspaceInvitationRole;
 }       
+
+export class RemoveUserFromWorkspaceDto {
+  @IsString()
+  @IsNotEmpty()
+  targetUserId: string;
+}

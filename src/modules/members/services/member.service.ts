@@ -129,10 +129,6 @@ export class MemberService {
       throw customError.notFound('Workspace not found');
     }
 
-    if (!workspace.isActive) {
-      throw customError.badRequest('Workspace is not active');
-    }
-
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
       throw customError.notFound('User not found');
@@ -249,6 +245,71 @@ export class MemberService {
     }
   }
 
+  /**
+   * Remove a member from a workspace 
+   * @param workspaceId - The workspace ID
+   * @param userId - The user ID to remove
+   */
+  async removeMemberFromWorkspace(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+
+
+    const member = await this.isUserMember(workspaceId, userId);
+    if (!member) {
+      throw customError.notFound('Member not found');
+    }
+
+    // Sanitize slug and get schema name
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+
+      const result = await this.dataSource.query(
+        `
+      DELETE FROM "${schemaName}".members
+      WHERE user_id = $1
+      RETURNING id, user_id, role
+      `,
+        [userId],
+      );
+
+      if (!result || result.length === 0) {
+        throw customError.internalServerError(
+          'Failed to remove member from workspace',
+        );
+      }
+
+      this.logger.log(
+        `Member removed: user ${userId} from workspace ${workspaceId} (${schemaName})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error removing member from workspace ${workspaceId}: ${error.message}`,
+      );
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError(
+        'Failed to remove member from workspace',
+      );
+    }
+  }
   /**
    * Get member with safe fields only
    * Returns only public/safe member information
