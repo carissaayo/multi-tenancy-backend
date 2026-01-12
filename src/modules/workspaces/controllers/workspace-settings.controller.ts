@@ -109,13 +109,13 @@ export class WorkspaceSettingsController {
     return this.workspaceSettingService.activate(req);
   }
 
-  // Permanently delete a workspace
+  // soft delete a workspace
   @Delete()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Permanently delete a workspace' })
-  @ApiResponse({ status: 200, description: 'Workspace permanently deleted' })
-  permanentlyDelete(@Req() req: AuthenticatedRequest): Promise<void> {
-    return this.workspaceSettingService.permanentlyDelete(req);
+  @ApiOperation({ summary: 'Delete a workspace' })
+  @ApiResponse({ status: 200, description: 'Workspace deleted successfully' })
+  delete(@Req() req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
+    return this.workspaceSettingService.delete(req);
   }
 
   // Update workspace plan (upgrade/downgrade)

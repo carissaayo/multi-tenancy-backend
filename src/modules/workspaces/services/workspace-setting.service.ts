@@ -90,12 +90,11 @@ export class WorkspaceSettingService {
   }
 
   /**
-   * Permanently delete workspace
+   * Delete workspace
    */
-  async permanentlyDelete(req: AuthenticatedRequest): Promise<void> {
-    return this.workspaceLifecycleService.permanentlyDelete(
-      req.workspaceId!,
-      req.userId,
+  async delete(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
+    return this.workspaceLifecycleService.delete(
+      req,
     );
   }
 

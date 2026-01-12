@@ -350,9 +350,7 @@ export class WorkspaceLifecycleService {
   /**
    * Activate workspace
    */
-  async activate(
-    req: AuthenticatedRequest,
-  ): Promise<NoDataWorkspaceResponse> {
+  async activate(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
     if (!user) {
       throw customError.notFound('User not found');
@@ -389,42 +387,32 @@ export class WorkspaceLifecycleService {
   }
 
   /**
-   * Permanently delete workspace (dangerous!)
+   * Delete workspace
    */
-  async permanentlyDelete(workspaceId: string, userId: string): Promise<void> {
-    const workspace = await this.workspaceQueryService.findById(workspaceId);
+  async delete(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceQueryService.findById(req.workspaceId!);
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
 
     // Only owner can delete
-    if (workspace.createdBy !== userId) {
+    if (workspace.createdBy !== user.id) {
       throw customError.forbidden('Only workspace owner can delete workspace');
     }
+    await this.workspaceRepo.softDelete(workspace.id);
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
-    try {
-      // 1. Drop workspace schema (CASCADE removes all tables)
-      await queryRunner.query(
-        `DROP SCHEMA IF EXISTS workspace_${workspace.slug} CASCADE`,
-      );
-
-      // 2. Delete workspace record
-      await queryRunner.manager.delete(Workspace, { id: workspaceId });
-
-      await queryRunner.commitTransaction();
-
-      this.logger.warn(`⚠️ Workspace PERMANENTLY deleted: ${workspace.slug}`);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      this.logger.error(
-        `Failed to delete workspace: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    } finally {
-      await queryRunner.release();
-    }
+    this.logger.warn(`Workspace soft-deleted: ${workspace.slug}`);
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace deleted successfully',
+    };
   }
 
   /**

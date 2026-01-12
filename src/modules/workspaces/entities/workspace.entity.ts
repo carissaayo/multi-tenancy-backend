@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { WorkspacePlan } from '../interfaces/workspace.interface';
 
@@ -56,4 +57,9 @@ export class Workspace {
 
   @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at' })
+  deletedAt: Date;
+  
+
 }
