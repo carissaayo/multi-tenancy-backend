@@ -64,7 +64,7 @@ export class TenantResolverMiddleware implements NestMiddleware {
 
       // Lookup workspace
       const workspace = await this.workspaceRepo.findOne({
-        where: { slug: workspaceSlug, isActive: true },
+        where: { slug: workspaceSlug},
       });
 
       if (!workspace) {
