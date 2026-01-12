@@ -319,6 +319,12 @@ export class WorkspaceLifecycleService {
     const workspace = await this.workspaceQueryService.findById(
       req.workspaceId!,
     );
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    if (!workspace.isActive) {
+      throw customError.conflict('Workspace is already deactivated');
+    }
 
     // Only owner can deactivate
     if (workspace.createdBy !== user.id) {
