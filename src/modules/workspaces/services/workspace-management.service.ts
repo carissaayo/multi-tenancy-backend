@@ -14,9 +14,16 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { RolePermissions } from 'src/core/security/interfaces/permission.interface';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { NoDataWorkspaceResponse, WorkspaceInvitationRole } from '../interfaces/workspace.interface';
+import {
+  NoDataWorkspaceResponse,
+  WorkspaceInvitationRole,
+} from '../interfaces/workspace.interface';
 
-import { ChangeMemberRoleDto, RemoveUserFromWorkspaceDto } from '../dtos/workspace-management.dto';
+import {
+  ChangeMemberRoleDto,
+  DeactivateMemberDto,
+  RemoveUserFromWorkspaceDto,
+} from '../dtos/workspace-management.dto';
 @Injectable()
 export class WorkspaceManagementService {
   private readonly logger = new Logger(WorkspaceManagementService.name);
@@ -219,8 +226,6 @@ export class WorkspaceManagementService {
       throw customError.notFound('Workspace not found');
     }
 
-
-
     const canManageWorkspace =
       await this.workspaceMembershipService.canUserManageWorkspace(
         workspace.id,
@@ -262,12 +267,10 @@ export class WorkspaceManagementService {
       );
     }
 
-  
     await this.memberService.removeMemberFromWorkspace(
       workspace.id,
       targetUserId,
     );
-
     this.logger.log(
       `User ${targetUserId} removed from workspace ${workspace.id} by ${user.id}`,
     );
@@ -277,6 +280,90 @@ export class WorkspaceManagementService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
       message: 'Member removed from workspace successfully',
+    };
+  }
+
+  async leaveWorkspace(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: req.workspaceId! },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.notFound('You are not a member of this workspace');
+    }
+
+    // Workspace owner cannot leave workspace
+    const isOwner =
+      workspace.ownerId === user.id || workspace.createdBy === user.id;
+    if (isOwner || member.role === 'owner') {
+      throw customError.forbidden(
+        'Workspace owner cannot leave the workspace. Please transfer ownership or delete the workspace instead.',
+      );
+    }
+    
+    await this.memberService.removeMemberFromWorkspace(workspace.id, user.id);
+    this.logger.log(`User ${user.id} left workspace ${workspace.id}`);
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'You have left the workspace successfully',
+    };
+  }
+
+  async deactivateMember(req: AuthenticatedRequest, dto: DeactivateMemberDto): Promise<NoDataWorkspaceResponse> {
+    const { targetUserId } = dto;
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: req.workspaceId! },
+    });
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const canManageWorkspace =
+      await this.workspaceMembershipService.canUserManageWorkspace(
+        workspace.id,
+        user.id,
+      );
+    if (!canManageWorkspace) {
+      throw customError.forbidden(
+        'You do not have permission to manage users in this workspace',
+      );
+    }
+    const targetMember = await this.memberService.isUserMember(
+      workspace.id,
+      targetUserId,
+    );
+    if (!targetMember) {
+      throw customError.notFound(
+        'Target user is not a member of this workspace',
+      );
+    }
+    if (targetMember.role === 'owner') {
+      throw customError.forbidden('You cannot deactivate the workspace owner');
+    }
+    await this.memberService.deactivateMember(workspace.id, targetUserId);
+    this.logger.log(
+      `User ${targetUserId} deactivated from workspace ${workspace.id} by ${user.id}`,
+    );
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Member has been deactivated successfully',
     };
   }
 }

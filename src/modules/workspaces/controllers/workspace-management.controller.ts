@@ -14,7 +14,7 @@ import {
 
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { ChangeMemberRoleDto, RemoveUserFromWorkspaceDto } from '../dtos/workspace-management.dto';
+import { ChangeMemberRoleDto, DeactivateMemberDto, RemoveUserFromWorkspaceDto } from '../dtos/workspace-management.dto';
 
 @ApiTags('Workspace Management')
 @Controller('management')
@@ -41,12 +41,12 @@ export class WorkspaceManagementController {
     );
   }
 
-  // Update member role
+  // Remove user from workspace
   @Delete('members/remove')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Remove user from workspace' })
-  @ApiResponse({  
-    status: 201,
+  @ApiResponse({
+    status: 200,
     description: 'User has been removed from workspace successfully',
   })
   removeUserFromWorkspace(
@@ -57,5 +57,35 @@ export class WorkspaceManagementController {
       removeUserFromWorkspaceDto,
       req,
     );
+  }
+
+  // Leave workspace
+  @Delete('leave')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Leave workspace' })
+  @ApiResponse({
+    status: 200,
+    description: 'You have left the workspace successfully',
+  })
+  leaveWorkspace(
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.workspaceManagementService.leaveWorkspace(req); 
+  }
+
+
+  // Deactivate member
+  @Patch('members/deactivate')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Deactivate member' })
+  @ApiResponse({
+    status: 200,
+    description: 'Member has been deactivated successfully',
+  })
+  deactivateMember(
+    @Req() req: AuthenticatedRequest,
+    @Body() deactivateMemberDto: DeactivateMemberDto,
+  ) {
+    return this.workspaceManagementService.deactivateMember(req, deactivateMemberDto);
   }
 }

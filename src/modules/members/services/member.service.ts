@@ -246,7 +246,7 @@ export class MemberService {
   }
 
   /**
-   * Remove a member from a workspace 
+   * Remove a member from a workspace
    * @param workspaceId - The workspace ID
    * @param userId - The user ID to remove
    */
@@ -262,8 +262,6 @@ export class MemberService {
       throw customError.notFound('Workspace not found');
     }
 
-
-
     const member = await this.isUserMember(workspaceId, userId);
     if (!member) {
       throw customError.notFound('Member not found');
@@ -276,7 +274,6 @@ export class MemberService {
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-
       const result = await this.dataSource.query(
         `
       DELETE FROM "${schemaName}".members
@@ -307,6 +304,69 @@ export class MemberService {
 
       throw customError.internalServerError(
         'Failed to remove member from workspace',
+      );
+    }
+  }
+
+  /**
+   * Deactivate a member from a workspace
+   * @param workspaceId - The workspace ID
+   * @param userId - The user ID to remove
+   */
+  async deactivateMember(
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    const member = await this.isUserMember(workspaceId, userId);
+    if (!member) {
+      throw customError.notFound('Member not found');
+    }
+
+    // Sanitize slug and get schema name
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      const result = await this.dataSource.query(
+        `
+      UPDATE FROM "${schemaName}".members
+      WHERE user_id = $1
+      SET is_active = false
+      `,
+        [userId],
+      );
+
+      if (!result || result.length === 0) {
+        throw customError.internalServerError(
+          'Failed to deactivate member from workspace',
+        );
+      }
+
+      this.logger.log(
+        `Member deactivated: user ${userId} from workspace ${workspaceId} (${schemaName})`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error deactivating member from workspace ${workspaceId}: ${error.message}`,
+      );
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError(
+        'Failed to deactivate member from workspace',
       );
     }
   }
