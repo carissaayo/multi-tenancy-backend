@@ -1,17 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Channel, ChannelEntity } from '../entities/channel.entity';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { CreateChannelDto } from '../dtos/channel.dto';
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { User } from 'src/modules/users/entities/user.entity';
-import { customError } from 'src/core/error-handler/custom-errors';
-import { MemberService } from 'src/modules/members/services/member.service';
-import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
+
 import { ChannelLifecycleService } from './channel-lifecycle.service';
 import { ChannelMembershipService } from './channel-membership.service';
 import { ChannelQueryService } from './channel-query.service';
+import { MemberService } from 'src/modules/members/services/member.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+
+import { Channel } from '../entities/channel.entity';
+import { CreateChannelDto, UpdateChannelDto } from '../dtos/channel.dto';
+
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
+import { customError } from 'src/core/error-handler/custom-errors';
 
 @Injectable()
 export class ChannelService {
@@ -27,8 +27,64 @@ export class ChannelService {
   async createChannel(
     req: AuthenticatedRequest,
     dto: CreateChannelDto,
-  ): Promise<{ channel: Channel; message: string }> {
-    return this.channelLifecycleService.createChannel(req, dto);
+  ): Promise<{ channel: Channel; accessToken: string; refreshToken: string; message: string }> {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const canManageChannels = await this.hasChannelManagementPermission(
+      workspace.id,
+      user.id,
+      workspace,
+    );
+    if (!canManageChannels) {
+      throw customError.forbidden(
+        'You do not have permission to create channels in this workspace',
+      );
+    }
+
+    const channel = await this.channelLifecycleService.createChannel(
+      user,
+      workspace,
+      dto,
+    );
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      message: 'Channel created successfully',
+      channel: channel,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+  }
+
+  async updateChannel(req: AuthenticatedRequest, id: string, updateDto: UpdateChannelDto) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const canManageChannels = await this.hasChannelManagementPermission(
+      workspace.id,
+      user.id,
+      workspace,
+    );
+    if (!canManageChannels) {
+      throw customError.forbidden(
+        'You do not have permission to create channels in this workspace',
+      );
+    }
+
+    const updatedChannel = await this.channelLifecycleService.updateChannel(req, id, updateDto);
+
+    console.log(updatedChannel);
+    
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      message: 'Channel updated successfully',
+      channel: updatedChannel,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+
   }
 
   async getChannel(req: AuthenticatedRequest, id: string) {

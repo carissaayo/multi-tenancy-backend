@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Param, Patch } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,7 +8,7 @@ import {
 
 import { ChannelService } from '../services/channel.service';
 
-import { CreateChannelDto } from '../dtos/channel.dto';
+import { CreateChannelDto, UpdateChannelDto } from '../dtos/channel.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 
 @ApiTags('Channels')
@@ -31,6 +31,21 @@ export class ChannelController {
     return this.channelService.createChannel(req, createChannelDto);
   }
 
+  // Update a channel
+  @Patch(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a channel' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel updated successfully',
+  })
+  updateChannel(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() updateChannelDto: UpdateChannelDto,
+  ) {
+    return this.channelService.updateChannel(req, id, updateChannelDto);
+  }
 
   // Get a channel by id
   @Get(':id')

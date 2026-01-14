@@ -1,17 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Channel, } from '../entities/channel.entity';
 import { DataSource } from 'typeorm';
 
-import { CreateChannelDto } from '../dtos/channel.dto';
+import { MemberService } from 'src/modules/members/services/member.service';
+import { ChannelQueryService } from './channel-query.service';
+import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
 
+import { CreateChannelDto, UpdateChannelDto } from '../dtos/channel.dto';
+
+import { Channel } from '../entities/channel.entity';
 import { User } from 'src/modules/users/entities/user.entity';
 import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
-import { customError } from 'src/core/error-handler/custom-errors';
-import { MemberService } from 'src/modules/members/services/member.service';
 
-import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
+import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { ChannelService } from './channel.service';
 
 @Injectable()
 export class ChannelLifecycleService {
@@ -20,26 +21,14 @@ export class ChannelLifecycleService {
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
     private readonly workspaceService: WorkspacesService,
-    private readonly channelService: ChannelService,
+    private readonly channelQueryService: ChannelQueryService,
   ) {}
 
   async createChannel(
-    req:AuthenticatedRequest,
+    user: User,
+    workspace: Workspace,
     dto: CreateChannelDto,
-  ): Promise<{ channel: Channel; message: string }> {
-    const user = req.user!;
-    const workspace = req.workspace!;
-
-    const canManageChannels = await this.channelService.hasChannelManagementPermission(
-      workspace.id,
-      user.id,
-      workspace,
-    );
-    if (!canManageChannels) {
-      throw customError.forbidden(
-        'You do not have permission to create channels in this workspace',
-      );
-    }
+  ): Promise<Channel> {
     // Get the member record for the user to get member ID
     const member = await this.memberService.isUserMember(workspace.id, user.id);
     if (!member) {
@@ -95,10 +84,7 @@ export class ChannelLifecycleService {
         `Channel created: ${channel.name} (${channel.id}) in workspace ${workspace.id} by user ${user.id}`,
       );
 
-         return {
-           channel: channel,
-           message: 'Channel created successfully',
-         };
+      return channel;
     } catch (error) {
       this.logger.error(
         `Error creating channel in workspace ${workspace.id}: ${error.message}`,
@@ -125,7 +111,133 @@ export class ChannelLifecycleService {
     }
   }
 
-  async updateChannel(req: AuthenticatedRequest, id: string, ){
+  async updateChannel(
+    req: AuthenticatedRequest,
+    id: string,
+    updateDto: UpdateChannelDto,
+  ): Promise<Channel> {
+    const user = req.user!;
+    const workspace = req.workspace!;
 
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.notFound('You are not a member of this workspace');
+    }
+
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
+
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+
+    // Sanitize slug and get schema name
+    const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
+      let paramIndex = 1;
+
+      if (updateDto.name !== undefined) {
+        updateFields.push(`name = $${paramIndex}`);
+        updateValues.push(updateDto.name);
+        paramIndex++;
+      }
+
+      if (updateDto.description !== undefined) {
+        updateFields.push(`description = $${paramIndex}`);
+        updateValues.push(updateDto.description || null);
+        paramIndex++;
+      }
+
+      // Always update the updated_at timestamp
+      updateFields.push(`updated_at = NOW()`);
+
+      if (updateFields.length === 1) {
+        // Only updated_at would be updated, which means no actual changes
+        throw customError.badRequest('No fields to update');
+      }
+
+      // Add channel ID as the last parameter for WHERE clause
+      updateValues.push(id);
+
+      const updateQuery = `
+        UPDATE "${schemaName}".channels
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING id, name, description, is_private, created_by, created_at, updated_at
+      `;
+
+      const result = await this.dataSource.query(updateQuery, updateValues);
+
+      if (!result || result.length === 0) {
+        throw customError.internalServerError('Failed to update channel');
+      }
+
+      // The result structure is [[{...}], metadata], so we need result[0][0]
+      const rows = Array.isArray(result[0]) ? result[0] : result;
+      const channelData = rows[0];
+
+      if (!channelData) {
+        throw customError.internalServerError('Failed to update channel');
+      }
+
+      // Map SQL result to Channel format (snake_case -> camelCase)
+      const updatedChannel: Channel = {
+        id: channelData.id,
+        name: channelData.name,
+        description: channelData.description,
+        isPrivate: channelData.is_private,
+        createdBy: channelData.created_by,
+        createdAt: channelData.created_at,
+        updatedAt: channelData.updated_at,
+      };
+
+      // Validate that we got the essential fields
+      if (!updatedChannel.id || !updatedChannel.name) {
+        this.logger.error(
+          `Invalid channel data returned: ${JSON.stringify(channelData)}`,
+        );
+        throw customError.internalServerError(
+          'Invalid channel data returned from update',
+        );
+      }
+
+      this.logger.log(
+        `Channel updated: ${updatedChannel.name} (${updatedChannel.id}) in workspace ${workspace.id} by user ${user.id}`,
+      );
+
+      return updatedChannel;
+    } catch (error) {
+      this.logger.error(
+        `Error updating channel ${id} in workspace ${workspace.id}: ${error.message}`,
+        error.stack,
+      );
+
+      // Handle unique constraint violation (channel name already exists)
+      if (error.code === '23505') {
+        throw customError.badRequest(
+          'A channel with this name already exists in this workspace',
+        );
+      }
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      // Re-throw custom errors
+      if (error.statusCode) {
+        throw error;
+      }
+
+      throw customError.internalServerError('Failed to update channel');
+    }
   }
 }
