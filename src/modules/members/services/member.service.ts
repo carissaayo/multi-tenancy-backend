@@ -368,6 +368,12 @@ export class MemberService {
     }
   }
 
+  /**
+   * Transfer ownership of a workspace to a new owner
+   * @param workspaceId - The workspace ID
+   * @param previousOwnerId - The ID of the previous owner
+   * @param newOwnerId - The ID of the new owner
+   */
   async transferOwnership(
     workspaceId: string,
     previousOwnerId: string,
@@ -381,7 +387,9 @@ export class MemberService {
     }
     const newOwnerMember = await this.isUserMember(workspaceId, newOwnerId);
     if (!newOwnerMember) {
-      throw customError.notFound('Intended new owner is not a member of this workspace');
+      throw customError.notFound(
+        'Intended new owner is not a member of this workspace',
+      );
     }
 
     // Sanitize slug and get schema name
@@ -390,16 +398,25 @@ export class MemberService {
     );
 
     const schemaName = `workspace_${sanitizedSlug}`;
+    // Get permissions for admin and owner roles
+    const adminPermissions = RolePermissions.admin.map((p) => p.toString());
+    const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
+
+    
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      // Update new owner's role to 'owner'
-      const newOwnerResult = await this.dataSource.query(
+
+      const newOwnerResult = await queryRunner.query(
         `
         UPDATE "${schemaName}".members
-        SET role = 'owner'
-        WHERE user_id = $1
+        SET role = $1, permissions = $2::jsonb
+        WHERE user_id = $3
         RETURNING id, user_id, role
         `,
-        [newOwnerId],
+        ['owner', JSON.stringify(ownerPermissions), newOwnerId],
       );
 
       if (!newOwnerResult || newOwnerResult.length === 0) {
@@ -408,26 +425,36 @@ export class MemberService {
         );
       }
 
-      // Update previous owner's role to 'admin' (if they are a member)
       const previousOwnerMember = await this.isUserMember(
         workspaceId,
         previousOwnerId,
       );
       if (previousOwnerMember) {
-        await this.dataSource.query(
+        const previousOwnerResult = await queryRunner.query(
           `
           UPDATE "${schemaName}".members
-          SET role = 'admin'
-          WHERE user_id = $1
+          SET role = $1, permissions = $2::jsonb
+          WHERE user_id = $3
+          RETURNING id, user_id, role
           `,
-          [previousOwnerId],
+          ['admin', JSON.stringify(adminPermissions), previousOwnerId],
         );
+
+        if (!previousOwnerResult || previousOwnerResult.length === 0) {
+          throw customError.internalServerError(
+            'Failed to transfer ownership: previous owner role update failed',
+          );
+        }
       }
 
+      await queryRunner.commitTransaction();
+
       this.logger.log(
-        `Ownership transferred: user ${newOwnerId} is now owner of workspace ${workspaceId} (${schemaName}). Previous owner ${previousOwnerId} role updated to admin.`,
+        `Ownership transferred: user ${newOwnerId} is now owner of workspace ${workspaceId} (${schemaName}). Previous owner ${previousOwnerId} role and permissions updated to admin.`,
       );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
+
       this.logger.error(
         `Error transferring ownership: ${workspaceId}: ${error.message}`,
       );
@@ -437,7 +464,14 @@ export class MemberService {
         throw customError.internalServerError('Workspace schema not found');
       }
 
+      // Re-throw custom errors
+      if (error.statusCode) {
+        throw error;
+      }
+
       throw customError.internalServerError('Failed to transfer ownership');
+    } finally {
+      await queryRunner.release();
     }
   }
   /**

@@ -61,7 +61,7 @@ export class WorkspaceManagementService {
 
     const user = req.user!;
 
-    const workspace = req.workspace!
+    const workspace = req.workspace!;
 
     const requester = await this.memberService.isUserMember(
       workspace.id,
@@ -189,7 +189,6 @@ export class WorkspaceManagementService {
     }
   }
 
-
   /**
    * Remove a user from a workspace
    */
@@ -260,8 +259,9 @@ export class WorkspaceManagementService {
     };
   }
 
-  async leaveWorkspace(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
-   
+  async leaveWorkspace(
+    req: AuthenticatedRequest,
+  ): Promise<NoDataWorkspaceResponse> {
     const user = req.user!;
 
     const workspace = req.workspace!;
@@ -279,7 +279,7 @@ export class WorkspaceManagementService {
         'Workspace owner cannot leave the workspace. Please transfer ownership or delete the workspace instead.',
       );
     }
-    
+
     await this.memberService.removeMemberFromWorkspace(workspace.id, user.id);
     this.logger.log(`User ${user.id} left workspace ${workspace.id}`);
     const tokens = await this.tokenManager.signTokens(user, req);
@@ -290,9 +290,12 @@ export class WorkspaceManagementService {
     };
   }
 
-  async deactivateMember(req: AuthenticatedRequest, dto: DeactivateMemberDto): Promise<NoDataWorkspaceResponse> {
+  async deactivateMember(
+    req: AuthenticatedRequest,
+    dto: DeactivateMemberDto,
+  ): Promise<NoDataWorkspaceResponse> {
     const { targetUserId } = dto;
-   
+
     const user = req.user!;
 
     const workspace = req.workspace!;
@@ -331,27 +334,35 @@ export class WorkspaceManagementService {
     };
   }
 
-  async transferOwnership(req: AuthenticatedRequest, dto: TransferOwnershipDto): Promise<NoDataWorkspaceResponse> {
+  async transferOwnership(
+    req: AuthenticatedRequest,
+    dto: TransferOwnershipDto,
+  ): Promise<NoDataWorkspaceResponse> {
     const { targetUserId } = dto;
 
     const user = req.user!;
 
     const workspace = req.workspace!;
-    
+
     // Only the current owner can transfer ownership
-    const isCurrentOwner =
-      workspace.ownerId === user.id;
+    const isCurrentOwner = workspace.ownerId === user.id;
     if (!isCurrentOwner) {
       throw customError.forbidden(
         'Only the workspace owner can transfer ownership',
       );
     }
+    const currentOwnerMember = await this.memberService.isUserMember(
+      workspace.id,
+      user.id,
+    );
 
-        // Cannot transfer to yourself
+    if (!currentOwnerMember) {
+      throw customError.notFound('You are not a member of this workspace');
+    }
+
+    // Cannot transfer to yourself
     if (targetUserId === user.id) {
-      throw customError.badRequest(
-        'You cannot transfer ownership to yourself',
-      );
+      throw customError.badRequest('You cannot transfer ownership to yourself');
     }
 
     const targetMember = await this.memberService.isUserMember(
@@ -363,29 +374,25 @@ export class WorkspaceManagementService {
         'Target user is not a member of this workspace',
       );
     }
-      const currentOwnerMember = await this.memberService.isUserMember(
-        workspace.id,
-        user.id,
-      );
 
-     await this.memberService.transferOwnership(
-       workspace.id,
-       user.id, // previous owner
-       targetUserId, // new owner
-     );
-      await this.workspaceRepo.update(workspace.id, {
-        ownerId: targetUserId,
-      });
+    await this.memberService.transferOwnership(
+      workspace.id,
+      user.id, // previous owner
+      targetUserId, // new owner
+    );
+    await this.workspaceRepo.update(workspace.id, {
+      ownerId: targetUserId,
+    });
 
-       this.logger.log(
-         `Ownership transferred from user ${user.id} to user ${targetUserId} in workspace ${workspace.id}`,
-       );
+    this.logger.log(
+      `Ownership transferred from user ${user.id} to user ${targetUserId} in workspace ${workspace.id}`,
+    );
 
-       const tokens = await this.tokenManager.signTokens(user, req);
-       return {
-         accessToken: tokens.accessToken,
-         refreshToken: tokens.refreshToken || '',
-         message: 'Ownership has been transferred successfully',
-       };
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Ownership has been transferred successfully',
+    };
   }
 }
