@@ -9,6 +9,9 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { MemberService } from 'src/modules/members/services/member.service';
 import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
 import { ChannelLifecycleService } from './channel-lifecycle.service';
+import { ChannelMembershipService } from './channel-membership.service';
+import { ChannelQueryService } from './channel-query.service';
+import { TokenManager } from 'src/core/security/services/token-manager.service';
 
 @Injectable()
 export class ChannelService {
@@ -16,13 +19,16 @@ export class ChannelService {
   constructor(
     private readonly memberService: MemberService,
     private readonly channelLifecycleService: ChannelLifecycleService,
+    private readonly channelMembershipService: ChannelMembershipService,
+    private readonly channelQueryService: ChannelQueryService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   /**
    * Check if user has permission to manage channels
    * User must be either:
    * 1. The workspace owner, OR
-   * 2. A member with channel management permissions 
+   * 2. A member with channel management permissions
    */
   async hasChannelManagementPermission(
     workspaceId: string,
@@ -75,7 +81,10 @@ export class ChannelService {
     return canManageChannels;
   }
 
-  async createChannel(req: AuthenticatedRequest, dto: CreateChannelDto): Promise<{ channel: Channel; message: string }> {
+  async createChannel(
+    req: AuthenticatedRequest,
+    dto: CreateChannelDto,
+  ): Promise<{ channel: Channel; message: string }> {
     const user = req.user!;
     const workspace = req.workspace!;
 
@@ -85,13 +94,59 @@ export class ChannelService {
       workspace,
     );
     if (!canManageChannels) {
-      throw customError.forbidden('You do not have permission to create channels in this workspace');
+      throw customError.forbidden(
+        'You do not have permission to create channels in this workspace',
+      );
     }
 
-    const channel = await this.channelLifecycleService.createChannel(user, workspace, dto);
-    return{
-        channel: channel,
-        message: 'Channel created successfully',
+    const channel = await this.channelLifecycleService.createChannel(
+      user,
+      workspace,
+      dto,
+    );
+    return {
+      channel: channel,
+      message: 'Channel created successfully',
+    };
+  }
+
+  async getChannel(req: AuthenticatedRequest, id: string) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+
+       const member = await this.memberService.isUserMember(
+         workspace.id,
+         user.id,
+       );
+
+       if (!member) {
+         throw customError.forbidden('You are not a member of this workspace');
+       }
+
+    const isAMember = await this.channelMembershipService.isUserMember(
+      id,
+      member.id,
+      workspace.id,
+    );
+
+    if (!isAMember) {
+      throw customError.forbidden('You are not a member of this channel');
     }
+
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      channel: channel,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Channel retrieved successfully',
+    };
   }
 }

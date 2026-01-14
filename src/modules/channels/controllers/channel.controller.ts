@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -29,5 +29,18 @@ export class ChannelController {
     @Body() createChannelDto: CreateChannelDto,
   ) {
     return this.channelService.createChannel(req, createChannelDto);
+  }
+
+
+  // Get a channel by id
+  @Get(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get a channel by id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel retrieved successfully',
+  })
+  getChannel(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.channelService.getChannel(req, id);
   }
 }
