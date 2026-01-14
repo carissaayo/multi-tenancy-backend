@@ -12,6 +12,7 @@ import { WorkspaceModule } from './modules/workspaces/workspace.module';
 import { APP_GUARD } from '@nestjs/core';
 import { EmailVerificationGuard } from './core/security/guards/email-verification.guard';
 import { UserModule } from './modules/users/user.module';
+import { ChannelModule } from './modules/channels/channel.module';
 
 
 @Module({
@@ -28,10 +29,9 @@ import { UserModule } from './modules/users/user.module';
     AuthModule,
     UserModule,
     WorkspaceModule,
+    ChannelModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-  ],
+  providers: [AppService],
 })
 export class AppModule {}

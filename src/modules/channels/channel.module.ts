@@ -1,0 +1,28 @@
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+
+import { MemberModule } from "../members/member.module";
+import { WorkspaceModule } from "../workspaces/workspace.module";
+import { SecurityModule } from "src/core/security/security.module";
+
+import { ChannelService } from "./services/channel.service";
+import { ChannelLifecycleService } from "./services/channel-lifecycle.service";
+
+import { ChannelController } from "./controllers/channel.controller";
+
+import { ChannelEntity } from "./entities/channel.entity";
+import { ChannelMemberEntity } from "./entities/channel-member.entity";
+
+@Module({
+    imports: [
+        TypeOrmModule.forFeature([ChannelEntity, ChannelMemberEntity]),
+        MemberModule,
+        WorkspaceModule,
+        SecurityModule,
+    ],
+    controllers: [ChannelController],
+    providers: [ChannelService, ChannelLifecycleService],
+    exports: [ChannelService],
+})
+
+export class ChannelModule {}
