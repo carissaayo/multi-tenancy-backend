@@ -23,6 +23,7 @@ import {
   ChangeMemberRoleDto,
   DeactivateMemberDto,
   RemoveUserFromWorkspaceDto,
+  TransferOwnershipDto,
 } from '../dtos/workspace-management.dto';
 @Injectable()
 export class WorkspaceManagementService {
@@ -201,9 +202,7 @@ export class WorkspaceManagementService {
     }
   }
 
-  /**
-   * Remove a user from a workspace
-   */
+
   /**
    * Remove a user from a workspace
    */
@@ -365,5 +364,68 @@ export class WorkspaceManagementService {
       refreshToken: tokens.refreshToken || '',
       message: 'Member has been deactivated successfully',
     };
+  }
+
+  async transferOwnership(req: AuthenticatedRequest, dto: TransferOwnershipDto): Promise<NoDataWorkspaceResponse> {
+    const { targetUserId } = dto;
+    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    if (!user) {
+      throw customError.notFound('User not found');
+    }
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: req.workspaceId! },
+    });
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    // Only the current owner can transfer ownership
+    const isCurrentOwner =
+      workspace.ownerId === user.id;
+    if (!isCurrentOwner) {
+      throw customError.forbidden(
+        'Only the workspace owner can transfer ownership',
+      );
+    }
+
+        // Cannot transfer to yourself
+    if (targetUserId === user.id) {
+      throw customError.badRequest(
+        'You cannot transfer ownership to yourself',
+      );
+    }
+
+    const targetMember = await this.memberService.isUserMember(
+      workspace.id,
+      targetUserId,
+    );
+    if (!targetMember) {
+      throw customError.notFound(
+        'Target user is not a member of this workspace',
+      );
+    }
+      const currentOwnerMember = await this.memberService.isUserMember(
+        workspace.id,
+        user.id,
+      );
+
+     await this.memberService.transferOwnership(
+       workspace.id,
+       user.id, // previous owner
+       targetUserId, // new owner
+     );
+      await this.workspaceRepo.update(workspace.id, {
+        ownerId: targetUserId,
+      });
+
+       this.logger.log(
+         `Ownership transferred from user ${user.id} to user ${targetUserId} in workspace ${workspace.id}`,
+       );
+
+       const tokens = await this.tokenManager.signTokens(user, req);
+       return {
+         accessToken: tokens.accessToken,
+         refreshToken: tokens.refreshToken || '',
+         message: 'Ownership has been transferred successfully',
+       };
   }
 }

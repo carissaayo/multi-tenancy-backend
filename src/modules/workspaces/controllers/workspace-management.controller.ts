@@ -14,7 +14,7 @@ import {
 
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { ChangeMemberRoleDto, DeactivateMemberDto, RemoveUserFromWorkspaceDto } from '../dtos/workspace-management.dto';
+import { ChangeMemberRoleDto, DeactivateMemberDto, RemoveUserFromWorkspaceDto, TransferOwnershipDto } from '../dtos/workspace-management.dto';
 
 @ApiTags('Workspace Management')
 @Controller('management')
@@ -60,7 +60,7 @@ export class WorkspaceManagementController {
   }
 
   // Leave workspace
-  @Delete('leave')
+  @Patch('leave')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Leave workspace' })
   @ApiResponse({
@@ -87,5 +87,20 @@ export class WorkspaceManagementController {
     @Body() deactivateMemberDto: DeactivateMemberDto,
   ) {
     return this.workspaceManagementService.deactivateMember(req, deactivateMemberDto);
+  }
+
+  // Transfer ownership
+  @Patch('transfer-ownership')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Transfer ownership' })
+  @ApiResponse({
+    status: 200,
+    description: 'Ownership has been transferred successfully',
+  })
+  transferOwnership(
+    @Req() req: AuthenticatedRequest,
+    @Body() transferOwnershipDto: TransferOwnershipDto,
+  ) {
+    return this.workspaceManagementService.transferOwnership(req, transferOwnershipDto);
   }
 }

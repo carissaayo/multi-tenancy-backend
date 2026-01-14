@@ -194,6 +194,13 @@ export class WorkspaceInviteService {
       );
     }
 
+    // Delete any existing ACCEPTED invitations for this workspace+email
+    // to avoid unique constraint violation when updating status to ACCEPTED
+    await this.workspaceInvitationRepo.delete({
+      workspaceId: invitation.workspaceId,
+      email: invitation.email,
+      status: WorkspaceInvitationStatus.ACCEPTED,
+    });
     // Mark invitation as accepted
     invitation.status = WorkspaceInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();

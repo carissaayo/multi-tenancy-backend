@@ -22,3 +22,9 @@ export class DeactivateMemberDto {
   @IsNotEmpty()
   targetUserId: string;
 }
+
+export class TransferOwnershipDto {
+  @IsString()
+  @IsNotEmpty()
+  targetUserId: string;
+}

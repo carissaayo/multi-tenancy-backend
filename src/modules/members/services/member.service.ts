@@ -313,10 +313,7 @@ export class MemberService {
    * @param workspaceId - The workspace ID
    * @param userId - The user ID to remove
    */
-  async deactivateMember(
-    workspaceId: string,
-    userId: string,
-  ): Promise<void> {
+  async deactivateMember(workspaceId: string, userId: string): Promise<void> {
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
     });
@@ -368,6 +365,79 @@ export class MemberService {
       throw customError.internalServerError(
         'Failed to deactivate member from workspace',
       );
+    }
+  }
+
+  async transferOwnership(
+    workspaceId: string,
+    previousOwnerId: string,
+    newOwnerId: string,
+  ): Promise<void> {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const newOwnerMember = await this.isUserMember(workspaceId, newOwnerId);
+    if (!newOwnerMember) {
+      throw customError.notFound('Intended new owner is not a member of this workspace');
+    }
+
+    // Sanitize slug and get schema name
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+
+    const schemaName = `workspace_${sanitizedSlug}`;
+    try {
+      // Update new owner's role to 'owner'
+      const newOwnerResult = await this.dataSource.query(
+        `
+        UPDATE "${schemaName}".members
+        SET role = 'owner'
+        WHERE user_id = $1
+        RETURNING id, user_id, role
+        `,
+        [newOwnerId],
+      );
+
+      if (!newOwnerResult || newOwnerResult.length === 0) {
+        throw customError.internalServerError(
+          'Failed to transfer ownership: new owner role update failed',
+        );
+      }
+
+      // Update previous owner's role to 'admin' (if they are a member)
+      const previousOwnerMember = await this.isUserMember(
+        workspaceId,
+        previousOwnerId,
+      );
+      if (previousOwnerMember) {
+        await this.dataSource.query(
+          `
+          UPDATE "${schemaName}".members
+          SET role = 'admin'
+          WHERE user_id = $1
+          `,
+          [previousOwnerId],
+        );
+      }
+
+      this.logger.log(
+        `Ownership transferred: user ${newOwnerId} is now owner of workspace ${workspaceId} (${schemaName}). Previous owner ${previousOwnerId} role updated to admin.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error transferring ownership: ${workspaceId}: ${error.message}`,
+      );
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError('Failed to transfer ownership');
     }
   }
   /**
