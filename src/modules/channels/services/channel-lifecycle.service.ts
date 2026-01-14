@@ -10,6 +10,8 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { MemberService } from 'src/modules/members/services/member.service';
 
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { ChannelService } from './channel.service';
 
 @Injectable()
 export class ChannelLifecycleService {
@@ -18,14 +20,26 @@ export class ChannelLifecycleService {
     private readonly dataSource: DataSource,
     private readonly memberService: MemberService,
     private readonly workspaceService: WorkspacesService,
+    private readonly channelService: ChannelService,
   ) {}
 
   async createChannel(
-    user: User,
-    workspace: Workspace,
+    req:AuthenticatedRequest,
     dto: CreateChannelDto,
-  ): Promise<Channel> {
-    
+  ): Promise<{ channel: Channel; message: string }> {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const canManageChannels = await this.channelService.hasChannelManagementPermission(
+      workspace.id,
+      user.id,
+      workspace,
+    );
+    if (!canManageChannels) {
+      throw customError.forbidden(
+        'You do not have permission to create channels in this workspace',
+      );
+    }
     // Get the member record for the user to get member ID
     const member = await this.memberService.isUserMember(workspace.id, user.id);
     if (!member) {
@@ -81,7 +95,10 @@ export class ChannelLifecycleService {
         `Channel created: ${channel.name} (${channel.id}) in workspace ${workspace.id} by user ${user.id}`,
       );
 
-      return channel;
+         return {
+           channel: channel,
+           message: 'Channel created successfully',
+         };
     } catch (error) {
       this.logger.error(
         `Error creating channel in workspace ${workspace.id}: ${error.message}`,
@@ -108,5 +125,7 @@ export class ChannelLifecycleService {
     }
   }
 
-  
+  async updateChannel(req: AuthenticatedRequest, id: string, ){
+
+  }
 }

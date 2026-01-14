@@ -14,3 +14,13 @@ export class CreateChannelDto {
   @IsOptional()
   isPrivate?: boolean;
 }
+
+export class UpdateChannelDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+}

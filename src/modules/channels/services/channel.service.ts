@@ -85,29 +85,7 @@ export class ChannelService {
     req: AuthenticatedRequest,
     dto: CreateChannelDto,
   ): Promise<{ channel: Channel; message: string }> {
-    const user = req.user!;
-    const workspace = req.workspace!;
-
-    const canManageChannels = await this.hasChannelManagementPermission(
-      workspace.id,
-      user.id,
-      workspace,
-    );
-    if (!canManageChannels) {
-      throw customError.forbidden(
-        'You do not have permission to create channels in this workspace',
-      );
-    }
-
-    const channel = await this.channelLifecycleService.createChannel(
-      user,
-      workspace,
-      dto,
-    );
-    return {
-      channel: channel,
-      message: 'Channel created successfully',
-    };
+  return this.channelLifecycleService.createChannel(req, dto);
   }
 
   async getChannel(req: AuthenticatedRequest, id: string) {
