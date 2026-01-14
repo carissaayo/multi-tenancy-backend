@@ -43,4 +43,16 @@ export class ChannelController {
   getChannel(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.channelService.getChannel(req, id);
   }
+
+  // Get all channels in a workspace
+  @Get('')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all channels in a workspace' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channels retrieved successfully',
+  })
+  getAllChannelsInAWorkspace(@Req() req: AuthenticatedRequest) {
+    return this.channelService.getAllChannelsInAWorkspace(req);
+  }
 }

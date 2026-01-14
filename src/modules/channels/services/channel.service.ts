@@ -149,4 +149,23 @@ export class ChannelService {
       message: 'Channel retrieved successfully',
     };
   }
+
+  async getAllChannelsInAWorkspace(req: AuthenticatedRequest) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    const channels = await this.channelQueryService.findAllChannelsInAWorkspace(workspace.id,member.id);
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      channels: channels,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Channels retrieved successfully',
+    };
+  }
 }
