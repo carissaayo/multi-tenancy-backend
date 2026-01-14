@@ -53,10 +53,8 @@ export class WorkspaceLifecycleService {
     refreshToken: string;
     message: string;
   }> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
+  
+    const user = req.user!;
 
     // Determine the plan (defaults to FREE if not specified)
     const workspacePlan = createDto.plan || WorkspacePlan.FREE;
@@ -184,16 +182,14 @@ export class WorkspaceLifecycleService {
   ): Promise<UpdateWorkspaceResponse> {
     console.log(workspaceId);
 
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceQueryService.findById(workspaceId);
+ 
+    const user = req.user!;
 
+    const workspace = req.workspace!;
     // Check user is owner or admin
     const canUpdate =
       await this.workspaceMembershipService.canUserManageWorkspace(
-        workspaceId,
+        workspace.id,
         user.id,
       );
     if (!canUpdate) {
@@ -232,23 +228,15 @@ export class WorkspaceLifecycleService {
     req: AuthenticatedRequest,
     file: Express.Multer.File,
   ): Promise<UpdateWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
+ 
+    const user = req.user!;
 
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: workspaceId },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
+    const workspace = req.workspace!;
 
     // Check permissions (owner/admin only)
     const canUpdate =
       await this.workspaceMembershipService.canUserManageWorkspace(
-        workspaceId,
+        workspace.id,
         user.id,
       );
     if (!canUpdate) {
@@ -315,19 +303,10 @@ export class WorkspaceLifecycleService {
   async deactivate(
     req: AuthenticatedRequest,
   ): Promise<NoDataWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceQueryService.findById(
-      req.workspaceId!,
-    );
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
-    if (!workspace.isActive) {
-      throw customError.conflict('Workspace is currently deactivated');
-    }
+    const user = req.user!;
+
+    const workspace = req.workspace!;
+
 
     // Only owner can deactivate
     if (workspace.createdBy !== user.id) {
@@ -354,19 +333,9 @@ export class WorkspaceLifecycleService {
    * Activate workspace
    */
   async activate(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceQueryService.findById(
-      req.workspaceId!,
-    );
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
-    if (workspace.isActive) {
-      throw customError.conflict('Workspace is currently active');
-    }
+    const user = req.user!;
+
+    const workspace = req.workspace!;
 
     // Only owner can activate
     if (workspace.createdBy !== user.id) {
@@ -393,14 +362,9 @@ export class WorkspaceLifecycleService {
    * Delete workspace
    */
   async delete(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceQueryService.findById(req.workspaceId!);
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
+    const user = req.user!;
+
+    const workspace = req.workspace!;
 
     // Only owner can delete
     if (workspace.createdBy !== user.id) {

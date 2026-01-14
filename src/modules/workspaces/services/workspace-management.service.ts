@@ -59,22 +59,9 @@ export class WorkspaceManagementService {
   }> {
     const { targetUserId, newRole } = changeMemberRoleDto;
 
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    const user = req.user!;
 
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
-    if (!workspace.isActive) {
-      throw customError.badRequest('Workspace is not active');
-    }
+    const workspace = req.workspace!
 
     const requester = await this.memberService.isUserMember(
       workspace.id,
@@ -211,19 +198,10 @@ export class WorkspaceManagementService {
     req: AuthenticatedRequest,
   ): Promise<NoDataWorkspaceResponse> {
     const { targetUserId } = dto;
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
+    const user = req.user!;
 
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
+    const workspace = req.workspace!;
 
     const canManageWorkspace =
       await this.workspaceMembershipService.canUserManageWorkspace(
@@ -283,19 +261,11 @@ export class WorkspaceManagementService {
   }
 
   async leaveWorkspace(req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+   
+    const user = req.user!;
 
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
+    const workspace = req.workspace!;
 
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
     const member = await this.memberService.isUserMember(workspace.id, user.id);
     if (!member) {
       throw customError.notFound('You are not a member of this workspace');
@@ -322,16 +292,11 @@ export class WorkspaceManagementService {
 
   async deactivateMember(req: AuthenticatedRequest, dto: DeactivateMemberDto): Promise<NoDataWorkspaceResponse> {
     const { targetUserId } = dto;
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
+   
+    const user = req.user!;
+
+    const workspace = req.workspace!;
+
     const canManageWorkspace =
       await this.workspaceMembershipService.canUserManageWorkspace(
         workspace.id,
@@ -368,16 +333,11 @@ export class WorkspaceManagementService {
 
   async transferOwnership(req: AuthenticatedRequest, dto: TransferOwnershipDto): Promise<NoDataWorkspaceResponse> {
     const { targetUserId } = dto;
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-    if (!workspace) {
-      throw customError.notFound('Workspace not found');
-    }
+
+    const user = req.user!;
+
+    const workspace = req.workspace!;
+    
     // Only the current owner can transfer ownership
     const isCurrentOwner =
       workspace.ownerId === user.id;
