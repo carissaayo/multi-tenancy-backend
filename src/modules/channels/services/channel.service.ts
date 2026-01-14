@@ -176,4 +176,5 @@ export class ChannelService {
 
     return canManageChannels;
   }
+  
 }
