@@ -70,20 +70,20 @@ export class ChannelMembershipService {
     if (!member) {
       throw customError.forbidden('You are not a member of this workspace');
     }
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
 
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
     const isAMember = await this.isUserMember(id, member.id, workspace.id);
 
     if (!isAMember) {
       throw customError.forbidden('You are not a member of this channel');
     }
 
-    const channel = await this.channelQueryService.findChannelById(
-      id,
-      workspace.id,
-    );
-    if (!channel) {
-      throw customError.notFound('Channel not found');
-    }
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
       channel: channel,

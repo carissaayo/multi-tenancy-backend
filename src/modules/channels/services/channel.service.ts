@@ -24,6 +24,7 @@ export class ChannelService {
     private readonly tokenManager: TokenManager,
   ) {}
 
+  
   async createChannel(
     req: AuthenticatedRequest,
     dto: CreateChannelDto,
@@ -95,6 +96,30 @@ export class ChannelService {
     return this.channelMembershipService.getAllChannelsInAWorkspace(req);
   }
 
+
+  async deleteChannel(req: AuthenticatedRequest, id: string): Promise<{ message: string; accessToken: string; refreshToken: string }> {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const canManageChannels = await this.hasChannelManagementPermission(
+      workspace.id,
+      user.id,
+      workspace,
+    );
+    if (!canManageChannels) {
+      throw customError.forbidden(
+        'You do not have permission to delete channels in this workspace',
+      );
+    }
+      await this.channelLifecycleService.deleteChannel(req, id);
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      message: 'Channel deleted successfully',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+  }
   /**
    * Check if user has permission to manage channels
    * User must be either:

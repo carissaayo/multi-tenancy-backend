@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Get, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Req, Get, Param, Patch, Delete } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -69,5 +69,17 @@ export class ChannelController {
   })
   getAllChannelsInAWorkspace(@Req() req: AuthenticatedRequest) {
     return this.channelService.getAllChannelsInAWorkspace(req);
+  }
+
+  // Delete a channel
+  @Delete(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete a channel' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel deleted successfully',
+  })
+  deleteChannel(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.channelService.deleteChannel(req, id);
   }
 }

@@ -240,4 +240,73 @@ export class ChannelLifecycleService {
       throw customError.internalServerError('Failed to update channel');
     }
   }
+
+  async deleteChannel(req: AuthenticatedRequest, id: string): Promise<void> {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.notFound('You are not a member of this workspace');
+    }
+
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+
+    // Sanitize slug and get schema name
+    const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      // Delete the channel (CASCADE will handle channel_members and messages)
+      const result = await this.dataSource.query(
+        `
+        DELETE FROM "${schemaName}".channels
+        WHERE id = $1
+        RETURNING id, name
+        `,
+        [id],
+      );
+
+      if (!result || result.length === 0) {
+        throw customError.internalServerError('Failed to delete channel');
+      }
+
+      // Handle nested result structure (same as update)
+      const rows = Array.isArray(result[0]) ? result[0] : result;
+      const deletedChannel = rows[0];
+
+      if (!deletedChannel) {
+        throw customError.internalServerError('Failed to delete channel');
+      }
+
+      this.logger.log(
+        `Channel deleted: ${deletedChannel.name} (${deletedChannel.id}) in workspace ${workspace.id} by user ${user.id}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error deleting channel ${id} in workspace ${workspace.id}: ${error.message}`,
+        error.stack,
+      );
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      // Re-throw custom errors
+      if (error.statusCode) {
+        throw error;
+      }
+
+      throw customError.internalServerError('Failed to delete channel');
+    }
+  }
 }
