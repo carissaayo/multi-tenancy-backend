@@ -43,22 +43,13 @@ export class WorkspaceInviteService {
     inviteDto: WorkspaceInviteDto,
   ) {
     const { email, role } = inviteDto;
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    const user = req.user!;
 
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
+    const workspace = req.workspace!;
+
     if (email === user.email) {
       throw customError.badRequest('You cannot invite yourself');
     }
-    const workspace = await this.workspaceRepo.findOne({
-      where: { id: req.workspaceId! },
-    });
-
-    if (!workspace) {
-      throw customError.notFound('No workspace found with this id');
-    }
-
     const isInviterAMember = await this.memberService.isUserMember(
       workspace.id,
       user.id,
@@ -249,11 +240,8 @@ export class WorkspaceInviteService {
     inviteId: string,
     req: AuthenticatedRequest,
   ): Promise<NoDataWorkspaceResponse> {
-    const user = await this.userRepo.findOne({ where: { id: req.userId } });
+    const user = req.user!;
 
-    if (!user) {
-      throw customError.notFound('User not found');
-    }
     const invitation = await this.workspaceInvitationRepo.findOne({
       where: { id: inviteId },
     });
