@@ -24,6 +24,21 @@ export class ChannelService {
     private readonly tokenManager: TokenManager,
   ) {}
 
+  async createChannel(
+    req: AuthenticatedRequest,
+    dto: CreateChannelDto,
+  ): Promise<{ channel: Channel; message: string }> {
+    return this.channelLifecycleService.createChannel(req, dto);
+  }
+
+  async getChannel(req: AuthenticatedRequest, id: string) {
+    return this.channelMembershipService.getChannel(req, id);
+  }
+
+  async getAllChannelsInAWorkspace(req: AuthenticatedRequest) {
+    return this.channelMembershipService.getAllChannelsInAWorkspace(req);
+  }
+
   /**
    * Check if user has permission to manage channels
    * User must be either:
@@ -79,71 +94,5 @@ export class ChannelService {
     }
 
     return canManageChannels;
-  }
-
-  async createChannel(
-    req: AuthenticatedRequest,
-    dto: CreateChannelDto,
-  ): Promise<{ channel: Channel; message: string }> {
-  return this.channelLifecycleService.createChannel(req, dto);
-  }
-
-  async getChannel(req: AuthenticatedRequest, id: string) {
-    const user = req.user!;
-    const workspace = req.workspace!;
-
-
-       const member = await this.memberService.isUserMember(
-         workspace.id,
-         user.id,
-       );
-
-       if (!member) {
-         throw customError.forbidden('You are not a member of this workspace');
-       }
-
-    const isAMember = await this.channelMembershipService.isUserMember(
-      id,
-      member.id,
-      workspace.id,
-    );
-
-    if (!isAMember) {
-      throw customError.forbidden('You are not a member of this channel');
-    }
-
-    const channel = await this.channelQueryService.findChannelById(
-      id,
-      workspace.id,
-    );
-    if (!channel) {
-      throw customError.notFound('Channel not found');
-    }
-    const tokens = await this.tokenManager.signTokens(user, req);
-    return {
-      channel: channel,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || '',
-      message: 'Channel retrieved successfully',
-    };
-  }
-
-  async getAllChannelsInAWorkspace(req: AuthenticatedRequest) {
-    const user = req.user!;
-    const workspace = req.workspace!;
-
-    const member = await this.memberService.isUserMember(workspace.id, user.id);
-    if (!member) {
-      throw customError.forbidden('You are not a member of this workspace');
-    }
-
-    const channels = await this.channelQueryService.findAllChannelsInAWorkspace(workspace.id,member.id);
-    const tokens = await this.tokenManager.signTokens(user, req);
-    return {
-      channels: channels,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken || '',
-      message: 'Channels retrieved successfully',
-    };
   }
 }

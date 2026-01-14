@@ -1,9 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+
+import { MemberService } from 'src/modules/members/services/member.service';
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
+import { ChannelQueryService } from './channel-query.service';
+
+import { TokenManager } from 'src/core/security/services/token-manager.service';
+
+import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
+import { Repository } from 'typeorm';
+
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { customError } from 'src/core/error-handler/custom-errors';
 
 @Injectable()
 export class ChannelMembershipService {
@@ -14,6 +23,9 @@ export class ChannelMembershipService {
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
     private readonly workspacesService: WorkspacesService,
+    private readonly memberService: MemberService,
+    private readonly channelQueryService: ChannelQueryService,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   async isUserMember(
@@ -21,7 +33,6 @@ export class ChannelMembershipService {
     memberId: string,
     workspaceId: string,
   ): Promise<boolean> {
-
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
     });
@@ -37,7 +48,6 @@ export class ChannelMembershipService {
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-
       const result = await this.dataSource.query(
         `SELECT 1 FROM "${schemaName}".channel_members WHERE channel_id = $1 AND member_id = $2`,
         [channelId, memberId],
@@ -49,5 +59,59 @@ export class ChannelMembershipService {
       );
       return false;
     }
+  }
+
+  async getChannel(req: AuthenticatedRequest, id: string) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+
+    if (!member) {
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    const isAMember = await this.isUserMember(id, member.id, workspace.id);
+
+    if (!isAMember) {
+      throw customError.forbidden('You are not a member of this channel');
+    }
+
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      channel: channel,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Channel retrieved successfully',
+    };
+  }
+
+  async getAllChannelsInAWorkspace(req: AuthenticatedRequest) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    const channels = await this.channelQueryService.findAllChannelsInAWorkspace(
+      workspace.id,
+      member.id,
+    );
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+      channels: channels,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Channels retrieved successfully',
+    };
   }
 }
