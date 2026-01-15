@@ -29,4 +29,15 @@ export class ChannelInviteController {
   inviteToJoinPrivateChannel(@Req() req: AuthenticatedRequest, @Param('id') id: string, @Body() channelInviteDto: ChannelInviteDto) {
     return this.channelInviteService.inviteToJoinPrivateChannel(req, id, channelInviteDto);
   }
+
+  @Patch(':invitationId/revoke')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Revoke a channel invitation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel invitation revoked successfully',
+  })
+  revokeInvitation(@Param('invitationId') invitationId: string, @Req() req: AuthenticatedRequest) {
+    return this.channelInviteService.revokeInvitation(invitationId, req);
+  }
 }
