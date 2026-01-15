@@ -1,18 +1,13 @@
 import { User } from '../../users/entities/user.entity';
-import { Workspace } from '../entities/workspace.entity';
-import { WorkspaceInvitationRole, WorkspaceInvitationStatus } from '../interfaces/workspace.interface';
-export declare class WorkspaceInvitation {
+import { WorkspaceInvitationStatus } from '../../workspaces/interfaces/workspace.interface';
+export declare class ChannelInvitation {
     id: string;
-    workspaceId: string;
-    workspace: Workspace;
     channelId: string;
-    email: string;
-    role: WorkspaceInvitationRole;
+    workspaceId: string;
+    memberId: string;
     token: string;
     invitedBy: string | null;
     inviter: User | null;
-    sentTo: User | null;
-    sentToId: string | null;
     invitedAt: Date;
     expiresAt: Date;
     acceptedAt: Date | null;

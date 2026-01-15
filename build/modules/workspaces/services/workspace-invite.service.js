@@ -55,29 +55,23 @@ const config_1 = require("@nestjs/config");
 const workspace_initations_entity_1 = require("../entities/workspace_initations.entity");
 const user_entity_1 = require("../../users/entities/user.entity");
 const custom_errors_1 = require("../../../core/error-handler/custom-errors");
-const workspace_entity_1 = require("../entities/workspace.entity");
 const member_service_1 = require("../../members/services/member.service");
 const permission_interface_1 = require("../../../core/security/interfaces/permission.interface");
 const email_service_1 = require("../../../core/email/services/email.service");
 const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
 const workspace_interface_1 = require("../interfaces/workspace.interface");
-const workspace_membership_service_1 = require("./workspace-membership.service");
 let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteService {
     workspaceInvitationRepo;
     userRepo;
-    workspaceRepo;
-    workspaceMembershipService;
     memberService;
     emailService;
     configService;
     tokenManager;
     logger = new common_1.Logger(WorkspaceInviteService_1.name);
     INIVTE_EXPIRY_DAYS = 1;
-    constructor(workspaceInvitationRepo, userRepo, workspaceRepo, workspaceMembershipService, memberService, emailService, configService, tokenManager) {
+    constructor(workspaceInvitationRepo, userRepo, memberService, emailService, configService, tokenManager) {
         this.workspaceInvitationRepo = workspaceInvitationRepo;
         this.userRepo = userRepo;
-        this.workspaceRepo = workspaceRepo;
-        this.workspaceMembershipService = workspaceMembershipService;
         this.memberService = memberService;
         this.emailService = emailService;
         this.configService = configService;
@@ -254,12 +248,9 @@ exports.WorkspaceInviteService = WorkspaceInviteService = WorkspaceInviteService
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(workspace_initations_entity_1.WorkspaceInvitation)),
     __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(2, (0, typeorm_1.InjectRepository)(workspace_entity_1.Workspace)),
-    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => member_service_1.MemberService))),
+    __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => member_service_1.MemberService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository,
-        workspace_membership_service_1.WorkspaceMembershipService,
         member_service_1.MemberService,
         email_service_1.EmailService,
         config_1.ConfigService,

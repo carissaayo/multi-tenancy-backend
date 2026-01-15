@@ -33,6 +33,7 @@ export declare class EmailService {
     sendWorkspaceInvitation(email: string, workspaceName: string, inviterName: string, inviteLink: string, expiresIn: string): Promise<void>;
     sendInvitationReminder(email: string, workspaceName: string, inviterName: string, inviteLink: string, expiresIn: string): Promise<void>;
     sendInvitationExpired(email: string, workspaceName: string, inviterName: string): Promise<void>;
+    sendChannelInvitation(email: string, workspaceName: string, channelName: string, inviterName: string, inviteLink: string, expiresIn: string): Promise<void>;
     sendWelcomeToWorkspace(email: string, firstName: string, workspaceName: string, workspaceUrl: string, inviterName?: string): Promise<void>;
     notifyMemberAdded(email: string, firstName: string, workspaceName: string, addedBy: string): Promise<void>;
     notifyMemberRemoved(email: string, firstName: string, workspaceName: string, removedBy: string, reason?: string): Promise<void>;

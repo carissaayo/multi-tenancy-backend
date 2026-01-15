@@ -11,4 +11,5 @@ export declare class ChannelQueryService {
     constructor(dataSource: DataSource, workspaceRepo: Repository<Workspace>, workspacesService: WorkspacesService);
     findChannelById(channelId: string, workspaceId: string): Promise<Channel | null>;
     findAllChannelsInAWorkspace(workspaceId: string, memberId?: string): Promise<Channel[]>;
+    findChannelMembers(channelId: string, workspaceId: string): Promise<any>;
 }

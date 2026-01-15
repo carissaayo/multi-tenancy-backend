@@ -50,6 +50,7 @@ const message_entity_1 = require("../../modules/messages/entities/message.entity
 const file_entity_1 = require("../../modules/files/entities/file.entity");
 const reaction_entity_1 = require("../../modules/reactions/entities/reaction.entity");
 const workspace_initations_entity_1 = require("../../modules/workspaces/entities/workspace_initations.entity");
+const channel_invitations_entity_1 = require("../../modules/channels/entities/channel_invitations.entity");
 const databaseUrl = process.env.DATABASE_URL;
 const baseConfig = {
     entities: [
@@ -65,6 +66,7 @@ const baseConfig = {
         message_entity_1.MessageEntity,
         file_entity_1.FileEntity,
         reaction_entity_1.ReactionEntity,
+        channel_invitations_entity_1.ChannelInvitation,
     ],
     migrations: [(0, path_1.join)(__dirname, '../../database/migrations/*{.ts,.js}')],
     synchronize: false,

@@ -112,6 +112,9 @@ let ChannelService = ChannelService_1 = class ChannelService {
         }
         return canManageChannels;
     }
+    async getChannelMembers(req, id) {
+        return this.channelMembershipService.getChannelMembers(req, id);
+    }
 };
 exports.ChannelService = ChannelService;
 exports.ChannelService = ChannelService = ChannelService_1 = __decorate([

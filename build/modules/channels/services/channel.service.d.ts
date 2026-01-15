@@ -47,4 +47,11 @@ export declare class ChannelService {
         ownerId: string;
         createdBy: string;
     }): Promise<boolean>;
+    getChannelMembers(req: AuthenticatedRequest, id: string): Promise<{
+        message: string;
+        channelMembers: any;
+        totalChannelMembers: any;
+        accessToken: string;
+        refreshToken: string;
+    }>;
 }

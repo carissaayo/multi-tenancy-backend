@@ -24,6 +24,7 @@ const file_entity_1 = require("../../modules/files/entities/file.entity");
 const reaction_entity_1 = require("../../modules/reactions/entities/reaction.entity");
 const database_config_1 = require("../../config/database.config");
 const migration_runner_service_1 = require("../../database/migration-runner.service");
+const channel_invitations_entity_1 = require("../../modules/channels/entities/channel_invitations.entity");
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -55,6 +56,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                             message_entity_1.MessageEntity,
                             file_entity_1.FileEntity,
                             reaction_entity_1.ReactionEntity,
+                            channel_invitations_entity_1.ChannelInvitation,
                         ],
                         synchronize: false,
                         logging: !isProd,

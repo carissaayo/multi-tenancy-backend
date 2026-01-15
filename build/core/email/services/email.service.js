@@ -519,6 +519,29 @@ let EmailService = class EmailService {
             html,
         });
     }
+    async sendChannelInvitation(email, workspaceName, channelName, inviterName, inviteLink, expiresIn) {
+        const subject = `You're invited to join ${channelName}`;
+        const html = this.buildTemplate({
+            title: subject,
+            greeting: `Hi,`,
+            body: `<p>${inviterName} has invited you to join <strong>${workspaceName} - ${channelName}</strong>.</p>
+             <p>Click the button below to accept the invitation and get started:</p>
+             <p style="margin:20px 0;">
+               <a href="${inviteLink}" 
+                  style="background:#4F46E5; color:#fff; padding:12px 24px; border-radius:5px; text-decoration:none; display:inline-block;">
+                 Join Channel
+               </a>
+             </p>
+             <p>This invitation expires in ${expiresIn}.</p>`,
+            workspaceName,
+        });
+        await this.sendEmail({
+            to: email,
+            subject,
+            text: `${inviterName} invited you to join ${workspaceName}. Link: ${inviteLink}`,
+            html,
+        });
+    }
     async sendWelcomeToWorkspace(email, firstName, workspaceName, workspaceUrl, inviterName) {
         const subject = `Welcome to ${workspaceName}!`;
         const html = this.buildTemplate({

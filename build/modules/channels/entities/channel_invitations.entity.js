@@ -9,23 +9,18 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WorkspaceInvitation = void 0;
+exports.ChannelInvitation = void 0;
 const user_entity_1 = require("../../users/entities/user.entity");
-const workspace_entity_1 = require("../entities/workspace.entity");
 const typeorm_1 = require("typeorm");
-const workspace_interface_1 = require("../interfaces/workspace.interface");
-let WorkspaceInvitation = class WorkspaceInvitation {
+const workspace_interface_1 = require("../../workspaces/interfaces/workspace.interface");
+let ChannelInvitation = class ChannelInvitation {
     id;
-    workspaceId;
-    workspace;
     channelId;
-    email;
-    role;
+    workspaceId;
+    memberId;
     token;
     invitedBy;
     inviter;
-    sentTo;
-    sentToId;
     invitedAt;
     expiresAt;
     acceptedAt;
@@ -37,92 +32,70 @@ let WorkspaceInvitation = class WorkspaceInvitation {
     status;
     message;
 };
-exports.WorkspaceInvitation = WorkspaceInvitation;
+exports.ChannelInvitation = ChannelInvitation;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "id", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'uuid', name: 'workspace_id' }),
-    __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "workspaceId", void 0);
-__decorate([
-    (0, typeorm_1.ManyToOne)(() => workspace_entity_1.Workspace, { onDelete: 'CASCADE' }),
-    (0, typeorm_1.JoinColumn)({ name: 'workspace_id' }),
-    __metadata("design:type", workspace_entity_1.Workspace)
-], WorkspaceInvitation.prototype, "workspace", void 0);
+], ChannelInvitation.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid', name: 'channel_id' }),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "channelId", void 0);
+], ChannelInvitation.prototype, "channelId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'text' }),
+    (0, typeorm_1.Column)({ type: 'uuid', name: 'workspace_id' }),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "email", void 0);
+], ChannelInvitation.prototype, "workspaceId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({
-        type: 'varchar',
-        length: 50,
-        default: workspace_interface_1.WorkspaceInvitationRole.MEMBER,
-    }),
+    (0, typeorm_1.Column)({ type: 'uuid', name: 'member_id' }),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "role", void 0);
+], ChannelInvitation.prototype, "memberId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', unique: true }),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "token", void 0);
+], ChannelInvitation.prototype, "token", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid', name: 'invited_by', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "invitedBy", void 0);
+], ChannelInvitation.prototype, "invitedBy", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'invited_by' }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "inviter", void 0);
-__decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'SET NULL' }),
-    (0, typeorm_1.JoinColumn)({ name: 'sent_to' }),
-    __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "sentTo", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'uuid', name: 'sentTo', nullable: true }),
-    __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "sentToId", void 0);
+], ChannelInvitation.prototype, "inviter", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', name: 'invited_at' }),
     __metadata("design:type", Date)
-], WorkspaceInvitation.prototype, "invitedAt", void 0);
+], ChannelInvitation.prototype, "invitedAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'timestamp', name: 'expires_at' }),
     __metadata("design:type", Date)
-], WorkspaceInvitation.prototype, "expiresAt", void 0);
+], ChannelInvitation.prototype, "expiresAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'timestamp', name: 'accepted_at', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "acceptedAt", void 0);
+], ChannelInvitation.prototype, "acceptedAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid', name: 'accepted_by', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "acceptedBy", void 0);
+], ChannelInvitation.prototype, "acceptedBy", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'accepted_by' }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "acceptedByUser", void 0);
+], ChannelInvitation.prototype, "acceptedByUser", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'timestamp', name: 'revoked_at', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "revokedAt", void 0);
+], ChannelInvitation.prototype, "revokedAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'uuid', name: 'revoked_by', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "revokedBy", void 0);
+], ChannelInvitation.prototype, "revokedBy", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'revoked_by' }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "revokedByUser", void 0);
+], ChannelInvitation.prototype, "revokedByUser", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'varchar',
@@ -130,17 +103,17 @@ __decorate([
         default: workspace_interface_1.WorkspaceInvitationStatus.PENDING,
     }),
     __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "status", void 0);
+], ChannelInvitation.prototype, "status", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "message", void 0);
-exports.WorkspaceInvitation = WorkspaceInvitation = __decorate([
-    (0, typeorm_1.Entity)({ name: 'workspace_invitations', schema: 'public' }),
+], ChannelInvitation.prototype, "message", void 0);
+exports.ChannelInvitation = ChannelInvitation = __decorate([
+    (0, typeorm_1.Entity)({ name: 'channel_invitations', schema: 'public' }),
     (0, typeorm_1.Index)(['token'], { unique: true }),
-    (0, typeorm_1.Index)(['workspaceId', 'email']),
+    (0, typeorm_1.Index)(['channelId', 'memberId']),
     (0, typeorm_1.Index)(['expiresAt']),
     (0, typeorm_1.Index)(['status']),
-    (0, typeorm_1.Index)(['workspaceId', 'email', 'status'], { unique: true })
-], WorkspaceInvitation);
-//# sourceMappingURL=workspace_initations.entity.js.map
+    (0, typeorm_1.Index)(['channelId', 'memberId', 'status'], { unique: true })
+], ChannelInvitation);
+//# sourceMappingURL=channel_invitations.entity.js.map

@@ -24,6 +24,7 @@ exports.workspaceOptionalRoutes = [
     "/api/auth/resend-verification-email",
     "/api/auth/select-workspace",
     '/api/invitations/accept',
+    '/api/channels/invitations/accept',
 ];
 exports.allowDeactivatedWorkspaceRoutes = [
     '/api/settings/activate',
