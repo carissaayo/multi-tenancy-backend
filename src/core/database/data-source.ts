@@ -1,16 +1,9 @@
-// src/core/database/data-source.ts
 import { DataSource } from 'typeorm';
 import { join } from 'path';
 import * as dotenv from 'dotenv';
 
-// Load env FIRST (TypeORM CLI does NOT do this for you)
 dotenv.config({ path: join(__dirname, '../../../.env') });
 
-import config from '../../config/config';
-
-const appConfig = config();
-
-// Import all entities explicitly
 import { User } from '../../modules/users/entities/user.entity';
 import { Workspace } from '../../modules/workspaces/entities/workspace.entity';
 import { FeatureFlag } from '../feature-flags/entities/feature-flag.entity';
@@ -24,15 +17,10 @@ import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from '../../modules/reactions/entities/reaction.entity';
 import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_initations.entity';
 
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  host: appConfig.database.host,
-  port: appConfig.database.port,
-  username: appConfig.database.username,
-  password: appConfig.database.password,
-  database: appConfig.database.database,
+const databaseUrl = process.env.DATABASE_URL;
 
-  // Explicitly list all entities (works better in Docker)
+
+const baseConfig = {
   entities: [
     // Public schema entities
     User,
@@ -50,9 +38,27 @@ export const AppDataSource = new DataSource({
     FileEntity,
     ReactionEntity,
   ],
-
   migrations: [join(__dirname, '../../database/migrations/*{.ts,.js}')],
-
   synchronize: false,
   logging: true,
-});
+};
+
+// Use DATABASE_URL if available (e.g., Render), otherwise use individual params
+export const AppDataSource = new DataSource(
+  databaseUrl
+    ? {
+        type: 'postgres',
+        url: databaseUrl,
+        ssl: { rejectUnauthorized: false },
+        ...baseConfig,
+      }
+    : {
+        type: 'postgres',
+        host: process.env.DB_HOST || 'postgres',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_NAME || 'multi_tenancy',
+        ...baseConfig,
+      },
+);
