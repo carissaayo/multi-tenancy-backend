@@ -1,52 +1,47 @@
 import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import databaseConfig from '../../config/database.config';
+
 
 // Public schema entities
 import { User } from '../../modules/users/entities/user.entity';
 import { Workspace } from '../../modules/workspaces/entities/workspace.entity';
 import { FeatureFlag } from '../feature-flags/entities/feature-flag.entity';
+import { UsageMetric } from '../usage/entities/usage.entity';
+import { RefreshToken } from '../security/entities/refresh-token.entity';
+import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_initations.entity';
 
-// Tenant schema entities (EntitySchema)
-
+// Tenant schema entities
+import { WorkspaceMemberEntity } from 'src/modules/members/entities/member.entity';
 import { ChannelEntity } from '../../modules/channels/entities/channel.entity';
 import { ChannelMemberEntity } from '../../modules/channels/entities/channel-member.entity';
 import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
-import { UsageMetric } from '../usage/entities/usage.entity';
-import { WorkspaceMemberEntity } from 'src/modules/members/entities/member.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
-import { RefreshToken } from '../security/entities/refresh-token.entity';
-import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_initations.entity';
 
 
 @Global()
 @Module({
   imports: [
-    // Load database configuration
-    ConfigModule.forFeature(databaseConfig),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
 
-    // TypeORM main connection
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbConfig = configService.get('database');
+        const isProd = process.env.NODE_ENV === 'production';
+        const databaseUrl = process.env.DATABASE_URL;
 
-        return {
-          ...dbConfig,
-
-          // Register all entities
+        const baseConfig = {
           entities: [
-            // Public schema entities (decorator-based)
             User,
             Workspace,
             WorkspaceInvitation,
             FeatureFlag,
             UsageMetric,
             RefreshToken,
-            // Tenant schema entities (EntitySchema)
             WorkspaceMemberEntity,
             ChannelEntity,
             ChannelMemberEntity,
@@ -54,19 +49,32 @@ import { WorkspaceInvitation } from 'src/modules/workspaces/entities/workspace_i
             FileEntity,
             ReactionEntity,
           ],
-
-          // Extra options
+          synchronize: false,
+          logging: !isProd,
+          migrationsRun: false,
           extra: {
-            // Connection pool configuration
             max: 10,
             idleTimeoutMillis: 30000,
             connectionTimeoutMillis: 2000,
           },
         };
+
+        if (isProd && databaseUrl) {
+          return {
+            type: 'postgres',
+            url: databaseUrl,
+            ssl: { rejectUnauthorized: false },
+            ...baseConfig,
+          };
+        }
+
+        return {
+          ...configService.get('database'),
+          ...baseConfig,
+        };
       },
     }),
 
-    // Register repositories for public schema entities
     TypeOrmModule.forFeature([User, Workspace, FeatureFlag, UsageMetric]),
   ],
   exports: [TypeOrmModule],

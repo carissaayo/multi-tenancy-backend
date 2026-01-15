@@ -1,34 +1,17 @@
-import { registerAs } from '@nestjs/config';
-import { DataSourceOptions } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { join } from 'path';
+import * as dotenv from 'dotenv';
 
+dotenv.config();
 
-export default registerAs(
-  'database',
-  (): DataSourceOptions => ({
-    type: 'postgres',
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+export const AppDataSource = new DataSource({
+  type: 'postgres',
+  url: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 
-    // Public schema entities (use class-based decorators)
-    entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
+  entities: [join(__dirname, '../**/*.entity{.ts,.js}')],
+  migrations: [join(__dirname, '../database/migrations/*{.ts,.js}')],
 
-    // Tenant schema entities (use EntitySchema)
-    // These are registered manually in the module
-    synchronize: process.env.NODE_ENV !== 'production',
-    logging: process.env.NODE_ENV === 'development',
-
-    // Migration settings
-    migrations: [join(__dirname, '../database/migrations/*{.ts,.js}')],
-    migrationsRun: true,
-
-    // Connection pool
-    poolSize: 10,
-
-    // Schema settings
-    schema: 'public', // Default schema
-  }),
-);
+  synchronize: false,
+  logging: true,
+});
