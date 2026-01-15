@@ -9,8 +9,10 @@ import { ChannelService } from "./services/channel.service";
 import { ChannelLifecycleService } from "./services/channel-lifecycle.service";
 import { ChannelMembershipService } from "./services/channel-membership.service";
 import { ChannelQueryService } from "./services/channel-query.service";
+import { ChannelManagementService } from "./services/channel-management.service";
 
 import { ChannelController } from "./controllers/channel.controller";
+import { ChannelManagementController } from "./controllers/channel-management.controller";
 
 import { ChannelEntity } from "./entities/channel.entity";
 import { ChannelMemberEntity } from "./entities/channel-member.entity";
@@ -22,12 +24,13 @@ import { ChannelMemberEntity } from "./entities/channel-member.entity";
     WorkspaceModule,
     SecurityModule,
   ],
-  controllers: [ChannelController],
+  controllers: [ChannelController, ChannelManagementController],
   providers: [
     ChannelService,
     ChannelLifecycleService,
     ChannelMembershipService,
     ChannelQueryService,
+    ChannelManagementService,
   ],
   exports: [ChannelService],
 })
