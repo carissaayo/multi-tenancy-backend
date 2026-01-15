@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { DataSource, MoreThan, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 
 import { MemberService } from 'src/modules/members/services/member.service';
@@ -16,6 +16,7 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { ChannelInviteDto } from '../dtos/channel-invite.dto';
 import { ChannelInvitation } from '../entities/channel_invitations.entity';
 import { WorkspaceInvitationStatus } from 'src/modules/workspaces/interfaces/workspace.interface';
+import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
 
 @Injectable()
 export class ChannelInviteService {
@@ -23,7 +24,7 @@ export class ChannelInviteService {
   private readonly INVITE_EXPIRY_DAYS = 1;
 
   constructor(
-
+    private readonly dataSource: DataSource,
     @InjectRepository(ChannelInvitation)
     private readonly channelInvitationRepo: Repository<ChannelInvitation>,
     private readonly memberService: MemberService,
@@ -31,6 +32,7 @@ export class ChannelInviteService {
     private readonly tokenManager: TokenManager,
     private readonly channelMembershipService: ChannelMembershipService,
     private readonly channelService: ChannelService,
+    private readonly workspaceService: WorkspacesService,
   ) {}
 
   async inviteToJoinPrivateChannel(
@@ -60,6 +62,7 @@ export class ChannelInviteService {
       workspace.id,
       user.id,
     );
+
     if (!inviterMember) {
       throw customError.forbidden(
         'You must be a workspace member to invite others',
@@ -67,7 +70,10 @@ export class ChannelInviteService {
     }
 
   
-
+    if (inviterMember.id === memberId) {
+      throw customError.forbidden('You cannot invite yourself to this channel');
+    }
+    
     const isInviterChannelMember =
       await this.channelMembershipService.isUserMember(
         id,
@@ -80,11 +86,8 @@ export class ChannelInviteService {
       );
     }
 
-      if (inviterMember.id === memberId) {
-        throw customError.forbidden(
-          'You cannot invite yourself to this channel',
-        );
-      }
+
+  
 
     
     const hasPermission = await this.channelService.hasChannelManagementPermission(workspace.id, user.id, workspace);
@@ -94,27 +97,32 @@ export class ChannelInviteService {
         'You do not have permission to invite members to this channel',
       );
     }
-    const invitedMember = await this.channelMembershipService.isUserMember(
-        id,
-        memberId,
-        workspace.id,
-    );
-    if (invitedMember) {
-      throw customError.badRequest('Member is already a member of this channel');
-    }
+   const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
+     workspace.slug,
+   );
+   const schemaName = `workspace_${sanitizedSlug}`;
 
-    const isMemberChannelMember =
-      await this.channelMembershipService.isUserMember(
-        id,
-        memberId,
-        workspace.id,
-      );
+   const [invitedMember] = await this.dataSource.query(
+     `SELECT id, user_id FROM "${schemaName}".members WHERE id = $1 AND is_active = true LIMIT 1`,
+     [memberId],
+   );
 
-    if (isMemberChannelMember) {
-      throw customError.badRequest(
-        'The user is already a member of this channel',
-      );
-    }
+   if (!invitedMember) {
+     throw customError.badRequest('The user is not a member of this workspace');
+   }
+
+   const isMemberChannelMember =
+     await this.channelMembershipService.isUserMember(
+       id,
+       memberId,
+       workspace.id,
+     );
+
+   if (isMemberChannelMember) {
+     throw customError.badRequest(
+       'The user is already a member of this channel',
+     );
+   }
 
     const existingInvitation = await this.channelInvitationRepo.findOne({
       where: {
