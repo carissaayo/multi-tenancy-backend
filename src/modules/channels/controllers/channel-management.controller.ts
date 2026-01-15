@@ -9,6 +9,7 @@ import {
 import { ChannelManagementService } from '../services/channel-management.service';
 
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
 
 @ApiTags('Channel Management')
 @Controller('channels')
@@ -42,7 +43,7 @@ export class ChannelManagementController {
   }
 
   // Remove a member from a channel
-  @Delete(':id/members/:memberId')
+  @Delete(':id/members/remove')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Remove a member from a channel' })
   @ApiResponse({
@@ -52,12 +53,12 @@ export class ChannelManagementController {
   removeMemberFromChannel(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Param('memberId') memberId: string,
+    @Body() dto: RemoveMemberFromChannelDto,
   ) {
     return this.channelManagementService.removeMemberFromChannel(
       req,
       id,
-      memberId,
+      dto,
     );
   }
 }

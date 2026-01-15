@@ -15,12 +15,14 @@ import { customError } from 'src/core/error-handler/custom-errors';
 import { ChannelQueryService } from './channel-query.service';
 import { ChannelMembershipService } from './channel-membership.service';
 import { ChannelService } from './channel.service';
+import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
 
 @Injectable()
 export class ChannelManagementService {
   private readonly logger = new Logger(ChannelManagementService.name);
 
   constructor(
+    private readonly dataSource: DataSource,
     private readonly workspacesService: WorkspacesService,
     private readonly memberService: MemberService,
     private readonly channelQueryService: ChannelQueryService,
@@ -80,7 +82,7 @@ export class ChannelManagementService {
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
       message: 'You have successfully joined the channel',
-      channel: joinedChannel,
+      channel: channel,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
     };
@@ -122,11 +124,11 @@ export class ChannelManagementService {
   async removeMemberFromChannel(
     req: AuthenticatedRequest,
     id: string,
-    targetMemberId: string,
+    dto: RemoveMemberFromChannelDto,
   ) {
+    const { targetMemberId } = dto;
     const user = req.user!;
     const workspace = req.workspace!;
-
 
     const channel = await this.channelQueryService.findChannelById(
       id,
@@ -137,7 +139,6 @@ export class ChannelManagementService {
       throw customError.notFound('Channel not found');
     }
 
-  
     const hasPermission =
       await this.channelService.hasChannelManagementPermission(
         workspace.id,
@@ -162,21 +163,26 @@ export class ChannelManagementService {
       throw customError.forbidden('You are not a member of this workspace');
     }
 
-    
     if (requesterMember.id === targetMemberId) {
       throw customError.badRequest(
         'You cannot remove yourself. But you can leave the channel.',
       );
     }
 
-    const targetMember = await this.memberService.isUserMember(
-      workspace.id,
-      targetMemberId,
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    const [targetMember] = await this.dataSource.query(
+      `SELECT id, user_id FROM "${schemaName}".members WHERE id = $1 AND is_active = true LIMIT 1`,
+      [targetMemberId],
     );
 
     if (!targetMember) {
       throw customError.notFound('Target member not found in this workspace');
     }
+
 
     await this.channelMembershipService.removeMemberFromChannel(
       id,
