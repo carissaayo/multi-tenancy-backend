@@ -32,17 +32,12 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 const typeorm_1 = require("typeorm");
 const path_1 = require("path");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config({ path: (0, path_1.join)(__dirname, '../../../.env') });
-const config_1 = __importDefault(require("../../config/config"));
-const appConfig = (0, config_1.default)();
 const user_entity_1 = require("../../modules/users/entities/user.entity");
 const workspace_entity_1 = require("../../modules/workspaces/entities/workspace.entity");
 const feature_flag_entity_1 = require("../feature-flags/entities/feature-flag.entity");
@@ -55,13 +50,8 @@ const message_entity_1 = require("../../modules/messages/entities/message.entity
 const file_entity_1 = require("../../modules/files/entities/file.entity");
 const reaction_entity_1 = require("../../modules/reactions/entities/reaction.entity");
 const workspace_initations_entity_1 = require("../../modules/workspaces/entities/workspace_initations.entity");
-exports.AppDataSource = new typeorm_1.DataSource({
-    type: 'postgres',
-    host: appConfig.database.host,
-    port: appConfig.database.port,
-    username: appConfig.database.username,
-    password: appConfig.database.password,
-    database: appConfig.database.database,
+const databaseUrl = process.env.DATABASE_URL;
+const baseConfig = {
     entities: [
         user_entity_1.User,
         workspace_entity_1.Workspace,
@@ -79,5 +69,21 @@ exports.AppDataSource = new typeorm_1.DataSource({
     migrations: [(0, path_1.join)(__dirname, '../../database/migrations/*{.ts,.js}')],
     synchronize: false,
     logging: true,
-});
+};
+exports.AppDataSource = new typeorm_1.DataSource(databaseUrl
+    ? {
+        type: 'postgres',
+        url: databaseUrl,
+        ssl: { rejectUnauthorized: false },
+        ...baseConfig,
+    }
+    : {
+        type: 'postgres',
+        host: process.env.DB_HOST || 'postgres',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_NAME || 'multi_tenancy',
+        ...baseConfig,
+    });
 //# sourceMappingURL=data-source.js.map

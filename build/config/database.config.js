@@ -38,13 +38,31 @@ const config_1 = require("@nestjs/config");
 const path_1 = require("path");
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
-exports.databaseConfig = (0, config_1.registerAs)('database', () => ({
-    type: 'postgres',
-    url: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
-    entities: [(0, path_1.join)(__dirname, '../**/*.entity{.ts,.js}')],
-    migrations: [(0, path_1.join)(__dirname, '../database/migrations/*{.ts,.js}')],
-    synchronize: false,
-    logging: true,
-}));
+exports.databaseConfig = (0, config_1.registerAs)('database', () => {
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+        return {
+            type: 'postgres',
+            url: databaseUrl,
+            ssl: { rejectUnauthorized: false },
+            entities: [(0, path_1.join)(__dirname, '../**/*.entity{.ts,.js}')],
+            migrations: [(0, path_1.join)(__dirname, '../database/migrations/*{.ts,.js}')],
+            synchronize: false,
+            logging: true,
+        };
+    }
+    return {
+        type: 'postgres',
+        host: process.env.DB_HOST || 'postgres',
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || 'postgres',
+        database: process.env.DB_NAME || 'multi_tenancy',
+        ssl: false,
+        entities: [(0, path_1.join)(__dirname, '../**/*.entity{.ts,.js}')],
+        migrations: [(0, path_1.join)(__dirname, '../database/migrations/*{.ts,.js}')],
+        synchronize: false,
+        logging: true,
+    };
+});
 //# sourceMappingURL=database.config.js.map
