@@ -1,0 +1,41 @@
+import { Workspace } from '../entities/workspace.entity';
+export declare enum WorkspacePlan {
+    FREE = "free",
+    PRO = "pro",
+    ENTERPRISE = "enterprise"
+}
+export declare enum WorkspaceInvitationStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    EXPIRED = "expired",
+    REVOKED = "revoked"
+}
+export declare enum WorkspaceInvitationRole {
+    MEMBER = "member",
+    ADMIN = "admin",
+    GUEST = "guest"
+}
+export interface GetUserWorkspacesResponse {
+    workspaces: Workspace[];
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+    totalWorkspacesCount: number;
+}
+export interface GetUserWorkspaceResponse {
+    workspace: Workspace | null;
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+}
+export interface UpdateWorkspaceResponse {
+    workspace: Workspace | null;
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+}
+export interface NoDataWorkspaceResponse {
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+}

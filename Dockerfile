@@ -21,12 +21,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install production deps only
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy compiled output
-COPY dist ./dist
+COPY build ./build
 
-# Railway/Render will inject PORT
-CMD ["node", "dist/main.js"]
+CMD ["node", "build/main.js"]

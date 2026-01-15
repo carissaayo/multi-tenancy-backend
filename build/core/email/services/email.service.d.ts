@@ -1,0 +1,59 @@
+import { ConfigService } from '@nestjs/config';
+interface WorkspaceMember {
+    email: string;
+    firstName?: string;
+}
+export declare class EmailService {
+    private readonly configService;
+    private transporter;
+    constructor(configService: ConfigService);
+    private buildTemplate;
+    private sendEmail;
+    private sendBatchEmails;
+    sendVerificationEmail(email: string, code: string): Promise<void>;
+    sendVerificationSuccessEmail(email: string, firstName: string): Promise<void>;
+    resendVerificationCode(email: string, code: string): Promise<void>;
+    sendPasswordResetEmail(email: string, code: string): Promise<void>;
+    sendPasswordChangeNotificationEmail(email: string, firstName: string): Promise<void>;
+    send2FAEnabled(email: string, firstName: string): Promise<void>;
+    send2FADisabled(email: string, firstName: string): Promise<void>;
+    sendNewDeviceLogin(email: string, firstName: string, device: string, location: string, timestamp: string): Promise<void>;
+    sendWorkspaceCreated(email: string, firstName: string, workspaceName: string, workspaceUrl: string): Promise<void>;
+    sendWorkspaceSetupComplete(email: string, firstName: string, workspaceName: string, workspaceUrl: string): Promise<void>;
+    notifyWorkspaceNameChange(members: WorkspaceMember[], oldName: string, newName: string, changedBy: string): Promise<void>;
+    notifyWorkspaceSettingsUpdated(members: WorkspaceMember[], workspaceName: string, settingChanged: string, changedBy: string): Promise<void>;
+    notifyWorkspaceDeletionScheduled(members: WorkspaceMember[], workspaceName: string, deletionDate: string, reason?: string): Promise<void>;
+    notifyWorkspaceArchived(members: WorkspaceMember[], workspaceName: string, archivedBy: string): Promise<void>;
+    sendOwnershipTransferRequest(newOwnerEmail: string, newOwnerName: string, workspaceName: string, currentOwner: string, acceptLink: string): Promise<void>;
+    notifyOwnershipTransferCompleted(oldOwnerEmail: string, oldOwnerName: string, newOwnerName: string, workspaceName: string): Promise<void>;
+    notifyNewOwner(newOwnerEmail: string, newOwnerName: string, workspaceName: string, previousOwner: string): Promise<void>;
+    notifyAdminRoleGranted(email: string, firstName: string, workspaceName: string, grantedBy: string): Promise<void>;
+    notifyAdminRoleRevoked(email: string, firstName: string, workspaceName: string, revokedBy: string): Promise<void>;
+    notifyBillingChange(email: string, firstName: string, workspaceName: string, changeDetails: string): Promise<void>;
+    sendWorkspaceInvitation(email: string, workspaceName: string, inviterName: string, inviteLink: string, expiresIn: string): Promise<void>;
+    sendInvitationReminder(email: string, workspaceName: string, inviterName: string, inviteLink: string, expiresIn: string): Promise<void>;
+    sendInvitationExpired(email: string, workspaceName: string, inviterName: string): Promise<void>;
+    sendWelcomeToWorkspace(email: string, firstName: string, workspaceName: string, workspaceUrl: string, inviterName?: string): Promise<void>;
+    notifyMemberAdded(email: string, firstName: string, workspaceName: string, addedBy: string): Promise<void>;
+    notifyMemberRemoved(email: string, firstName: string, workspaceName: string, removedBy: string, reason?: string): Promise<void>;
+    notifyRoleChanged(email: string, firstName: string, workspaceName: string, newRole: string, changedBy: string): Promise<void>;
+    notifyMemberLeft(email: string, firstName: string, workspaceName: string): Promise<void>;
+    notifyMemberDeactivated(email: string, firstName: string, workspaceName: string, deactivatedBy: string): Promise<void>;
+    notifyAddedToChannel(email: string, firstName: string, workspaceName: string, channelName: string, addedBy: string): Promise<void>;
+    notifyRemovedFromChannel(email: string, firstName: string, workspaceName: string, channelName: string, removedBy: string): Promise<void>;
+    sendPrivateChannelInvitation(email: string, firstName: string, workspaceName: string, channelName: string, inviterName: string, inviteLink: string): Promise<void>;
+    notifyGuestAccessGranted(email: string, firstName: string, workspaceName: string, grantedBy: string, limitations: string): Promise<void>;
+    notifyGuestAccessRevoked(email: string, firstName: string, workspaceName: string, revokedBy: string): Promise<void>;
+    notifyDataExportReady(email: string, firstName: string, workspaceName: string, downloadLink: string, expiresIn: string): Promise<void>;
+    notifyDataDeletionScheduled(email: string, firstName: string, workspaceName: string, deletionDate: string): Promise<void>;
+    notifyPolicyUpdate(members: WorkspaceMember[], workspaceName: string, policyType: string, updateLink: string): Promise<void>;
+    sendComplianceReportGenerated(email: string, firstName: string, workspaceName: string, reportLink: string): Promise<void>;
+    sendDirectMessageNotification(email: string, firstName: string, workspaceName: string, senderName: string, messagePreview: string, messageLink: string): Promise<void>;
+    sendMentionNotification(email: string, firstName: string, workspaceName: string, channelName: string, mentionedBy: string, messagePreview: string, messageLink: string): Promise<void>;
+    sendActivityDigest(email: string, firstName: string, workspaceName: string, digest: {
+        unreadMessages: number;
+        mentions: number;
+        newMembers: number;
+    }, digestLink: string): Promise<void>;
+}
+export {};

@@ -1,0 +1,1 @@
+{"version":3,"file":"workspace-member.decorator.js","sourceRoot":"","sources":["../../../../src/core/security/decorators/workspace-member.decorator.ts"],"names":[],"mappings":";;;AAAA,2CAAwE;AAE3D,QAAA,eAAe,GAAG,IAAA,6BAAoB,EACjD,CAAC,IAAa,EAAE,GAAqB,EAAE,EAAE;IACvC,MAAM,OAAO,GAAG,GAAG,CAAC,YAAY,EAAE,CAAC,UAAU,EAAE,CAAC;IAChD,OAAO,OAAO,CAAC,eAAe,CAAC;AACjC,CAAC,CACF,CAAC"}

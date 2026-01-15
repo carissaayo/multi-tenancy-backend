@@ -1,10 +1,10 @@
-import { DataSource } from 'typeorm';
+import { registerAs } from '@nestjs/config';
 import { join } from 'path';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-export const AppDataSource = new DataSource({
+export const databaseConfig = registerAs('database', () => ({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
@@ -14,4 +14,5 @@ export const AppDataSource = new DataSource({
 
   synchronize: false,
   logging: true,
-});
+}));
+

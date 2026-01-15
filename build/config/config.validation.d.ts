@@ -1,0 +1,30 @@
+import { z } from 'zod';
+export declare const envSchema: z.ZodObject<{
+    NODE_ENV: z.ZodDefault<z.ZodEnum<{
+        production: "production";
+        development: "development";
+        test: "test";
+        staging: "staging";
+    }>>;
+    PORT: z.ZodPipe<z.ZodString, z.ZodTransform<number, string>>;
+    APP_NAME: z.ZodString;
+    DB_HOST: z.ZodString;
+    DB_PORT: z.ZodPipe<z.ZodString, z.ZodTransform<number, string>>;
+    DB_USER: z.ZodString;
+    DB_PASSWORD: z.ZodString;
+    DB_NAME: z.ZodString;
+    ACCESS_TOKEN_SECRET: z.ZodString;
+    REFRESH_TOKEN_SECRET: z.ZodString;
+    JWT_DURATION_10M: z.ZodString;
+    JWT_DURATION_1H: z.ZodString;
+    JWT_DURATION_1D: z.ZodString;
+    JWT_DURATION_7D: z.ZodString;
+    AWS_REGION: z.ZodString;
+    AWS_ACCESS_KEY_ID: z.ZodString;
+    AWS_SECRET_ACCESS_KEY: z.ZodString;
+    AWS_BUCKET_NAME: z.ZodString;
+    FRONTEND_URL: z.ZodString;
+    MAX_FREE_WORKSPACES: z.ZodPipe<z.ZodString, z.ZodTransform<number, string>>;
+}, z.core.$strip>;
+export type EnvVars = z.infer<typeof envSchema>;
+export declare function validateEnv(config: Record<string, unknown>): EnvVars;

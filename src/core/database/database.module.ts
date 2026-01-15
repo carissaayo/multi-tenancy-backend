@@ -18,6 +18,8 @@ import { ChannelMemberEntity } from '../../modules/channels/entities/channel-mem
 import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
+import { databaseConfig } from 'src/config/database.config';
+
 
 
 @Global()
@@ -26,6 +28,7 @@ import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ConfigModule.forFeature(databaseConfig),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
