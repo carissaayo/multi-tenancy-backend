@@ -1,4 +1,4 @@
-import { Controller, Req, Param, Patch, Body } from '@nestjs/common';
+import { Controller, Req, Param, Patch, Body, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -39,5 +39,16 @@ export class ChannelInviteController {
   })
   revokeInvitation(@Param('invitationId') invitationId: string, @Req() req: AuthenticatedRequest) {
     return this.channelInviteService.revokeInvitation(invitationId, req);
+  }
+
+  @Patch('invitations/accept')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Accept a channel invitation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Channel invitation accepted successfully',
+  })
+  acceptInvitation(@Query('token') token: string) {
+    return this.channelInviteService.acceptInvitation(token);
   }
 }

@@ -115,7 +115,11 @@ export class ChannelMembershipService {
     };
   }
 
-  async inviteToJoinPrivateChannel(req: AuthenticatedRequest, id: string, memberId: string) {
+  async inviteToJoinPrivateChannel(
+    req: AuthenticatedRequest,
+    id: string,
+    memberId: string,
+  ) {
     const user = req.user!;
     const workspace = req.workspace!;
 
@@ -212,6 +216,77 @@ export class ChannelMembershipService {
       }
 
       throw customError.internalServerError('Failed to join channel');
+    }
+  }
+
+  /**
+   * Add a member to a channel (for invitation acceptance)
+   */
+  async addMemberToChannel(
+    channelId: string,
+    memberId: string,
+    workspaceId: string,
+  ) {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    const isChannelMember = await this.isUserMember(
+      channelId,
+      memberId,
+      workspaceId,
+    );
+
+    if (isChannelMember) {
+      throw customError.badRequest('Member is already in this channel');
+    }
+
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      await this.dataSource.query(
+        `
+        INSERT INTO "${schemaName}".channel_members
+          (channel_id, member_id, joined_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (channel_id, member_id) DO NOTHING
+        `,
+        [channelId, memberId],
+      );
+
+      this.logger.log(
+        `Member ${memberId} added to channel ${channelId} in workspace ${workspaceId}`,
+      );
+
+      const channel = await this.channelQueryService.findChannelById(
+        channelId,
+        workspaceId,
+      );
+
+      if (!channel) {
+        throw customError.internalServerError(
+          'Failed to retrieve channel after adding member',
+        );
+      }
+
+      return channel;
+    } catch (error) {
+      this.logger.error(
+        `Error adding member ${memberId} to channel ${channelId}: ${error.message}`,
+      );
+
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError('Failed to add member to channel');
     }
   }
 

@@ -33,6 +33,8 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'workspace_id' })
   workspace: Workspace;
 
+  @Column({ type: 'uuid', name: 'channel_id' })
+  channelId: string;
   // -------------------------
   // Invitation target
   // -------------------------
