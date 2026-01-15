@@ -692,7 +692,7 @@ export class EmailService {
              <p style="margin:20px 0;">
                <a href="${inviteLink}" 
                   style="background:#4F46E5; color:#fff; padding:12px 24px; border-radius:5px; text-decoration:none; display:inline-block;">
-                 Join Workspace
+                 Join Channel
                </a>
              </p>
              <p>This invitation expires in ${expiresIn}.</p>`,
