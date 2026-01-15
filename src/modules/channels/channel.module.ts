@@ -13,6 +13,7 @@ import { ChannelManagementService } from "./services/channel-management.service"
 
 import { ChannelController } from "./controllers/channel.controller";
 import { ChannelManagementController } from "./controllers/channel-management.controller";
+import { ChannelMembershipController } from "./controllers/channel-membership.controller";
 
 import { ChannelEntity } from "./entities/channel.entity";
 import { ChannelMemberEntity } from "./entities/channel-member.entity";
@@ -24,7 +25,11 @@ import { ChannelMemberEntity } from "./entities/channel-member.entity";
     WorkspaceModule,
     SecurityModule,
   ],
-  controllers: [ChannelController, ChannelManagementController],
+  controllers: [
+    ChannelController,
+    ChannelManagementController,
+    ChannelMembershipController,
+  ],
   providers: [
     ChannelService,
     ChannelLifecycleService,

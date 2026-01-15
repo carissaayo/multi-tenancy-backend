@@ -114,7 +114,6 @@ export class ChannelQueryService {
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-   
       let query = `
         SELECT DISTINCT c.id, c.name, c.description, c.is_private, c.created_by, c.created_at, c.updated_at
         FROM "${schemaName}".channels c
@@ -169,6 +168,91 @@ export class ChannelQueryService {
       }
 
       throw customError.internalServerError('Failed to find channels');
+    }
+  }
+
+  async findChannelMembers(channelId: string, workspaceId: string) {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      // Join channel_members with members and users to get complete member information
+      const result = await this.dataSource.query(
+        `
+        SELECT 
+          cm.id as channel_member_id,
+          cm.joined_at as channel_joined_at,
+          m.id as member_id,
+          m.user_id,
+          m.role,
+          m.permissions,
+          m.is_active as member_is_active,
+          m.joined_at as workspace_joined_at,
+          u.id as user_id,
+          u.email,
+          u.full_name,
+          u.avatar_url,
+          u.is_email_verified
+        FROM "${schemaName}".channel_members cm
+        INNER JOIN "${schemaName}".members m ON cm.member_id = m.id
+        INNER JOIN public.users u ON m.user_id = u.id
+        WHERE cm.channel_id = $1 AND m.is_active = true
+        ORDER BY cm.joined_at ASC
+        `,
+        [channelId],
+      );
+
+      if (!result || result.length === 0) {
+        return [];
+      }
+
+      // Map the results to a structured format
+      return result.map((row) => ({
+        channelMember: {
+          id: row.channel_member_id,
+          channelId: channelId,
+          memberId: row.member_id,
+          joinedAt: row.channel_joined_at,
+        },
+        member: {
+          id: row.member_id,
+          userId: row.user_id,
+          role: row.role,
+          isActive: row.member_is_active,
+          joinedAt: row.workspace_joined_at,
+        },
+        user: {
+          id: row.user_id,
+          email: row.email,
+          fullName: row.full_name,
+          avatarUrl: row.avatar_url,
+          isEmailVerified: row.is_email_verified,
+        },
+      }));
+    } catch (error) {
+      this.logger.error(
+        `Error finding channel members for channel ${channelId} in workspace ${workspaceId}: ${error.message}`,
+      );
+
+      // Handle schema not found
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      // Re-throw custom errors
+      if (error.statusCode) {
+        throw error;
+      }
+
+      throw customError.internalServerError('Failed to find channel members');
     }
   }
 }

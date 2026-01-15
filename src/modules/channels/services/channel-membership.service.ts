@@ -166,4 +166,26 @@ export class ChannelMembershipService {
       throw customError.internalServerError('Failed to join channel');
     }
   }
+
+  async getChannelMembers(req: AuthenticatedRequest, id: string) {
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    const member = await this.memberService.isUserMember(workspace.id, user.id);
+    if (!member) {
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    const channelMembers = await this.channelQueryService.findChannelMembers(id, workspace.id);
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+    return {
+        message: 'Channel members retrieved successfully',
+      channelMembers: channelMembers,
+      totalChannelMembers: channelMembers.length||0,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+    };
+  }
+  
 }

@@ -177,4 +177,7 @@ export class ChannelService {
     return canManageChannels;
   }
   
+  async getChannelMembers(req: AuthenticatedRequest, id: string) {
+    return this.channelMembershipService.getChannelMembers(req, id);
+  }
 }
