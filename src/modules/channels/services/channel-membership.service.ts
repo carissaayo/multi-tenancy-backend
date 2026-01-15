@@ -313,4 +313,128 @@ export class ChannelMembershipService {
       refreshToken: tokens.refreshToken || '',
     };
   }
+
+  /**
+   * Leave a channel
+   */
+  async leaveChannel(channelId: string, memberId: string, workspaceId: string) {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    const isChannelMember = await this.isUserMember(
+      channelId,
+      memberId,
+      workspaceId,
+    );
+
+    if (!isChannelMember) {
+      throw customError.badRequest('You are not a member of this channel');
+    }
+
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      const result = await this.dataSource.query(
+        `
+        DELETE FROM "${schemaName}".channel_members
+        WHERE channel_id = $1 AND member_id = $2
+        RETURNING id
+        `,
+        [channelId, memberId],
+      );
+
+      if (!result || result.length === 0) {
+        throw customError.badRequest('Failed to leave channel');
+      }
+
+      this.logger.log(
+        `Member ${memberId} left channel ${channelId} in workspace ${workspaceId}`,
+      );
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Error removing member ${memberId} from channel ${channelId}: ${error.message}`,
+      );
+
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError('Failed to leave channel');
+    }
+  }
+
+  /**
+   * Remove a member from a channel
+   */
+  async removeMemberFromChannel(
+    channelId: string,
+    targetMemberId: string,
+    workspaceId: string,
+  ) {
+    const workspace = await this.workspaceRepo.findOne({
+      where: { id: workspaceId },
+    });
+
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    const isChannelMember = await this.isUserMember(
+      channelId,
+      targetMemberId,
+      workspaceId,
+    );
+
+    if (!isChannelMember) {
+      throw customError.badRequest('Member is not in this channel');
+    }
+
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    try {
+      const result = await this.dataSource.query(
+        `
+        DELETE FROM "${schemaName}".channel_members
+        WHERE channel_id = $1 AND member_id = $2
+        RETURNING id
+        `,
+        [channelId, targetMemberId],
+      );
+
+      if (!result || result.length === 0) {
+        throw customError.badRequest('Failed to remove member from channel');
+      }
+
+      this.logger.log(
+        `Member ${targetMemberId} removed from channel ${channelId} in workspace ${workspaceId}`,
+      );
+
+      return true;
+    } catch (error) {
+      this.logger.error(
+        `Error removing member ${targetMemberId} from channel ${channelId}: ${error.message}`,
+      );
+
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError(
+        'Failed to remove member from channel',
+      );
+    }
+  }
 }
