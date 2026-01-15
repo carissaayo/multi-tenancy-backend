@@ -19,6 +19,7 @@ import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
 import { databaseConfig } from 'src/config/database.config';
+import { MigrationRunnerService } from 'src/database/migration-runner.service';
 
 
 
@@ -80,6 +81,8 @@ import { databaseConfig } from 'src/config/database.config';
 
     TypeOrmModule.forFeature([User, Workspace, FeatureFlag, UsageMetric]),
   ],
+  providers: [MigrationRunnerService],
   exports: [TypeOrmModule],
+
 })
 export class DatabaseModule {}
