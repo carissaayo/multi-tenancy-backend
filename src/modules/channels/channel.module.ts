@@ -11,6 +11,7 @@ import { ChannelMembershipService } from "./services/channel-membership.service"
 import { ChannelQueryService } from "./services/channel-query.service";
 import { ChannelManagementService } from "./services/channel-management.service";
 import { ChannelInviteService } from "./services/channel-invite.service";
+import { EmailService } from "src/core/email/services/email.service";
 
 import { ChannelController } from "./controllers/channel.controller";
 import { ChannelManagementController } from "./controllers/channel-management.controller";
@@ -41,6 +42,7 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
     ChannelQueryService,
     ChannelManagementService,
     ChannelInviteService,
+    EmailService,
   ],
   exports: [ChannelService],
 })
