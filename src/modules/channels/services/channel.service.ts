@@ -24,11 +24,15 @@ export class ChannelService {
     private readonly tokenManager: TokenManager,
   ) {}
 
-  
   async createChannel(
     req: AuthenticatedRequest,
     dto: CreateChannelDto,
-  ): Promise<{ channel: Channel; accessToken: string; refreshToken: string; message: string }> {
+  ): Promise<{
+    channel: Channel;
+    accessToken: string;
+    refreshToken: string;
+    message: string;
+  }> {
     const user = req.user!;
     const workspace = req.workspace!;
 
@@ -58,7 +62,11 @@ export class ChannelService {
     };
   }
 
-  async updateChannel(req: AuthenticatedRequest, id: string, updateDto: UpdateChannelDto) {
+  async updateChannel(
+    req: AuthenticatedRequest,
+    id: string,
+    updateDto: UpdateChannelDto,
+  ) {
     const user = req.user!;
     const workspace = req.workspace!;
 
@@ -73,10 +81,13 @@ export class ChannelService {
       );
     }
 
-    const updatedChannel = await this.channelLifecycleService.updateChannel(req, id, updateDto);
+    const updatedChannel = await this.channelLifecycleService.updateChannel(
+      req,
+      id,
+      updateDto,
+    );
 
     console.log(updatedChannel);
-    
 
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
@@ -85,7 +96,6 @@ export class ChannelService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
     };
-
   }
 
   async getChannel(req: AuthenticatedRequest, id: string) {
@@ -96,8 +106,10 @@ export class ChannelService {
     return this.channelMembershipService.getAllChannelsInAWorkspace(req);
   }
 
-
-  async deleteChannel(req: AuthenticatedRequest, id: string): Promise<{ message: string; accessToken: string; refreshToken: string }> {
+  async deleteChannel(
+    req: AuthenticatedRequest,
+    id: string,
+  ): Promise<{ message: string; accessToken: string; refreshToken: string }> {
     const user = req.user!;
     const workspace = req.workspace!;
 
@@ -111,7 +123,7 @@ export class ChannelService {
         'You do not have permission to delete channels in this workspace',
       );
     }
-      await this.channelLifecycleService.deleteChannel(req, id);
+    await this.channelLifecycleService.deleteChannel(req, id);
 
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
@@ -176,7 +188,8 @@ export class ChannelService {
 
     return canManageChannels;
   }
-  
+
+
   async getChannelMembers(req: AuthenticatedRequest, id: string) {
     return this.channelMembershipService.getChannelMembers(req, id);
   }

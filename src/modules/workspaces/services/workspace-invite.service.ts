@@ -19,7 +19,7 @@ import {
   WorkspaceInvitationRole,
   WorkspaceInvitationStatus,
 } from '../interfaces/workspace.interface';
-import { WorkspaceMembershipService } from './workspace-membership.service';
+
 
 @Injectable()
 export class WorkspaceInviteService {
@@ -29,9 +29,6 @@ export class WorkspaceInviteService {
     @InjectRepository(WorkspaceInvitation)
     private readonly workspaceInvitationRepo: Repository<WorkspaceInvitation>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
-    @InjectRepository(Workspace)
-    private readonly workspaceRepo: Repository<Workspace>,
-    private readonly workspaceMembershipService: WorkspaceMembershipService,
     @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
     private readonly emailService: EmailService,

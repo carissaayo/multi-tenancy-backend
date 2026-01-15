@@ -89,6 +89,8 @@ export class ChannelQueryService {
     }
   }
 
+  
+
   /**
    * Find all channels in a workspace that the user can access
    * Returns all public channels + private channels the user is a member of

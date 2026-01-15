@@ -20,6 +20,7 @@ import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
 import { databaseConfig } from 'src/config/database.config';
 import { MigrationRunnerService } from 'src/database/migration-runner.service';
+import { ChannelInvitation } from 'src/modules/channels/entities/channel_invitations.entity';
 
 
 
@@ -52,6 +53,7 @@ import { MigrationRunnerService } from 'src/database/migration-runner.service';
             MessageEntity,
             FileEntity,
             ReactionEntity,
+            ChannelInvitation,
           ],
           synchronize: false,
           logging: !isProd,

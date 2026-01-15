@@ -49,6 +49,10 @@ export class ChannelManagementService {
       throw customError.notFound('Channel not found');
     }
 
+    if (channel.isPrivate) {
+      throw customError.badRequest('You need to be invited to join this private channel');
+    }
+
     const isThisChannelMember =
       await this.channelMembershipService.isUserMember(
         id,
