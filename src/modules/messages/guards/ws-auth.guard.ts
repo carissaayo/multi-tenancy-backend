@@ -1,8 +1,8 @@
-// src/modules/messaging/guards/ws-auth.guard.ts
 import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
-import { JwtService } from '@nestjs/jwt';
+
 import { Socket } from 'socket.io';
+import { AuthDomainService } from 'src/core/security/services/auth-domain.service';
 import { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interface';
 
 
@@ -10,7 +10,7 @@ import { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interfa
 export class WsAuthGuard implements CanActivate {
   private readonly logger = new Logger(WsAuthGuard.name);
 
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(private readonly authDomain: AuthDomainService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     try {
@@ -21,13 +21,11 @@ export class WsAuthGuard implements CanActivate {
         throw new WsException('Unauthorized: No token provided');
       }
 
-      const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET,
-      });
+      const auth = await this.authDomain.validateAccessToken(token);
 
       // Attach user info to socket
-      (client as AuthenticatedSocket).userId = payload.sub;
-      (client as AuthenticatedSocket).workspaceId = payload.workspaceId;
+      (client as AuthenticatedSocket).userId = auth.userId;
+      (client as AuthenticatedSocket).workspaceId = auth.workspaceId;
 
       return true;
     } catch (error) {

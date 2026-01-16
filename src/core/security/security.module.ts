@@ -1,8 +1,10 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { StringValue } from 'ms';
+
 import { CorsHandler } from './services/cors-handler.service';
 import { IpReputationHandler } from './services/ip-reputation-handler.service';
 import { InputSanitizer } from './services/input-sanitizer.service';
@@ -10,14 +12,17 @@ import { AuthHandler } from './services/auth-handler.service';
 import { ResponseMonitor } from './services/response-monitor.service';
 import { AttackDetector } from './services/attack-detector.service';
 import { TokenManager } from './services/token-manager.service';
-import { SecurityMiddleware } from './middlewares/security.middleware';
-import { User } from 'src/modules/users/entities/user.entity';
-import { RefreshToken } from './entities/refresh-token.entity'; 
 import { RateLimitHandler } from './services/rate-limit-handler.service';
 import { RedisRateLimiter } from './services/radis-rate-limiter.service';
+import { AuthDomainService } from './services/auth-domain.service';
+
 import { TenantResolverMiddleware } from './middlewares/tenancy-resolver.middleware';
-import { APP_GUARD } from '@nestjs/core';
+import { SecurityMiddleware } from './middlewares/security.middleware';
+
 import { EmailVerificationGuard } from './guards/email-verification.guard';
+
+import { RefreshToken } from './entities/refresh-token.entity'; 
+import { User } from 'src/modules/users/entities/user.entity';
 
 
 @Module({
@@ -43,6 +48,7 @@ import { EmailVerificationGuard } from './guards/email-verification.guard';
     IpReputationHandler,
     InputSanitizer,
     AuthHandler,
+    AuthDomainService,
     ResponseMonitor,
     AttackDetector,
     TokenManager,
@@ -54,7 +60,7 @@ import { EmailVerificationGuard } from './guards/email-verification.guard';
       useClass: EmailVerificationGuard,
     },
   ],
-  exports: [TokenManager, AuthHandler],
+  exports: [TokenManager, AuthHandler, AuthDomainService],
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

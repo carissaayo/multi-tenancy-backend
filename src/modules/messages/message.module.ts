@@ -1,11 +1,14 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { MessagingGateway } from './gateways/messaging.gateway';
-import { MessageService } from './services/message.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
+
 import { WorkspaceModule } from '../workspaces/workspace.module';
 import { MemberModule } from '../members/member.module';
+import { SecurityModule } from 'src/core/security/security.module';
+
+import { MessagingGateway } from './gateways/messaging.gateway';
+import { MessageService } from './services/message.service';
 
 @Module({
   imports: [
@@ -22,6 +25,7 @@ import { MemberModule } from '../members/member.module';
     }),
     forwardRef(() => WorkspaceModule),
     forwardRef(() => MemberModule),
+    forwardRef(() => SecurityModule),
   ],
   providers: [MessagingGateway, MessageService],
   exports: [MessagingGateway, MessageService],

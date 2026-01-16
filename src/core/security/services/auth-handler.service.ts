@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { TokenManager } from './token-manager.service';
 import { User } from 'src/modules/users/entities/user.entity';
 import config from 'src/config/config';
+import { AuthDomainService } from './auth-domain.service';
 
 const appConfig = config();
 
@@ -19,7 +20,7 @@ export class AuthHandler {
   constructor(
     private readonly jwtService: JwtService,
     private readonly tokenManager: TokenManager,
-
+    private readonly authDomain: AuthDomainService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
   ) {}
@@ -47,21 +48,9 @@ export class AuthHandler {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = this.jwtService.verify(token, {
-        secret: appConfig.jwt.access_token_secret,
-      }) as { sub: string };
-
-      const user = await this.findUserById(decoded.sub);
-
-      if (!user || !user.isActive) {
-        res.status(HttpStatus.UNAUTHORIZED).json({
-          success: false,
-          message: 'Invalid or inactive user',
-          timestamp: new Date().toISOString(),
-        });
-        return { success: false };
-      }
-
+   
+      const { user } = await this.authDomain.validateAccessToken(token);
+    
       return {
         success: true,
         user,
