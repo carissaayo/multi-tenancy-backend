@@ -25,9 +25,7 @@ async function bootstrap() {
     }, 'access-token')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
-    if (process.env.NODE_ENV !== 'production') {
-        swagger_1.SwaggerModule.setup('api/docs', app, document);
-    }
+    swagger_1.SwaggerModule.setup('api/docs', app, document);
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
