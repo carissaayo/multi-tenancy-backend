@@ -75,4 +75,5 @@ export declare class MessagingGateway implements OnGatewayInit, OnGatewayConnect
     emitToUser(userId: string, event: string, data: any): void;
     emitToWorkspace(workspaceId: string, event: string, data: any): void;
     emitToChannel(channelId: string, event: string, data: any): void;
+    joinUserToWorkspace(userId: string, workspaceId: string): Promise<void>;
 }

@@ -106,18 +106,17 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
     extractWorkspaceFromSubdomain(req) {
         const hostname = this.getHostname(req);
         const parts = hostname.split('.');
-        const baseDomains = [
-            'onrender.com',
-            'localhost',
-        ];
-        const isBaseDomain = baseDomains.some((baseDomain) => hostname === baseDomain || hostname.endsWith('.' + baseDomain));
-        if (isBaseDomain && parts.length <= 2) {
-            return null;
-        }
-        if (parts.length === 1 || hostname.includes('localhost')) {
+        if (hostname.includes('localhost')) {
             if (parts.length > 1 && parts[0] !== 'localhost') {
                 return parts[0];
             }
+            return null;
+        }
+        const baseDomains = [
+            'onrender.com',
+        ];
+        const isBaseDomain = baseDomains.some((baseDomain) => hostname === baseDomain || hostname.endsWith('.' + baseDomain));
+        if (isBaseDomain && parts.length <= 2) {
             return null;
         }
         if (isBaseDomain) {

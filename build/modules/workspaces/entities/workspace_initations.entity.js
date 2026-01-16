@@ -18,7 +18,6 @@ let WorkspaceInvitation = class WorkspaceInvitation {
     id;
     workspaceId;
     workspace;
-    channelId;
     email;
     role;
     token;
@@ -51,10 +50,6 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'workspace_id' }),
     __metadata("design:type", workspace_entity_1.Workspace)
 ], WorkspaceInvitation.prototype, "workspace", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'uuid', name: 'channel_id' }),
-    __metadata("design:type", String)
-], WorkspaceInvitation.prototype, "channelId", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text' }),
     __metadata("design:type", String)

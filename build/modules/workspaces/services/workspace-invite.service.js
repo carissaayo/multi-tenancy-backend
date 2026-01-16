@@ -60,6 +60,7 @@ const permission_interface_1 = require("../../../core/security/interfaces/permis
 const email_service_1 = require("../../../core/email/services/email.service");
 const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
 const workspace_interface_1 = require("../interfaces/workspace.interface");
+const messaging_gateway_1 = require("../../messages/gateways/messaging.gateway");
 let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteService {
     workspaceInvitationRepo;
     userRepo;
@@ -67,15 +68,17 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
     emailService;
     configService;
     tokenManager;
+    messagingGateway;
     logger = new common_1.Logger(WorkspaceInviteService_1.name);
     INIVTE_EXPIRY_DAYS = 1;
-    constructor(workspaceInvitationRepo, userRepo, memberService, emailService, configService, tokenManager) {
+    constructor(workspaceInvitationRepo, userRepo, memberService, emailService, configService, tokenManager, messagingGateway) {
         this.workspaceInvitationRepo = workspaceInvitationRepo;
         this.userRepo = userRepo;
         this.memberService = memberService;
         this.emailService = emailService;
         this.configService = configService;
         this.tokenManager = tokenManager;
+        this.messagingGateway = messagingGateway;
     }
     async inviteByEmail(req, inviteDto) {
         const { email, role } = inviteDto;
@@ -104,12 +107,16 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
             where: {
                 workspaceId: workspace.id,
                 email,
-                expiresAt: (0, typeorm_2.MoreThan)(new Date()),
                 status: workspace_interface_1.WorkspaceInvitationStatus.PENDING,
             },
         });
         if (existingInvitation) {
-            throw custom_errors_1.customError.badRequest('This email is already invited to this workspace');
+            if (existingInvitation.expiresAt > new Date()) {
+                throw custom_errors_1.customError.badRequest('This email is already invited to this workspace');
+            }
+            existingInvitation.status = workspace_interface_1.WorkspaceInvitationStatus.EXPIRED;
+            await this.workspaceInvitationRepo.save(existingInvitation);
+            this.logger.log(`Expired invitation for ${email} in workspace ${workspace.id} marked as EXPIRED`);
         }
         const token = crypto.randomBytes(32).toString('hex');
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * this.INIVTE_EXPIRY_DAYS);
@@ -185,6 +192,27 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
             throw custom_errors_1.customError.notFound('Inviter not found');
         }
         await this.memberService.addMemberToWorkspace(workspace.id, user.id, invitation.role ?? workspace_interface_1.WorkspaceInvitationRole.MEMBER);
+        await this.messagingGateway.joinUserToWorkspace(user.id, workspace.id);
+        this.messagingGateway.emitToUser(user.id, 'workspaceJoined', {
+            workspace: {
+                id: workspace.id,
+                name: workspace.name,
+                slug: workspace.slug,
+            },
+            message: 'You have successfully joined the workspace',
+        });
+        this.messagingGateway.emitToWorkspace(workspace.id, 'memberJoined', {
+            workspaceId: workspace.id,
+            member: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName,
+                avatarUrl: user.avatarUrl,
+            },
+            role: invitation.role ?? workspace_interface_1.WorkspaceInvitationRole.MEMBER,
+            joinedAt: new Date(),
+        });
+        this.logger.log(`User ${user.id} accepted invitation and joined workspace ${workspace.id}`);
         const frontendUrl = this.configService.get('frontend.url') || 'http://localhost:8000';
         const workspaceUrl = `${frontendUrl}/workspace/${workspace.id}`;
         await this.emailService.sendWelcomeToWorkspace(user.email, user.fullName || user.email, workspace.name, workspaceUrl, inviter ? `${inviter.fullName}` : undefined);
@@ -251,11 +279,13 @@ exports.WorkspaceInviteService = WorkspaceInviteService = WorkspaceInviteService
     __param(0, (0, typeorm_1.InjectRepository)(workspace_initations_entity_1.WorkspaceInvitation)),
     __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => member_service_1.MemberService))),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => messaging_gateway_1.MessagingGateway))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         member_service_1.MemberService,
         email_service_1.EmailService,
         config_1.ConfigService,
-        token_manager_service_1.TokenManager])
+        token_manager_service_1.TokenManager,
+        messaging_gateway_1.MessagingGateway])
 ], WorkspaceInviteService);
 //# sourceMappingURL=workspace-invite.service.js.map

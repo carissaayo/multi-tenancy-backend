@@ -5,7 +5,6 @@ export declare class WorkspaceInvitation {
     id: string;
     workspaceId: string;
     workspace: Workspace;
-    channelId: string;
     email: string;
     role: WorkspaceInvitationRole;
     token: string;

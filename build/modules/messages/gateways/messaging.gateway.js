@@ -164,10 +164,35 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
         }
     }
     emitToWorkspace(workspaceId, event, data) {
+        this.logger.log(`Emitting to workspace ${workspaceId} event ${event}`);
         this.server.to(`workspace:${workspaceId}`).emit(event, data);
     }
     emitToChannel(channelId, event, data) {
         this.server.to(`channel:${channelId}`).emit(event, data);
+    }
+    async joinUserToWorkspace(userId, workspaceId) {
+        const userSocketIds = this.userSockets.get(userId);
+        if (!userSocketIds || userSocketIds.size === 0) {
+            this.logger.debug(`User ${userId} has no active WebSocket connections to join workspace ${workspaceId}`);
+            return;
+        }
+        const roomName = `workspace:${workspaceId}`;
+        for (const socketId of userSocketIds) {
+            const socket = this.server.sockets.sockets.get(socketId);
+            if (socket) {
+                await socket.join(roomName);
+                if (!this.workspaceRooms.has(workspaceId)) {
+                    this.workspaceRooms.set(workspaceId, new Set());
+                }
+                this.workspaceRooms.get(workspaceId).add(socketId);
+                this.logger.log(`Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`);
+            }
+        }
+        this.emitToUser(userId, 'workspaceJoined', {
+            workspaceId,
+            success: true,
+            message: 'You have been automatically joined to the workspace',
+        });
     }
 };
 exports.MessagingGateway = MessagingGateway;
@@ -223,7 +248,7 @@ __decorate([
 exports.MessagingGateway = MessagingGateway = MessagingGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
-            origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+            origin: 'http://localhost:8000',
             credentials: true,
         },
         namespace: '/messaging',

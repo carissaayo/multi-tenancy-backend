@@ -9,12 +9,10 @@ exports.publicRoutes = [
     '/api/payment/paystack/webhook',
     '/api/invitations/accept',
     '/api/docs',
-    '/api/api/docs',
 ];
 exports.workspaceOptionalRoutes = [
     '/api/workspaces',
     '/api/workspaces/:id',
-    '/api/invitations',
     '/api/users',
     '/api/users/avatar',
     '/api/auth/password-reset',
