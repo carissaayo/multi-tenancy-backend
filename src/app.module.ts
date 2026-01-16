@@ -12,6 +12,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { WorkspaceModule } from './modules/workspaces/workspace.module';
 import { UserModule } from './modules/users/user.module';
 import { ChannelModule } from './modules/channels/channel.module';
+import { MessageModule } from './modules/messages/message.module';
 
 
 @Module({
@@ -29,6 +30,7 @@ import { ChannelModule } from './modules/channels/channel.module';
     UserModule,
     WorkspaceModule,
     ChannelModule,
+    MessageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
