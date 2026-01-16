@@ -13,6 +13,7 @@ export declare class Workspace {
     creator: User;
     ownerId: string;
     owner: User;
+    sentToId: string | null;
     createdAt: Date;
     updatedAt: Date;
     deletedAt: Date;

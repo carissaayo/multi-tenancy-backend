@@ -26,6 +26,7 @@ let Workspace = class Workspace {
     creator;
     ownerId;
     owner;
+    sentToId;
     createdAt;
     updatedAt;
     deletedAt;
@@ -81,6 +82,10 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'owner_id' }),
     __metadata("design:type", user_entity_1.User)
 ], Workspace.prototype, "owner", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', name: 'sent_to', nullable: true }),
+    __metadata("design:type", Object)
+], Workspace.prototype, "sentToId", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', name: 'created_at' }),
     __metadata("design:type", Date)
