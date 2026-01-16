@@ -5,7 +5,8 @@ export const publicRoutes = [
   '/api/auth/password-reset',
   '/api/payment/paystack/webhook',
   '/api/invitations/accept',
-  "/api/docs"
+  '/api/docs',
+  '/api/api/docs',
 ];
 
 export const workspaceOptionalRoutes = [
@@ -25,6 +26,7 @@ export const workspaceOptionalRoutes = [
   '/api/invitations/accept',
   '/api/channels/invitations/accept',
   '/api/docs',
+  "/api/api/docs"
 ];
 
 

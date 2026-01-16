@@ -8,7 +8,8 @@ exports.publicRoutes = [
     '/api/auth/password-reset',
     '/api/payment/paystack/webhook',
     '/api/invitations/accept',
-    "/api/docs"
+    '/api/docs',
+    '/api/api/docs',
 ];
 exports.workspaceOptionalRoutes = [
     '/api/workspaces',
@@ -27,6 +28,7 @@ exports.workspaceOptionalRoutes = [
     '/api/invitations/accept',
     '/api/channels/invitations/accept',
     '/api/docs',
+    "/api/api/docs"
 ];
 exports.allowDeactivatedWorkspaceRoutes = [
     '/api/settings/activate',

@@ -22,6 +22,11 @@ exports.MessageEntity = new typeorm_1.EntitySchema({
         content: {
             type: 'text',
         },
+        type: {
+            type: 'varchar',
+            length: 20,
+            default: 'text',
+        },
         threadId: {
             type: 'uuid',
             nullable: true,
@@ -42,19 +47,20 @@ exports.MessageEntity = new typeorm_1.EntitySchema({
             default: () => 'NOW()',
             name: 'updated_at',
         },
+        deletedAt: {
+            type: 'timestamp',
+            nullable: true,
+            name: 'deleted_at',
+        },
     },
     indices: [
         {
-            name: 'idx_messages_channel',
-            columns: ['channelId'],
+            name: 'idx_messages_channel_created',
+            columns: ['channelId', 'createdAt'],
         },
         {
             name: 'idx_messages_thread',
             columns: ['threadId'],
-        },
-        {
-            name: 'idx_messages_created_at',
-            columns: ['createdAt'],
         },
     ],
 });
