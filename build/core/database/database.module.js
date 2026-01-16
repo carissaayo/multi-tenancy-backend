@@ -23,7 +23,6 @@ const message_entity_1 = require("../../modules/messages/entities/message.entity
 const file_entity_1 = require("../../modules/files/entities/file.entity");
 const reaction_entity_1 = require("../../modules/reactions/entities/reaction.entity");
 const database_config_1 = require("../../config/database.config");
-const migration_runner_service_1 = require("../../database/migration-runner.service");
 const channel_invitations_entity_1 = require("../../modules/channels/entities/channel_invitations.entity");
 let DatabaseModule = class DatabaseModule {
 };
@@ -83,7 +82,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
             }),
             typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, workspace_entity_1.Workspace, feature_flag_entity_1.FeatureFlag, usage_entity_1.UsageMetric]),
         ],
-        providers: [migration_runner_service_1.MigrationRunnerService],
+        providers: [],
         exports: [typeorm_1.TypeOrmModule],
     })
 ], DatabaseModule);

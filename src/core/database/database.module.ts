@@ -19,7 +19,6 @@ import { MessageEntity } from '../../modules/messages/entities/message.entity';
 import { FileEntity } from '../../modules/files/entities/file.entity';
 import { ReactionEntity } from 'src/modules/reactions/entities/reaction.entity';
 import { databaseConfig } from 'src/config/database.config';
-import { MigrationRunnerService } from 'src/database/migration-runner.service';
 import { ChannelInvitation } from 'src/modules/channels/entities/channel_invitations.entity';
 
 
@@ -83,7 +82,7 @@ import { ChannelInvitation } from 'src/modules/channels/entities/channel_invitat
 
     TypeOrmModule.forFeature([User, Workspace, FeatureFlag, UsageMetric]),
   ],
-  providers: [MigrationRunnerService],
+  providers: [],
   exports: [TypeOrmModule],
 
 })

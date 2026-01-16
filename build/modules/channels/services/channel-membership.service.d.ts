@@ -38,4 +38,6 @@ export declare class ChannelMembershipService {
         accessToken: string;
         refreshToken: string;
     }>;
+    leaveChannel(channelId: string, memberId: string, workspaceId: string): Promise<boolean>;
+    removeMemberFromChannel(channelId: string, targetMemberId: string, workspaceId: string): Promise<boolean>;
 }

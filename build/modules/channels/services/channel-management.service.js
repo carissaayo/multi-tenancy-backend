@@ -12,24 +12,30 @@ var ChannelManagementService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChannelManagementService = void 0;
 const common_1 = require("@nestjs/common");
+const typeorm_1 = require("typeorm");
 const member_service_1 = require("../../members/services/member.service");
 const workspace_service_1 = require("../../workspaces/services/workspace.service");
 const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
 const custom_errors_1 = require("../../../core/error-handler/custom-errors");
 const channel_query_service_1 = require("./channel-query.service");
 const channel_membership_service_1 = require("./channel-membership.service");
+const channel_service_1 = require("./channel.service");
 let ChannelManagementService = ChannelManagementService_1 = class ChannelManagementService {
+    dataSource;
     workspacesService;
     memberService;
     channelQueryService;
     channelMembershipService;
+    channelService;
     tokenManager;
     logger = new common_1.Logger(ChannelManagementService_1.name);
-    constructor(workspacesService, memberService, channelQueryService, channelMembershipService, tokenManager) {
+    constructor(dataSource, workspacesService, memberService, channelQueryService, channelMembershipService, channelService, tokenManager) {
+        this.dataSource = dataSource;
         this.workspacesService = workspacesService;
         this.memberService = memberService;
         this.channelQueryService = channelQueryService;
         this.channelMembershipService = channelMembershipService;
+        this.channelService = channelService;
         this.tokenManager = tokenManager;
     }
     async joinChannel(req, id) {
@@ -57,7 +63,61 @@ let ChannelManagementService = ChannelManagementService_1 = class ChannelManagem
         const tokens = await this.tokenManager.signTokens(user, req);
         return {
             message: 'You have successfully joined the channel',
-            channel: joinedChannel,
+            channel: channel,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || '',
+        };
+    }
+    async leaveChannel(req, id) {
+        const user = req.user;
+        const workspace = req.workspace;
+        const member = await this.memberService.isUserMember(workspace.id, user.id);
+        if (!member) {
+            throw custom_errors_1.customError.forbidden('You are not a member of this workspace');
+        }
+        const channel = await this.channelQueryService.findChannelById(id, workspace.id);
+        if (!channel) {
+            throw custom_errors_1.customError.notFound('Channel not found');
+        }
+        await this.channelMembershipService.leaveChannel(id, member.id, workspace.id);
+        const tokens = await this.tokenManager.signTokens(user, req);
+        return {
+            message: 'You have successfully left the channel',
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || '',
+        };
+    }
+    async removeMemberFromChannel(req, id, dto) {
+        const { targetMemberId } = dto;
+        const user = req.user;
+        const workspace = req.workspace;
+        const channel = await this.channelQueryService.findChannelById(id, workspace.id);
+        if (!channel) {
+            throw custom_errors_1.customError.notFound('Channel not found');
+        }
+        const hasPermission = await this.channelService.hasChannelManagementPermission(workspace.id, user.id, workspace);
+        const isChannelCreator = channel.createdBy === user.id;
+        if (!hasPermission && !isChannelCreator) {
+            throw custom_errors_1.customError.forbidden('You do not have permission to remove members from this channel');
+        }
+        const requesterMember = await this.memberService.isUserMember(workspace.id, user.id);
+        if (!requesterMember) {
+            throw custom_errors_1.customError.forbidden('You are not a member of this workspace');
+        }
+        if (requesterMember.id === targetMemberId) {
+            throw custom_errors_1.customError.badRequest('You cannot remove yourself. But you can leave the channel.');
+        }
+        const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(workspace.slug);
+        const schemaName = `workspace_${sanitizedSlug}`;
+        const [targetMember] = await this.dataSource.query(`SELECT id, user_id FROM "${schemaName}".members WHERE id = $1 AND is_active = true LIMIT 1`, [targetMemberId]);
+        if (!targetMember) {
+            throw custom_errors_1.customError.notFound('Target member not found in this workspace');
+        }
+        await this.channelMembershipService.removeMemberFromChannel(id, targetMemberId, workspace.id);
+        this.logger.log(`Member ${targetMemberId} removed from channel ${id} by user ${user.id}`);
+        const tokens = await this.tokenManager.signTokens(user, req);
+        return {
+            message: 'Member removed from channel successfully',
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken || '',
         };
@@ -66,10 +126,12 @@ let ChannelManagementService = ChannelManagementService_1 = class ChannelManagem
 exports.ChannelManagementService = ChannelManagementService;
 exports.ChannelManagementService = ChannelManagementService = ChannelManagementService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [workspace_service_1.WorkspacesService,
+    __metadata("design:paramtypes", [typeorm_1.DataSource,
+        workspace_service_1.WorkspacesService,
         member_service_1.MemberService,
         channel_query_service_1.ChannelQueryService,
         channel_membership_service_1.ChannelMembershipService,
+        channel_service_1.ChannelService,
         token_manager_service_1.TokenManager])
 ], ChannelManagementService);
 //# sourceMappingURL=channel-management.service.js.map

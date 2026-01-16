@@ -16,6 +16,7 @@ exports.ChannelManagementController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const channel_management_service_1 = require("../services/channel-management.service");
+const channel_management_dto_1 = require("../dtos/channel-management.dto");
 let ChannelManagementController = class ChannelManagementController {
     channelManagementService;
     constructor(channelManagementService) {
@@ -23,6 +24,12 @@ let ChannelManagementController = class ChannelManagementController {
     }
     joinChannel(req, id) {
         return this.channelManagementService.joinChannel(req, id);
+    }
+    leaveChannel(req, id) {
+        return this.channelManagementService.leaveChannel(req, id);
+    }
+    removeMemberFromChannel(req, id, dto) {
+        return this.channelManagementService.removeMemberFromChannel(req, id, dto);
     }
 };
 exports.ChannelManagementController = ChannelManagementController;
@@ -40,6 +47,35 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], ChannelManagementController.prototype, "joinChannel", null);
+__decorate([
+    (0, common_1.Patch)(':id/leave'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Leave a channel' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'You have successfully left the channel',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], ChannelManagementController.prototype, "leaveChannel", null);
+__decorate([
+    (0, common_1.Delete)(':id/members/remove'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a member from a channel' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Member removed from channel successfully',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, channel_management_dto_1.RemoveMemberFromChannelDto]),
+    __metadata("design:returntype", void 0)
+], ChannelManagementController.prototype, "removeMemberFromChannel", null);
 exports.ChannelManagementController = ChannelManagementController = __decorate([
     (0, swagger_1.ApiTags)('Channel Management'),
     (0, common_1.Controller)('channels'),
