@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 
 import { WorkspaceQueryService } from './workspace-query.service';
 import { WorkspaceMembershipService } from './workspace-membership.service';
@@ -13,6 +13,7 @@ import {
   GetUserWorkspaceResponse,
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 
 @Injectable()
 export class WorkspacesService {
@@ -20,6 +21,8 @@ export class WorkspacesService {
     private readonly workspaceQueryService: WorkspaceQueryService,
     private readonly workspaceMembershipService: WorkspaceMembershipService,
     private readonly workspaceLifecycleService: WorkspaceLifecycleService,
+    @Inject(forwardRef(() => MessagingGateway))
+    private readonly messagingGateway: MessagingGateway,
   ) {}
 
   // ============================================
@@ -38,7 +41,18 @@ export class WorkspacesService {
     refreshToken: string;
     message: string;
   }> {
-    return this.workspaceLifecycleService.create(req, createDto);
+    const result = await this.workspaceLifecycleService.create(req, createDto);
+
+    // Emit WebSocket event if workspace was created
+    if (result.workspace) {
+      // Note: Users need to join the workspace room first via WebSocket
+      // This event will be received by users who are already connected
+      this.messagingGateway.emitToUser(req.userId, 'workspaceCreated', {
+        workspace: this.normalizedWorkspaceData(result.workspace),
+      });
+    }
+
+    return result;
   }
 
   // ============================================
@@ -98,8 +112,6 @@ export class WorkspacesService {
   // MEMBERSHIP OPERATIONS (delegated to WorkspaceMembershipService)
   // ============================================
 
-
-
   /**
    * Check if user can manage workspace (owner or admin)
    */
@@ -131,7 +143,7 @@ export class WorkspacesService {
   async countUserFreeWorkspaces(userId: string): Promise<number> {
     return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
   }
-  
+
   normalizedWorkspaceData(workspace: Workspace) {
     return {
       id: workspace.id,

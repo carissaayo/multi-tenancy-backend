@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 
 import { ChannelLifecycleService } from './channel-lifecycle.service';
 import { ChannelMembershipService } from './channel-membership.service';
-import { ChannelQueryService } from './channel-query.service';
 import { MemberService } from 'src/modules/members/services/member.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 
 import { Channel } from '../entities/channel.entity';
 import { CreateChannelDto, UpdateChannelDto } from '../dtos/channel.dto';
@@ -20,8 +20,9 @@ export class ChannelService {
     private readonly memberService: MemberService,
     private readonly channelLifecycleService: ChannelLifecycleService,
     private readonly channelMembershipService: ChannelMembershipService,
-    private readonly channelQueryService: ChannelQueryService,
     private readonly tokenManager: TokenManager,
+    @Inject(forwardRef(() => MessagingGateway))
+    private readonly messagingGateway: MessagingGateway,
   ) {}
 
   async createChannel(
@@ -52,6 +53,21 @@ export class ChannelService {
       workspace,
       dto,
     );
+    // Emit WebSocket event to workspace
+    this.messagingGateway.emitToWorkspace(workspace.id, 'channelCreated', {
+      channel: {
+        id: channel.id,
+        name: channel.name,
+        description: channel.description,
+        isPrivate: channel.isPrivate,
+        createdBy: channel.createdBy,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt,
+      },
+      workspaceId: workspace.id,
+    });
+
+    this.logger.log(`Channel ${channel.id} created, WebSocket event emitted`);
 
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
@@ -87,7 +103,19 @@ export class ChannelService {
       updateDto,
     );
 
-    console.log(updatedChannel);
+    // Emit WebSocket event
+    this.messagingGateway.emitToWorkspace(workspace.id, 'channelUpdated', {
+      channel: {
+        id: updatedChannel.id,
+        name: updatedChannel.name,
+        description: updatedChannel.description,
+        isPrivate: updatedChannel.isPrivate,
+        updatedAt: updatedChannel.updatedAt,
+      },
+      workspaceId: workspace.id,
+    });
+
+    this.logger.log(`Channel ${id} updated, WebSocket event emitted`);
 
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
@@ -124,6 +152,14 @@ export class ChannelService {
       );
     }
     await this.channelLifecycleService.deleteChannel(req, id);
+
+    // Emit WebSocket event
+    this.messagingGateway.emitToWorkspace(workspace.id, 'channelDeleted', {
+      channelId: id,
+      workspaceId: workspace.id,
+    });
+
+    this.logger.log(`Channel ${id} deleted, WebSocket event emitted`);
 
     const tokens = await this.tokenManager.signTokens(user, req);
     return {
@@ -188,7 +224,6 @@ export class ChannelService {
 
     return canManageChannels;
   }
-
 
   async getChannelMembers(req: AuthenticatedRequest, id: string) {
     return this.channelMembershipService.getChannelMembers(req, id);

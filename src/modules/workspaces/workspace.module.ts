@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { SecurityModule } from 'src/core/security/security.module';
 import { UserModule } from '../users/user.module';
 import { MemberModule } from '../members/member.module';
+import { MessageModule } from '../messages/message.module';
 
 import { WorkspacesService } from './services/workspace.service';
 import { WorkspaceQueryService } from './services/workspace-query.service';
@@ -29,10 +30,16 @@ import { WorkspaceMember } from 'src/core/security/decorators/workspace-member.d
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([Workspace, User, WorkspaceInvitation,WorkspaceMember]),
+    TypeOrmModule.forFeature([
+      Workspace,
+      User,
+      WorkspaceInvitation,
+      WorkspaceMember,
+    ]),
     SecurityModule,
     UserModule,
     forwardRef(() => MemberModule),
+    forwardRef(() => MessageModule),
   ],
   providers: [
     WorkspacesService,

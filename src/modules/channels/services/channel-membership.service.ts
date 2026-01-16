@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { MemberService } from 'src/modules/members/services/member.service';
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
 import { ChannelQueryService } from './channel-query.service';
-
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
 
 import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
@@ -26,6 +26,8 @@ export class ChannelMembershipService {
     private readonly memberService: MemberService,
     private readonly channelQueryService: ChannelQueryService,
     private readonly tokenManager: TokenManager,
+    @Inject(forwardRef(() => MessagingGateway))
+    private readonly messagingGateway: MessagingGateway,
   ) {}
 
   async isUserMember(
@@ -120,7 +122,6 @@ export class ChannelMembershipService {
     id: string,
     memberId: string,
   ) {
-    const user = req.user!;
     const workspace = req.workspace!;
 
     // Check if member is already in the channel
@@ -170,7 +171,6 @@ export class ChannelMembershipService {
   }
 
   async joinChannel(req: AuthenticatedRequest, id: string, memberId: string) {
-    const user = req.user!;
     const workspace = req.workspace!;
 
     // Check if member is already in the channel
@@ -204,6 +204,13 @@ export class ChannelMembershipService {
       this.logger.log(
         `Member ${memberId} joined channel ${id} in workspace ${workspace.id}`,
       );
+
+      // Emit WebSocket event
+      this.messagingGateway.emitToChannel(id, 'memberJoined', {
+        channelId: id,
+        memberId: memberId,
+        workspaceId: workspace.id,
+      });
 
       return true;
     } catch (error) {
