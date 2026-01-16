@@ -20,6 +20,7 @@ const typeorm_2 = require("@nestjs/typeorm");
 const member_service_1 = require("../../members/services/member.service");
 const workspace_service_1 = require("../../workspaces/services/workspace.service");
 const channel_query_service_1 = require("./channel-query.service");
+const messaging_gateway_1 = require("../../messages/gateways/messaging.gateway");
 const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
 const workspace_entity_1 = require("../../workspaces/entities/workspace.entity");
 const typeorm_3 = require("typeorm");
@@ -31,14 +32,16 @@ let ChannelMembershipService = ChannelMembershipService_1 = class ChannelMembers
     memberService;
     channelQueryService;
     tokenManager;
+    messagingGateway;
     logger = new common_1.Logger(ChannelMembershipService_1.name);
-    constructor(dataSource, workspaceRepo, workspacesService, memberService, channelQueryService, tokenManager) {
+    constructor(dataSource, workspaceRepo, workspacesService, memberService, channelQueryService, tokenManager, messagingGateway) {
         this.dataSource = dataSource;
         this.workspaceRepo = workspaceRepo;
         this.workspacesService = workspacesService;
         this.memberService = memberService;
         this.channelQueryService = channelQueryService;
         this.tokenManager = tokenManager;
+        this.messagingGateway = messagingGateway;
     }
     async isUserMember(channelId, memberId, workspaceId) {
         const workspace = await this.workspaceRepo.findOne({
@@ -98,7 +101,6 @@ let ChannelMembershipService = ChannelMembershipService_1 = class ChannelMembers
         };
     }
     async inviteToJoinPrivateChannel(req, id, memberId) {
-        const user = req.user;
         const workspace = req.workspace;
         const isThisUserThisChannelMember = await this.isUserMember(id, memberId, workspace.id);
         if (isThisUserThisChannelMember) {
@@ -125,7 +127,6 @@ let ChannelMembershipService = ChannelMembershipService_1 = class ChannelMembers
         }
     }
     async joinChannel(req, id, memberId) {
-        const user = req.user;
         const workspace = req.workspace;
         const isThisUserThisChannelMember = await this.isUserMember(id, memberId, workspace.id);
         if (isThisUserThisChannelMember) {
@@ -141,6 +142,11 @@ let ChannelMembershipService = ChannelMembershipService_1 = class ChannelMembers
         ON CONFLICT (channel_id, member_id) DO NOTHING
         `, [id, memberId]);
             this.logger.log(`Member ${memberId} joined channel ${id} in workspace ${workspace.id}`);
+            this.messagingGateway.emitToChannel(id, 'memberJoined', {
+                channelId: id,
+                memberId: memberId,
+                workspaceId: workspace.id,
+            });
             return true;
         }
         catch (error) {
@@ -274,11 +280,13 @@ exports.ChannelMembershipService = ChannelMembershipService;
 exports.ChannelMembershipService = ChannelMembershipService = ChannelMembershipService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, typeorm_2.InjectRepository)(workspace_entity_1.Workspace)),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => messaging_gateway_1.MessagingGateway))),
     __metadata("design:paramtypes", [typeorm_1.DataSource,
         typeorm_3.Repository,
         workspace_service_1.WorkspacesService,
         member_service_1.MemberService,
         channel_query_service_1.ChannelQueryService,
-        token_manager_service_1.TokenManager])
+        token_manager_service_1.TokenManager,
+        messaging_gateway_1.MessagingGateway])
 ], ChannelMembershipService);
 //# sourceMappingURL=channel-membership.service.js.map

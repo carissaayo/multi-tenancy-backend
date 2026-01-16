@@ -23,6 +23,7 @@ const auth_module_1 = require("./modules/auth/auth.module");
 const workspace_module_1 = require("./modules/workspaces/workspace.module");
 const user_module_1 = require("./modules/users/user.module");
 const channel_module_1 = require("./modules/channels/channel.module");
+const message_module_1 = require("./modules/messages/message.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -41,6 +42,7 @@ exports.AppModule = AppModule = __decorate([
             user_module_1.UserModule,
             workspace_module_1.WorkspaceModule,
             channel_module_1.ChannelModule,
+            message_module_1.MessageModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

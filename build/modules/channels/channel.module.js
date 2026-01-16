@@ -12,6 +12,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const member_module_1 = require("../members/member.module");
 const workspace_module_1 = require("../workspaces/workspace.module");
 const security_module_1 = require("../../core/security/security.module");
+const message_module_1 = require("../messages/message.module");
 const channel_service_1 = require("./services/channel.service");
 const channel_lifecycle_service_1 = require("./services/channel-lifecycle.service");
 const channel_membership_service_1 = require("./services/channel-membership.service");
@@ -32,10 +33,15 @@ exports.ChannelModule = ChannelModule;
 exports.ChannelModule = ChannelModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([channel_entity_1.ChannelEntity, channel_member_entity_1.ChannelMemberEntity, channel_invitations_entity_1.ChannelInvitation]),
+            typeorm_1.TypeOrmModule.forFeature([
+                channel_entity_1.ChannelEntity,
+                channel_member_entity_1.ChannelMemberEntity,
+                channel_invitations_entity_1.ChannelInvitation,
+            ]),
             member_module_1.MemberModule,
             workspace_module_1.WorkspaceModule,
             security_module_1.SecurityModule,
+            (0, common_1.forwardRef)(() => message_module_1.MessageModule),
         ],
         controllers: [
             channel_controller_1.ChannelController,

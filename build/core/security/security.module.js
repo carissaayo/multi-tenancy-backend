@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const typeorm_1 = require("@nestjs/typeorm");
+const core_1 = require("@nestjs/core");
 const cors_handler_service_1 = require("./services/cors-handler.service");
 const ip_reputation_handler_service_1 = require("./services/ip-reputation-handler.service");
 const input_sanitizer_service_1 = require("./services/input-sanitizer.service");
@@ -18,14 +19,14 @@ const auth_handler_service_1 = require("./services/auth-handler.service");
 const response_monitor_service_1 = require("./services/response-monitor.service");
 const attack_detector_service_1 = require("./services/attack-detector.service");
 const token_manager_service_1 = require("./services/token-manager.service");
-const security_middleware_1 = require("./middlewares/security.middleware");
-const user_entity_1 = require("../../modules/users/entities/user.entity");
-const refresh_token_entity_1 = require("./entities/refresh-token.entity");
 const rate_limit_handler_service_1 = require("./services/rate-limit-handler.service");
 const radis_rate_limiter_service_1 = require("./services/radis-rate-limiter.service");
+const auth_domain_service_1 = require("./services/auth-domain.service");
 const tenancy_resolver_middleware_1 = require("./middlewares/tenancy-resolver.middleware");
-const core_1 = require("@nestjs/core");
+const security_middleware_1 = require("./middlewares/security.middleware");
 const email_verification_guard_1 = require("./guards/email-verification.guard");
+const refresh_token_entity_1 = require("./entities/refresh-token.entity");
+const user_entity_1 = require("../../modules/users/entities/user.entity");
 let SecurityModule = class SecurityModule {
     configure(consumer) {
         consumer
@@ -58,6 +59,7 @@ exports.SecurityModule = SecurityModule = __decorate([
             ip_reputation_handler_service_1.IpReputationHandler,
             input_sanitizer_service_1.InputSanitizer,
             auth_handler_service_1.AuthHandler,
+            auth_domain_service_1.AuthDomainService,
             response_monitor_service_1.ResponseMonitor,
             attack_detector_service_1.AttackDetector,
             token_manager_service_1.TokenManager,
@@ -69,7 +71,7 @@ exports.SecurityModule = SecurityModule = __decorate([
                 useClass: email_verification_guard_1.EmailVerificationGuard,
             },
         ],
-        exports: [token_manager_service_1.TokenManager, auth_handler_service_1.AuthHandler],
+        exports: [token_manager_service_1.TokenManager, auth_handler_service_1.AuthHandler, auth_domain_service_1.AuthDomainService],
     })
 ], SecurityModule);
 //# sourceMappingURL=security.module.js.map

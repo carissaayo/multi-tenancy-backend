@@ -8,23 +8,35 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkspacesService = void 0;
 const common_1 = require("@nestjs/common");
 const workspace_query_service_1 = require("./workspace-query.service");
 const workspace_membership_service_1 = require("./workspace-membership.service");
 const workspace_lifecycle_service_1 = require("./workspace-lifecycle.service");
+const messaging_gateway_1 = require("../../messages/gateways/messaging.gateway");
 let WorkspacesService = class WorkspacesService {
     workspaceQueryService;
     workspaceMembershipService;
     workspaceLifecycleService;
-    constructor(workspaceQueryService, workspaceMembershipService, workspaceLifecycleService) {
+    messagingGateway;
+    constructor(workspaceQueryService, workspaceMembershipService, workspaceLifecycleService, messagingGateway) {
         this.workspaceQueryService = workspaceQueryService;
         this.workspaceMembershipService = workspaceMembershipService;
         this.workspaceLifecycleService = workspaceLifecycleService;
+        this.messagingGateway = messagingGateway;
     }
     async create(req, createDto) {
-        return this.workspaceLifecycleService.create(req, createDto);
+        const result = await this.workspaceLifecycleService.create(req, createDto);
+        if (result.workspace) {
+            this.messagingGateway.emitToUser(req.userId, 'workspaceCreated', {
+                workspace: this.normalizedWorkspaceData(result.workspace),
+            });
+        }
+        return result;
     }
     async getUserWorkspaces(req) {
         return this.workspaceQueryService.getUserWorkspaces(req);
@@ -82,8 +94,10 @@ let WorkspacesService = class WorkspacesService {
 exports.WorkspacesService = WorkspacesService;
 exports.WorkspacesService = WorkspacesService = __decorate([
     (0, common_1.Injectable)(),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => messaging_gateway_1.MessagingGateway))),
     __metadata("design:paramtypes", [workspace_query_service_1.WorkspaceQueryService,
         workspace_membership_service_1.WorkspaceMembershipService,
-        workspace_lifecycle_service_1.WorkspaceLifecycleService])
+        workspace_lifecycle_service_1.WorkspaceLifecycleService,
+        messaging_gateway_1.MessagingGateway])
 ], WorkspacesService);
 //# sourceMappingURL=workspace.service.js.map

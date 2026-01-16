@@ -25,15 +25,18 @@ const typeorm_2 = require("typeorm");
 const token_manager_service_1 = require("./token-manager.service");
 const user_entity_1 = require("../../../modules/users/entities/user.entity");
 const config_1 = __importDefault(require("../../../config/config"));
+const auth_domain_service_1 = require("./auth-domain.service");
 const appConfig = (0, config_1.default)();
 let AuthHandler = AuthHandler_1 = class AuthHandler {
     jwtService;
     tokenManager;
+    authDomain;
     userRepo;
     logger = new common_1.Logger(AuthHandler_1.name);
-    constructor(jwtService, tokenManager, userRepo) {
+    constructor(jwtService, tokenManager, authDomain, userRepo) {
         this.jwtService = jwtService;
         this.tokenManager = tokenManager;
+        this.authDomain = authDomain;
         this.userRepo = userRepo;
     }
     async authenticateToken(req, res) {
@@ -50,18 +53,7 @@ let AuthHandler = AuthHandler_1 = class AuthHandler {
         }
         const token = authHeader.substring(7);
         try {
-            const decoded = this.jwtService.verify(token, {
-                secret: appConfig.jwt.access_token_secret,
-            });
-            const user = await this.findUserById(decoded.sub);
-            if (!user || !user.isActive) {
-                res.status(common_1.HttpStatus.UNAUTHORIZED).json({
-                    success: false,
-                    message: 'Invalid or inactive user',
-                    timestamp: new Date().toISOString(),
-                });
-                return { success: false };
-            }
+            const { user } = await this.authDomain.validateAccessToken(token);
             return {
                 success: true,
                 user,
@@ -104,9 +96,10 @@ let AuthHandler = AuthHandler_1 = class AuthHandler {
 exports.AuthHandler = AuthHandler;
 exports.AuthHandler = AuthHandler = AuthHandler_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(2, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [jwt_1.JwtService,
         token_manager_service_1.TokenManager,
+        auth_domain_service_1.AuthDomainService,
         typeorm_2.Repository])
 ], AuthHandler);
 //# sourceMappingURL=auth-handler.service.js.map

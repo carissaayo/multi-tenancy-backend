@@ -5,11 +5,13 @@ import { Workspace } from '../entities/workspace.entity';
 import { CreateWorkspaceDto } from '../dtos/workspace.dto';
 import { GetUserWorkspacesResponse, GetUserWorkspaceResponse } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 export declare class WorkspacesService {
     private readonly workspaceQueryService;
     private readonly workspaceMembershipService;
     private readonly workspaceLifecycleService;
-    constructor(workspaceQueryService: WorkspaceQueryService, workspaceMembershipService: WorkspaceMembershipService, workspaceLifecycleService: WorkspaceLifecycleService);
+    private readonly messagingGateway;
+    constructor(workspaceQueryService: WorkspaceQueryService, workspaceMembershipService: WorkspaceMembershipService, workspaceLifecycleService: WorkspaceLifecycleService, messagingGateway: MessagingGateway);
     create(req: AuthenticatedRequest, createDto: CreateWorkspaceDto): Promise<{
         workspace: Workspace | null;
         accessToken: string;
