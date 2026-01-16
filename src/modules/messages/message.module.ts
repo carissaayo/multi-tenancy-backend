@@ -13,7 +13,7 @@ import { MemberModule } from '../members/member.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>('ACCESS_TOKEN_SECRET'),
         signOptions: {
           expiresIn: (configService.get<string>('JWT_EXPIRES_IN', '1h') ||
             '1h') as StringValue,
