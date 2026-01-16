@@ -1,12 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = require("@nestjs/core");
+const platform_express_1 = require("@nestjs/platform-express");
+const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 const swagger_1 = require("@nestjs/swagger");
-const common_1 = require("@nestjs/common");
 const all_exceptions_handler_1 = require("./core/error-handler/all-exceptions-handler");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const httpAdapter = app.getHttpAdapter();
+    if (httpAdapter instanceof platform_express_1.ExpressAdapter) {
+        httpAdapter.getInstance().set('trust proxy', true);
+    }
     app.useGlobalFilters(new all_exceptions_handler_1.AllExceptionsFilter());
     app.setGlobalPrefix('api');
     const config = new swagger_1.DocumentBuilder()

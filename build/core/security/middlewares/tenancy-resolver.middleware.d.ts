@@ -8,6 +8,7 @@ export declare class TenantResolverMiddleware implements NestMiddleware {
     private readonly logger;
     constructor(workspaceRepo: Repository<Workspace>);
     use(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void | Response<any, Record<string, any>>>;
+    private getHostname;
     private extractWorkspaceFromSubdomain;
     private isPublicRoute;
     private isWorkspaceOptionalRoute;

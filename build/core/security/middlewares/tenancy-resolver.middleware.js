@@ -34,7 +34,7 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
             }
             if (this.isWorkspaceOptionalRoute(req.originalUrl)) {
                 this.logger.debug(`Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if subdomain present`);
-                const workspaceSlug = this.extractWorkspaceFromSubdomain(req.hostname);
+                const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
                 if (workspaceSlug) {
                     const workspace = await this.workspaceRepo.findOne({
                         where: { slug: workspaceSlug, isActive: true },
@@ -47,7 +47,14 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
                 }
                 return next();
             }
-            const workspaceSlug = this.extractWorkspaceFromSubdomain(req.hostname);
+            const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+            if (!workspaceSlug) {
+                this.logger.warn(`No workspace subdomain found in hostname: ${this.getHostname(req)}`);
+                return res.status(common_1.HttpStatus.BAD_REQUEST).json({
+                    success: false,
+                    message: 'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
+                });
+            }
             if (!workspaceSlug) {
                 this.logger.warn(`No workspace subdomain found in hostname: ${req.hostname}`);
                 return res.status(common_1.HttpStatus.BAD_REQUEST).json({
@@ -93,13 +100,29 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
             });
         }
     }
-    extractWorkspaceFromSubdomain(hostname) {
+    getHostname(req) {
+        return req.headers['x-forwarded-host'] || req.hostname;
+    }
+    extractWorkspaceFromSubdomain(req) {
+        const hostname = this.getHostname(req);
         const parts = hostname.split('.');
+        const baseDomains = [
+            'onrender.com',
+            'localhost',
+        ];
+        const isBaseDomain = baseDomains.some((baseDomain) => hostname === baseDomain || hostname.endsWith('.' + baseDomain));
+        if (isBaseDomain && parts.length <= 2) {
+            return null;
+        }
         if (parts.length === 1 || hostname.includes('localhost')) {
             if (parts.length > 1 && parts[0] !== 'localhost') {
                 return parts[0];
             }
             return null;
+        }
+        if (isBaseDomain) {
+            const subdomain = parts[0];
+            return subdomain;
         }
         return parts[0];
     }
