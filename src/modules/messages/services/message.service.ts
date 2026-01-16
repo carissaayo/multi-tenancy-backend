@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { WorkspacesService } from '../../workspaces/services/workspace.service';
 import { MemberService } from '../../members/services/member.service';
@@ -10,7 +10,9 @@ export class MessageService {
 
   constructor(
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
+    @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
   ) {}
 
