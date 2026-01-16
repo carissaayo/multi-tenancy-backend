@@ -120,7 +120,8 @@ export class WorkspaceInviteService {
 
     const inviterName = user.fullName || user.email;
 
-    await this.emailService.sendWorkspaceInvitation(
+    // await remove because render do not support email sending in free plan
+     this.emailService.sendWorkspaceInvitation(
       email,
       workspace.name,
       inviterName,
@@ -136,6 +137,8 @@ export class WorkspaceInviteService {
 
     return {
       message: 'Invitation sent successfully',
+      invitationId: invitation.id,
+      token: token,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
     };

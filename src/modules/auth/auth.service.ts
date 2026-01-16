@@ -71,11 +71,12 @@ export class AuthService {
     });
 
     await this.userRepo.save(user);
-
-    await this.emailService.sendVerificationEmail(user.email, emailCode);
+// await remove because render do not support email sending in free plan
+   this.emailService.sendVerificationEmail(user.email, emailCode);
 
     return {
       message: 'Registration successful. Verify your email.',
+      emailCode: user.emailCode,
     };
   }
 

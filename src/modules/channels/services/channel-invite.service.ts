@@ -175,7 +175,9 @@ export class ChannelInviteService {
     const inviteLink = `${frontendUrl}/accept-invite?token=${token}`;
 
     const inviterName = user.fullName || user.email;
-    await this.emailService.sendChannelInvitation(
+
+    // await remove because render do not support email sending in free plan
+     this.emailService.sendChannelInvitation(
       invitedMember.email,
       workspace.name,
       channel.name,
@@ -192,6 +194,7 @@ export class ChannelInviteService {
     return {
       message: 'Invitation to join the channel sent successfully',
       invitationId: invitation.id,
+      token: token,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
     };
