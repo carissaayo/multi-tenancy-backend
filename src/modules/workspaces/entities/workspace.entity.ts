@@ -52,8 +52,7 @@ export class Workspace {
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
-  @Column({ type: 'uuid', name: 'sent_to', nullable: true })
-  sentToId: string | null;
+
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

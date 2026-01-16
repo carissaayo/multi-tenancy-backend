@@ -7,20 +7,20 @@ export class AddMissingColumnsAndTables1738000000000 implements MigrationInterfa
     // Add owner_id to workspaces table
     await queryRunner.query(`
       ALTER TABLE "workspaces"
-      ADD COLUMN "owner_id" uuid NOT NULL DEFAULT uuid_generate_v4()
+      ADD COLUMN IF NOT EXISTS "owner_id" uuid
     `);
 
     // Set owner_id to created_by for existing records
     await queryRunner.query(`
       UPDATE "workspaces"
       SET "owner_id" = "created_by"
-      WHERE "owner_id" IS NULL OR "owner_id" = uuid_generate_v4()
+      WHERE "owner_id" IS NULL
     `);
 
-    // Remove default after setting values
+    // Make owner_id NOT NULL after setting values
     await queryRunner.query(`
       ALTER TABLE "workspaces"
-      ALTER COLUMN "owner_id" DROP DEFAULT
+      ALTER COLUMN "owner_id" SET NOT NULL
     `);
 
     // Add foreign key constraint for owner_id
@@ -34,96 +34,119 @@ export class AddMissingColumnsAndTables1738000000000 implements MigrationInterfa
     // Add deleted_at (soft delete) to workspaces table
     await queryRunner.query(`
       ALTER TABLE "workspaces"
-      ADD COLUMN "deleted_at" TIMESTAMP
+      ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMP
     `);
 
     // Add permissions column to members table
     await queryRunner.query(`
       ALTER TABLE "members"
-      ADD COLUMN "permissions" jsonb NOT NULL DEFAULT '[]'::jsonb
+      ADD COLUMN IF NOT EXISTS "permissions" jsonb NOT NULL DEFAULT '[]'::jsonb
     `);
 
-    // Create workspace_invitations table
-    await queryRunner.query(`
-      CREATE TABLE "workspace_invitations" (
-        "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-        "workspace_id" uuid NOT NULL,
-        "channel_id" uuid NOT NULL,
-        "email" text NOT NULL,
-        "role" character varying(50) NOT NULL DEFAULT 'member',
-        "token" text NOT NULL,
-        "invited_by" uuid,
-        "sent_to" uuid,
-        "invited_at" TIMESTAMP NOT NULL DEFAULT now(),
-        "expires_at" TIMESTAMP NOT NULL,
-        "accepted_at" TIMESTAMP,
-        "accepted_by" uuid,
-        "revoked_at" TIMESTAMP,
-        "revoked_by" uuid,
-        "status" character varying(20) NOT NULL DEFAULT 'pending',
-        "message" text,
-        CONSTRAINT "UQ_workspace_invitations_token" UNIQUE ("token"),
-        CONSTRAINT "UQ_workspace_invitations_workspace_email_status" UNIQUE ("workspace_id", "email", "status"),
-        CONSTRAINT "PK_workspace_invitations" PRIMARY KEY ("id")
+    // Create workspace_invitations table if it doesn't exist
+    const workspaceInvitationsTable = await queryRunner.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'workspace_invitations'
       )
     `);
 
-    // Create indexes for workspace_invitations
-    await queryRunner.query(`
-      CREATE INDEX "IDX_workspace_invitations_token" ON "workspace_invitations" ("token")
-    `);
+    if (!workspaceInvitationsTable[0].exists) {
+      await queryRunner.query(`
+        CREATE TABLE "workspace_invitations" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "workspace_id" uuid NOT NULL,
+          "channel_id" uuid NOT NULL,
+          "email" text NOT NULL,
+          "role" character varying(50) NOT NULL DEFAULT 'member',
+          "token" text NOT NULL,
+          "invited_by" uuid,
+          "sent_to" uuid,
+          "invited_at" TIMESTAMP NOT NULL DEFAULT now(),
+          "expires_at" TIMESTAMP NOT NULL,
+          "accepted_at" TIMESTAMP,
+          "accepted_by" uuid,
+          "revoked_at" TIMESTAMP,
+          "revoked_by" uuid,
+          "status" character varying(20) NOT NULL DEFAULT 'pending',
+          "message" text,
+          CONSTRAINT "UQ_workspace_invitations_token" UNIQUE ("token"),
+          CONSTRAINT "UQ_workspace_invitations_workspace_email_status" UNIQUE ("workspace_id", "email", "status"),
+          CONSTRAINT "PK_workspace_invitations" PRIMARY KEY ("id")
+        )
+      `);
 
-    await queryRunner.query(`
-      CREATE INDEX "IDX_workspace_invitations_workspace_email" ON "workspace_invitations" ("workspace_id", "email")
-    `);
+      // Create indexes for workspace_invitations
+      await queryRunner.query(`
+        CREATE INDEX "IDX_workspace_invitations_token" ON "workspace_invitations" ("token")
+      `);
 
-    await queryRunner.query(`
-      CREATE INDEX "IDX_workspace_invitations_expires_at" ON "workspace_invitations" ("expires_at")
-    `);
+      await queryRunner.query(`
+        CREATE INDEX "IDX_workspace_invitations_workspace_email" ON "workspace_invitations" ("workspace_id", "email")
+      `);
 
-    await queryRunner.query(`
-      CREATE INDEX "IDX_workspace_invitations_status" ON "workspace_invitations" ("status")
-    `);
+      await queryRunner.query(`
+        CREATE INDEX "IDX_workspace_invitations_expires_at" ON "workspace_invitations" ("expires_at")
+      `);
 
-    // Add foreign key constraints for workspace_invitations
-    await queryRunner.query(`
-      ALTER TABLE "workspace_invitations"
-      ADD CONSTRAINT "FK_workspace_invitations_workspace_id"
-      FOREIGN KEY ("workspace_id") REFERENCES "workspaces"("id")
-      ON DELETE CASCADE ON UPDATE NO ACTION
-    `);
+      await queryRunner.query(`
+        CREATE INDEX "IDX_workspace_invitations_status" ON "workspace_invitations" ("status")
+      `);
 
-    await queryRunner.query(`
-      ALTER TABLE "workspace_invitations"
-      ADD CONSTRAINT "FK_workspace_invitations_invited_by"
-      FOREIGN KEY ("invited_by") REFERENCES "users"("id")
-      ON DELETE SET NULL ON UPDATE NO ACTION
-    `);
+      // Add foreign key constraints for workspace_invitations
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_workspace_id"
+        FOREIGN KEY ("workspace_id") REFERENCES "workspaces"("id")
+        ON DELETE CASCADE ON UPDATE NO ACTION
+      `);
 
-    await queryRunner.query(`
-      ALTER TABLE "workspace_invitations"
-      ADD CONSTRAINT "FK_workspace_invitations_sent_to"
-      FOREIGN KEY ("sent_to") REFERENCES "users"("id")
-      ON DELETE SET NULL ON UPDATE NO ACTION
-    `);
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_invited_by"
+        FOREIGN KEY ("invited_by") REFERENCES "users"("id")
+        ON DELETE SET NULL ON UPDATE NO ACTION
+      `);
 
-    await queryRunner.query(`
-      ALTER TABLE "workspace_invitations"
-      ADD CONSTRAINT "FK_workspace_invitations_accepted_by"
-      FOREIGN KEY ("accepted_by") REFERENCES "users"("id")
-      ON DELETE SET NULL ON UPDATE NO ACTION
-    `);
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_sent_to"
+        FOREIGN KEY ("sent_to") REFERENCES "users"("id")
+        ON DELETE SET NULL ON UPDATE NO ACTION
+      `);
 
-    await queryRunner.query(`
-      ALTER TABLE "workspace_invitations"
-      ADD CONSTRAINT "FK_workspace_invitations_revoked_by"
-      FOREIGN KEY ("revoked_by") REFERENCES "users"("id")
-      ON DELETE SET NULL ON UPDATE NO ACTION
-    `);
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_accepted_by"
+        FOREIGN KEY ("accepted_by") REFERENCES "users"("id")
+        ON DELETE SET NULL ON UPDATE NO ACTION
+      `);
+
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_revoked_by"
+        FOREIGN KEY ("revoked_by") REFERENCES "users"("id")
+        ON DELETE SET NULL ON UPDATE NO ACTION
+      `);
+    } else {
+      // If table exists, just add the sent_to column if it's missing
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD COLUMN IF NOT EXISTS "sent_to" uuid
+      `);
+
+      await queryRunner.query(`
+        ALTER TABLE "workspace_invitations"
+        ADD CONSTRAINT "FK_workspace_invitations_sent_to"
+        FOREIGN KEY ("sent_to") REFERENCES "users"("id")
+        ON DELETE SET NULL ON UPDATE NO ACTION
+      `);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Drop workspace_invitations table and its constraints
+    // Drop workspace_invitations constraints
     await queryRunner.query(`
       ALTER TABLE "workspace_invitations"
       DROP CONSTRAINT IF EXISTS "FK_workspace_invitations_revoked_by"

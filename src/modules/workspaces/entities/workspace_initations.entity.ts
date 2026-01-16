@@ -65,6 +65,7 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'sent_to' })
   sentTo: User | null;
 
+  
   @Column({ type: 'uuid', name: 'sentTo', nullable: true })
   sentToId: string | null;
 
