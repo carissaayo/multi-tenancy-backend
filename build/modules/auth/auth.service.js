@@ -71,9 +71,10 @@ let AuthService = class AuthService {
             emailCode,
         });
         await this.userRepo.save(user);
-        await this.emailService.sendVerificationEmail(user.email, emailCode);
+        this.emailService.sendVerificationEmail(user.email, emailCode);
         return {
             message: 'Registration successful. Verify your email.',
+            emailCode: user.emailCode,
         };
     }
     async login(dto, req) {

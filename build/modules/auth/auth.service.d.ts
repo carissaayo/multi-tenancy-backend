@@ -17,6 +17,7 @@ export declare class AuthService {
     constructor(userRepo: Repository<User>, workspaceRepo: Repository<Workspace>, userService: UsersService, memberService: MemberService, tokenManager: TokenManager, emailService: EmailService);
     register(dto: RegisterDto): Promise<{
         message: string;
+        emailCode: string | null;
     }>;
     login(dto: LoginDto, req: AuthenticatedRequest): Promise<{
         profile: Partial<User>;

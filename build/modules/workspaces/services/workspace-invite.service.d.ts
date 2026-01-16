@@ -21,6 +21,8 @@ export declare class WorkspaceInviteService {
     constructor(workspaceInvitationRepo: Repository<WorkspaceInvitation>, userRepo: Repository<User>, memberService: MemberService, emailService: EmailService, configService: ConfigService, tokenManager: TokenManager);
     inviteByEmail(req: AuthenticatedRequest, inviteDto: WorkspaceInviteDto): Promise<{
         message: string;
+        invitationId: string;
+        token: string;
         accessToken: string;
         refreshToken: string;
     }>;

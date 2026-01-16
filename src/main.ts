@@ -1,13 +1,20 @@
 import { NestFactory } from '@nestjs/core';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
 import { AllExceptionsFilter } from './core/error-handler/all-exceptions-handler';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Enable trust proxy for correct hostname parsing behind load balancers (Render, etc.)
+  const httpAdapter = app.getHttpAdapter();
+  if (httpAdapter instanceof ExpressAdapter) {
+    httpAdapter.getInstance().set('trust proxy', true);
+  }
+
   app.useGlobalFilters(new AllExceptionsFilter());
-  
+
   app.setGlobalPrefix('api');
   const config = new DocumentBuilder()
     .setTitle('Multi-Tenancy API')

@@ -25,6 +25,7 @@ exports.workspaceOptionalRoutes = [
     "/api/auth/select-workspace",
     '/api/invitations/accept',
     '/api/channels/invitations/accept',
+    '/api/users'
 ];
 exports.allowDeactivatedWorkspaceRoutes = [
     '/api/settings/activate',

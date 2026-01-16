@@ -6,6 +6,7 @@ export declare class AuthController {
     constructor(authService: AuthService);
     register(dto: RegisterDto): Promise<{
         message: string;
+        emailCode: string | null;
     }>;
     login(loginDto: LoginDto, req: AuthenticatedRequest): Promise<{
         profile: Partial<import("../users/entities/user.entity").User>;

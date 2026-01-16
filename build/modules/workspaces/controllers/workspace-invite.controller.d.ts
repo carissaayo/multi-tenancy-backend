@@ -6,6 +6,8 @@ export declare class WorkspaceInviteController {
     constructor(workspaceService: WorkspaceInviteService);
     sendInvitation(req: AuthenticatedRequest, inviteDto: WorkspaceInviteDto): Promise<{
         message: string;
+        invitationId: string;
+        token: string;
         accessToken: string;
         refreshToken: string;
     }>;

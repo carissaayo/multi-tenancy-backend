@@ -31,6 +31,7 @@ export declare class ChannelInviteService {
     inviteToJoinPrivateChannel(req: AuthenticatedRequest, id: string, channelInviteDto: ChannelInviteDto): Promise<{
         message: string;
         invitationId: string;
+        token: string;
         accessToken: string;
         refreshToken: string;
     }>;

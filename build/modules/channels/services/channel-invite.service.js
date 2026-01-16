@@ -160,12 +160,13 @@ let ChannelInviteService = ChannelInviteService_1 = class ChannelInviteService {
         const frontendUrl = this.configService.get('frontend.url') || 'http://localhost:8000';
         const inviteLink = `${frontendUrl}/accept-invite?token=${token}`;
         const inviterName = user.fullName || user.email;
-        await this.emailService.sendChannelInvitation(invitedMember.email, workspace.name, channel.name, inviterName, inviteLink, expiresAt.toISOString());
+        this.emailService.sendChannelInvitation(invitedMember.email, workspace.name, channel.name, inviterName, inviteLink, expiresAt.toISOString());
         this.logger.log(`Channel invitation sent: member ${memberId} to channel ${id} in workspace ${workspace.id}`);
         const tokens = await this.tokenManager.signTokens(user, req);
         return {
             message: 'Invitation to join the channel sent successfully',
             invitationId: invitation.id,
+            token: token,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken || '',
         };

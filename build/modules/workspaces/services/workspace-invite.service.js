@@ -127,11 +127,13 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
         const frontendUrl = this.configService.get('frontend.url') || 'http://localhost:8000';
         const inviteLink = `${frontendUrl}/accept-invite?token=${token}`;
         const inviterName = user.fullName || user.email;
-        await this.emailService.sendWorkspaceInvitation(email, workspace.name, inviterName, inviteLink, expiresAt.toISOString());
+        this.emailService.sendWorkspaceInvitation(email, workspace.name, inviterName, inviteLink, expiresAt.toISOString());
         this.logger.log(`Invitation sent to ${email} for workspace ${workspace.name}`);
         const tokens = await this.tokenManager.signTokens(user, req);
         return {
             message: 'Invitation sent successfully',
+            invitationId: invitation.id,
+            token: token,
             accessToken: tokens.accessToken,
             refreshToken: tokens.refreshToken || '',
         };

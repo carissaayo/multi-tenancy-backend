@@ -23,7 +23,7 @@ export const workspaceOptionalRoutes = [
   "/api/auth/select-workspace",
   '/api/invitations/accept',
   '/api/channels/invitations/accept',
-  '/api/users'
+  // '/api/users'
 ];
 
 
