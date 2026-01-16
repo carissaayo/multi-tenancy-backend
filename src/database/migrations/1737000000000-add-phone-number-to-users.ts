@@ -1,12 +1,16 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddPhoneNumberToUsers1737000000000 implements MigrationInterface {
-  name = 'AddPhoneNumberToUsers1737000000';
+export class AddProfileFieldsToUsers1737000000001 implements MigrationInterface {
+  name = 'AddProfileFieldsToUsers1737000000001';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "users"
-      ADD COLUMN "phone_number" character varying(20)
+      ADD COLUMN "phone_number" character varying(20),
+      ADD COLUMN "bio" character varying(500),
+      ADD COLUMN "city" character varying(500),
+      ADD COLUMN "state" character varying(500),
+      ADD COLUMN "country" character varying(500)
     `);
 
     await queryRunner.query(`
@@ -23,6 +27,10 @@ export class AddPhoneNumberToUsers1737000000000 implements MigrationInterface {
 
     await queryRunner.query(`
       ALTER TABLE "users"
+      DROP COLUMN "country",
+      DROP COLUMN "state",
+      DROP COLUMN "city",
+      DROP COLUMN "bio",
       DROP COLUMN "phone_number"
     `);
   }
