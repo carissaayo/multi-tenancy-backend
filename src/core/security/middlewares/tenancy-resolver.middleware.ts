@@ -21,49 +21,49 @@ export class TenantResolverMiddleware implements NestMiddleware {
 
   async use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-     if (this.isPublicRoute(req.originalUrl)) {
-       this.logger.debug(
-         `Skipping tenant resolution for public route: ${req.originalUrl}`,
-       );
-       return next();
-     }
+      if (this.isPublicRoute(req.originalUrl)) {
+        this.logger.debug(
+          `Skipping tenant resolution for public route: ${req.originalUrl}`,
+        );
+        return next();
+      }
 
-     // Skip tenant resolution for workspace-agnostic routes (e.g., creating workspace, listing user workspaces)
-     if (this.isWorkspaceOptionalRoute(req.originalUrl)) {
-       this.logger.debug(
-         `Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if subdomain present`,
-       );
+      // Skip tenant resolution for workspace-agnostic routes (e.g., creating workspace, listing user workspaces)
+      if (this.isWorkspaceOptionalRoute(req.originalUrl)) {
+        this.logger.debug(
+          `Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if subdomain present`,
+        );
 
-       // Try to resolve workspace if subdomain exists, but don't fail if it doesn't
-       const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
-       if (workspaceSlug) {
-         const workspace = await this.workspaceRepo.findOne({
-           where: { slug: workspaceSlug, isActive: true },
-         });
-         if (workspace) {
-           req.workspace = workspace;
-           req.workspaceId = workspace.id;
-           this.logger.debug(
-             `Workspace resolved for optional route: ${workspace.slug}`,
-           );
-         }
-       }
-       return next();
-     }
+        // Try to resolve workspace if subdomain exists, but don't fail if it doesn't
+        const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+        if (workspaceSlug) {
+          const workspace = await this.workspaceRepo.findOne({
+            where: { slug: workspaceSlug, isActive: true },
+          });
+          if (workspace) {
+            req.workspace = workspace;
+            req.workspaceId = workspace.id;
+            this.logger.debug(
+              `Workspace resolved for optional route: ${workspace.slug}`,
+            );
+          }
+        }
+        return next();
+      }
 
-     // For workspace-scoped routes, workspace from subdomain is REQUIRED
-     const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+      // For workspace-scoped routes, workspace from subdomain is REQUIRED
+      const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
 
-     if (!workspaceSlug) {
-       this.logger.warn(
-         `No workspace subdomain found in hostname: ${this.getHostname(req)}`,
-       );
-       return res.status(HttpStatus.BAD_REQUEST).json({
-         success: false,
-         message:
-           'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
-       });
-     }
+      if (!workspaceSlug) {
+        this.logger.warn(
+          `No workspace subdomain found in hostname: ${this.getHostname(req)}`,
+        );
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          success: false,
+          message:
+            'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
+        });
+      }
       if (!workspaceSlug) {
         this.logger.warn(
           `No workspace subdomain found in hostname: ${req.hostname}`,
@@ -136,11 +136,20 @@ export class TenantResolverMiddleware implements NestMiddleware {
     const hostname = this.getHostname(req);
     const parts = hostname.split('.');
 
+    // Handle localhost subdomains first (e.g., backend-developers.localhost)
+    if (hostname.includes('localhost')) {
+      // For local dev, check if there's a subdomain before localhost
+      if (parts.length > 1 && parts[0] !== 'localhost') {
+        return parts[0]; // Return the subdomain (e.g., 'backend-developers')
+      }
+      return null; // Just 'localhost' with no subdomain
+    }
+
     // Known base domains that should not be treated as workspace subdomains
     // Add your production domain here (e.g., 'yourdomain.com', 'onrender.com')
     const baseDomains = [
       'onrender.com',
-      'localhost',
+      // Remove 'localhost' from here since we handle it above
       // Add your custom domain here if you have one
       // 'yourdomain.com',
     ];
@@ -153,15 +162,6 @@ export class TenantResolverMiddleware implements NestMiddleware {
 
     // If it's a base domain (no subdomain), return null
     if (isBaseDomain && parts.length <= 2) {
-      return null;
-    }
-
-    // localhost or IP address (no subdomain)
-    if (parts.length === 1 || hostname.includes('localhost')) {
-      // For local dev, check if there's a subdomain before localhost
-      if (parts.length > 1 && parts[0] !== 'localhost') {
-        return parts[0];
-      }
       return null;
     }
 

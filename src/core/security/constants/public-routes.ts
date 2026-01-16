@@ -6,13 +6,11 @@ export const publicRoutes = [
   '/api/payment/paystack/webhook',
   '/api/invitations/accept',
   '/api/docs',
-  '/api/api/docs',
 ];
 
 export const workspaceOptionalRoutes = [
   '/api/workspaces',
   '/api/workspaces/:id',
-  '/api/invitations',
   '/api/users',
   '/api/users/avatar',
   '/api/auth/password-reset',

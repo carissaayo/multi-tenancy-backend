@@ -20,7 +20,6 @@ import {
   WorkspaceInvitationStatus,
 } from '../interfaces/workspace.interface';
 
-
 @Injectable()
 export class WorkspaceInviteService {
   private readonly logger = new Logger(WorkspaceInviteService.name);
@@ -87,15 +86,21 @@ export class WorkspaceInviteService {
       where: {
         workspaceId: workspace.id,
         email,
-        expiresAt: MoreThan(new Date()),
         status: WorkspaceInvitationStatus.PENDING,
       },
     });
 
     if (existingInvitation) {
-      throw customError.badRequest(
-        'This email is already invited to this workspace',
-      );
+      if (existingInvitation.expiresAt > new Date()) {
+        throw customError.badRequest(
+          'This email is already invited to this workspace',
+        );
+      }
+          existingInvitation.status = WorkspaceInvitationStatus.EXPIRED;
+          await this.workspaceInvitationRepo.save(existingInvitation);
+        this.logger.log(
+          `Expired invitation for ${email} in workspace ${workspace.id} marked as EXPIRED`,
+        );
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -121,7 +126,7 @@ export class WorkspaceInviteService {
     const inviterName = user.fullName || user.email;
 
     // await remove because render do not support email sending in free plan
-     this.emailService.sendWorkspaceInvitation(
+    this.emailService.sendWorkspaceInvitation(
       email,
       workspace.name,
       inviterName,
