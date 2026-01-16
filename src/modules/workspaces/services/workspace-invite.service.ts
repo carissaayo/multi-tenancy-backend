@@ -19,6 +19,7 @@ import {
   WorkspaceInvitationRole,
   WorkspaceInvitationStatus,
 } from '../interfaces/workspace.interface';
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 
 @Injectable()
 export class WorkspaceInviteService {
@@ -33,6 +34,8 @@ export class WorkspaceInviteService {
     private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly tokenManager: TokenManager,
+    @Inject(forwardRef(() => MessagingGateway))
+    private readonly messagingGateway: MessagingGateway,
   ) {}
   async inviteByEmail(
     req: AuthenticatedRequest,
@@ -96,11 +99,11 @@ export class WorkspaceInviteService {
           'This email is already invited to this workspace',
         );
       }
-          existingInvitation.status = WorkspaceInvitationStatus.EXPIRED;
-          await this.workspaceInvitationRepo.save(existingInvitation);
-        this.logger.log(
-          `Expired invitation for ${email} in workspace ${workspace.id} marked as EXPIRED`,
-        );
+      existingInvitation.status = WorkspaceInvitationStatus.EXPIRED;
+      await this.workspaceInvitationRepo.save(existingInvitation);
+      this.logger.log(
+        `Expired invitation for ${email} in workspace ${workspace.id} marked as EXPIRED`,
+      );
     }
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -191,19 +194,17 @@ export class WorkspaceInviteService {
     }
 
     // Delete any existing ACCEPTED invitations for this workspace+email
-    // to avoid unique constraint violation when updating status to ACCEPTED
     await this.workspaceInvitationRepo.delete({
       workspaceId: invitation.workspaceId,
       email: invitation.email,
       status: WorkspaceInvitationStatus.ACCEPTED,
     });
-    // Mark invitation as accepted
+
     invitation.status = WorkspaceInvitationStatus.ACCEPTED;
     invitation.acceptedAt = new Date();
     invitation.acceptedBy = user.id;
     await this.workspaceInvitationRepo.save(invitation);
 
-    // Send welcome email
     const workspace = invitation.workspace;
     const inviterId = invitation.invitedBy;
     if (!inviterId) {
@@ -221,6 +222,34 @@ export class WorkspaceInviteService {
       workspace.id,
       user.id,
       invitation.role ?? WorkspaceInvitationRole.MEMBER,
+    );
+
+    // Emit WebSocket events
+    // 1. Notify the user who accepted that they've joined
+    this.messagingGateway.emitToUser(user.id, 'workspaceJoined', {
+      workspace: {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+      },
+      message: 'You have successfully joined the workspace',
+    });
+
+    // 2. Notify all workspace members that a new member joined
+    this.messagingGateway.emitToWorkspace(workspace.id, 'memberJoined', {
+      workspaceId: workspace.id,
+      member: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl,
+      },
+      role: invitation.role ?? WorkspaceInvitationRole.MEMBER,
+      joinedAt: new Date(),
+    });
+
+    this.logger.log(
+      `User ${user.id} accepted invitation and joined workspace ${workspace.id}`,
     );
 
     const frontendUrl =
