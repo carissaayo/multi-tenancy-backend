@@ -16,7 +16,8 @@ import { MessageService } from '../services/message.service';
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    // origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin:'http://localhost:8000',
     credentials: true,
   },
   namespace: '/messaging',
@@ -264,11 +265,58 @@ export class MessagingGateway
 
   // Utility method to emit to workspace
   emitToWorkspace(workspaceId: string, event: string, data: any) {
+    this.logger.log(`Emitting to workspace ${workspaceId} event ${event}`);
     this.server.to(`workspace:${workspaceId}`).emit(event, data);
   }
 
   // Utility method to emit to channel
   emitToChannel(channelId: string, event: string, data: any) {
     this.server.to(`channel:${channelId}`).emit(event, data);
+  }
+
+  /**
+   * Programmatically join a user to a workspace room
+   * This can be called from services when a user joins a workspace
+   */
+  async joinUserToWorkspace(
+    userId: string,
+    workspaceId: string,
+  ): Promise<void> {
+    const userSocketIds = this.userSockets.get(userId);
+
+    if (!userSocketIds || userSocketIds.size === 0) {
+      // User has no active WebSocket connections
+      this.logger.debug(
+        `User ${userId} has no active WebSocket connections to join workspace ${workspaceId}`,
+      );
+      return;
+    }
+
+    const roomName = `workspace:${workspaceId}`;
+
+    // Join all user's socket connections to the workspace room
+    for (const socketId of userSocketIds) {
+      const socket = this.server.sockets.sockets.get(socketId);
+      if (socket) {
+        await socket.join(roomName);
+
+        // Track the connection
+        if (!this.workspaceRooms.has(workspaceId)) {
+          this.workspaceRooms.set(workspaceId, new Set());
+        }
+        this.workspaceRooms.get(workspaceId)!.add(socketId);
+
+        this.logger.log(
+          `Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`,
+        );
+      }
+    }
+
+    // Emit confirmation to the user
+    this.emitToUser(userId, 'workspaceJoined', {
+      workspaceId,
+      success: true,
+      message: 'You have been automatically joined to the workspace',
+    });
   }
 }

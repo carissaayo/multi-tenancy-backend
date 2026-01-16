@@ -193,6 +193,7 @@ export class WorkspaceInviteService {
       );
     }
 
+    
     // Delete any existing ACCEPTED invitations for this workspace+email
     await this.workspaceInvitationRepo.delete({
       workspaceId: invitation.workspaceId,
@@ -225,6 +226,11 @@ export class WorkspaceInviteService {
     );
 
     // Emit WebSocket events
+
+    // Automatically join user to workspace WebSocket room if they have active connections
+  await this.messagingGateway.joinUserToWorkspace(user.id, workspace.id);
+
+ 
     // 1. Notify the user who accepted that they've joined
     this.messagingGateway.emitToUser(user.id, 'workspaceJoined', {
       workspace: {
