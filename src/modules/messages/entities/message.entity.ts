@@ -1,14 +1,22 @@
 import { EntitySchema } from 'typeorm';
 
+export type MessageType = 'text' | 'system' | 'file';
+
 export interface Message {
   id: string;
   channelId: string;
   memberId: string;
+
   content: string;
+  type: MessageType;
+
   threadId: string | null;
+
   isEdited: boolean;
+
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 }
 
 export const MessageEntity = new EntitySchema<Message>({
@@ -31,6 +39,11 @@ export const MessageEntity = new EntitySchema<Message>({
     content: {
       type: 'text',
     },
+    type: {
+      type: 'varchar',
+      length: 20,
+      default: 'text',
+    },
     threadId: {
       type: 'uuid',
       nullable: true,
@@ -51,19 +64,20 @@ export const MessageEntity = new EntitySchema<Message>({
       default: () => 'NOW()',
       name: 'updated_at',
     },
+    deletedAt: {
+      type: 'timestamp',
+      nullable: true,
+      name: 'deleted_at',
+    },
   },
   indices: [
     {
-      name: 'idx_messages_channel',
-      columns: ['channelId'],
+      name: 'idx_messages_channel_created',
+      columns: ['channelId', 'createdAt'],
     },
     {
       name: 'idx_messages_thread',
       columns: ['threadId'],
-    },
-    {
-      name: 'idx_messages_created_at',
-      columns: ['createdAt'],
     },
   ],
 });
