@@ -13,6 +13,7 @@ import { Logger, UseGuards } from '@nestjs/common';
 import { WsAuthGuard } from '../guards/ws-auth.guard';
 import type { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interface';
 import { MessageService } from '../services/message.service';
+import { AuthDomainService } from 'src/core/security/services/auth-domain.service';
 
 @WebSocketGateway({
   cors: {
@@ -27,7 +28,6 @@ export class MessagingGateway
 {
   @WebSocketServer()
   server: Server;
-
   private readonly logger = new Logger(MessagingGateway.name);
 
   // Store active connections: userId -> socketId[]
@@ -36,7 +36,10 @@ export class MessagingGateway
   // Store workspace rooms: workspaceId -> Set of socketIds
   private workspaceRooms = new Map<string, Set<string>>();
 
-  constructor(private readonly messageService: MessageService) {}
+  constructor(
+    private readonly messageService: MessageService,
+    private readonly authDomain: AuthDomainService,
+  ) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
@@ -48,21 +51,62 @@ export class MessagingGateway
     try {
       // Extract token from handshake
       const token =
-        client.handshake.auth.token ||
-        client.handshake.headers.authorization?.replace('Bearer ', '');
+        client.handshake.auth?.token ||
+        client.handshake.headers?.authorization?.replace('Bearer ', '');
 
       if (!token) {
         this.logger.warn(`Client ${client.id} rejected: No token provided`);
-        client.disconnect();
+
+        // Emit error first, then disconnect after a small delay
+        client.emit('error', {
+          message: 'Authentication required',
+          code: 'NO_TOKEN'
+        });
+
+        // Give the client time to receive the error before disconnecting
+        setTimeout(() => {
+          if (client.connected) {
+            client.disconnect(true);
+          }
+        }, 100);
+
         return;
       }
 
-      // Token validation will happen in WsAuthGuard for message handlers
-      // For now, just log the connection attempt
-      this.logger.log(`Client connected: ${client.id}`);
-    } catch (error) {
-      this.logger.error(`Connection error for client ${client.id}:`, error);
-      client.disconnect();
+      // Validate token and get user info
+      const auth = await this.authDomain.validateAccessToken(token);
+
+      // Attach user info to socket
+      (client as AuthenticatedSocket).userId = auth.userId;
+      (client as AuthenticatedSocket).workspaceId = auth.workspaceId;
+
+      // Track user socket connection
+      if (!this.userSockets.has(auth.userId)) {
+        this.userSockets.set(auth.userId, new Set());
+      }
+      this.userSockets.get(auth.userId)!.add(client.id);
+
+      this.logger.log(
+        `Client ${client.id} connected successfully (user: ${auth.userId})`,
+      );
+
+    } catch (error: any) {
+      this.logger.warn(
+        `Client ${client.id} authentication failed: ${error?.message || 'Unknown error'}`,
+      );
+
+      // Emit error with details
+      client.emit('error', {
+        message: error?.message || 'Authentication failed',
+        code: error?.code || 'AUTH_FAILED'
+      });
+
+      // Delay disconnect to ensure error is received
+      setTimeout(() => {
+        if (client.connected) {
+          client.disconnect(true);
+        }
+      }, 100);
     }
   }
 
