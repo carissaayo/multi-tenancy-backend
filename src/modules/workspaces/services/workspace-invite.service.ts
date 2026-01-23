@@ -1,25 +1,34 @@
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 
-import { WorkspaceInvitation } from '../entities/workspace_initations.entity';
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
-import { User } from 'src/modules/users/entities/user.entity';
-import { customError } from 'src/core/error-handler/custom-errors';
-import { Workspace } from '../entities/workspace.entity';
+
 import { MemberService } from 'src/modules/members/services/member.service';
-import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
+
 import { EmailService } from 'src/core/email/services/email.service';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
+import { WorkspacesService } from './workspace.service';
+import { ChannelMembershipService } from 'src/modules/channels/services/channel-membership.service';
+
+import { WorkspaceInvitation } from '../entities/workspace_initations.entity';
+
+import { PermissionsEnum } from 'src/core/security/interfaces/permission.interface';
+import { User } from 'src/modules/users/entities/user.entity';
+import { Workspace } from '../entities/workspace.entity';
+
+
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
+import { customError } from 'src/core/error-handler/custom-errors';
+
 import {
   NoDataWorkspaceResponse,
   WorkspaceInvitationRole,
   WorkspaceInvitationStatus,
 } from '../interfaces/workspace.interface';
-import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
 
 @Injectable()
 export class WorkspaceInviteService {
@@ -36,6 +45,11 @@ export class WorkspaceInviteService {
     private readonly tokenManager: TokenManager,
     @Inject(forwardRef(() => MessagingGateway))
     private readonly messagingGateway: MessagingGateway,
+    private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => WorkspacesService))
+    private readonly workspaceService: WorkspacesService,
+    @Inject(forwardRef(() => ChannelMembershipService))
+    private readonly channelMembershipService: ChannelMembershipService,
   ) {}
   async inviteByEmail(
     req: AuthenticatedRequest,
@@ -219,11 +233,16 @@ export class WorkspaceInviteService {
       throw customError.notFound('Inviter not found');
     }
 
-    await this.memberService.addMemberToWorkspace(
+    const newMember = await this.memberService.addMemberToWorkspace(
       workspace.id,
       user.id,
       invitation.role ?? WorkspaceInvitationRole.MEMBER,
     );
+
+
+    // Add member to default channels (general and random)
+    await this.addMemberToDefaultChannels(workspace.id, newMember.id);
+
 
     // Emit WebSocket events
 
@@ -313,6 +332,76 @@ export class WorkspaceInviteService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
     };
+  }
+  /**
+ * Add new member to default channels (general and random)
+ */
+  private async addMemberToDefaultChannels(
+    workspaceId: string,
+    memberId: string,
+  ): Promise<void> {
+    try {
+      const workspace = await this.workspaceService.findById(workspaceId);
+      if (!workspace) {
+        this.logger.warn(
+          `Workspace ${workspaceId} not found, skipping default channel join`,
+        );
+        return;
+      }
+
+      const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
+        workspace.slug,
+      );
+      const schemaName = `workspace_${sanitizedSlug}`;
+
+      // Find default channels (general and random)
+      const defaultChannels = await this.dataSource.query(
+        `
+        SELECT id, name 
+        FROM "${schemaName}".channels 
+        WHERE name IN ('general', 'random') 
+        AND is_private = false
+        ORDER BY name
+      `,
+      );
+
+      if (!defaultChannels || defaultChannels.length === 0) {
+        this.logger.warn(
+          `No default channels found in workspace ${workspaceId}, skipping`,
+        );
+        return;
+      }
+
+      // Add member to each default channel
+      for (const channel of defaultChannels) {
+        try {
+          await this.channelMembershipService.addMemberToChannel(
+            channel.id,
+            memberId,
+            workspaceId,
+          );
+          this.logger.log(
+            `Added member ${memberId} to default channel ${channel.name} (${channel.id}) in workspace ${workspaceId}`,
+          );
+        } catch (error: any) {
+          // If member is already in channel, that's okay - just log it
+          if (error.message?.includes('already')) {
+            this.logger.debug(
+              `Member ${memberId} already in channel ${channel.name}`,
+            );
+          } else {
+            this.logger.error(
+              `Failed to add member ${memberId} to channel ${channel.name}: ${error.message}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      // Don't fail the invitation acceptance if channel joining fails
+      this.logger.error(
+        `Error adding member ${memberId} to default channels in workspace ${workspaceId}: ${error.message}`,
+      );
+    }
   }
 
   async listPendingInvites(workspaceId: string) {}
