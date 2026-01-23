@@ -53,6 +53,7 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
   exports: [
     ChannelService,
     ChannelMembershipService,
+    ChannelQueryService
 
   ],
 })

@@ -6,6 +6,7 @@ import { Message } from '../entities/message.entity';
 import { ChannelMembershipService } from 'src/modules/channels/services/channel-membership.service';
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { ChannelQueryService } from 'src/modules/channels/services/channel-query.service';
 
 
 @Injectable()
@@ -20,6 +21,9 @@ export class MessageService {
     private readonly memberService: MemberService,
     @Inject(forwardRef(() => ChannelMembershipService))
     private readonly channelMembershipService: ChannelMembershipService,
+    @Inject(forwardRef(() => ChannelQueryService))
+    private readonly channelQueryService: ChannelQueryService,
+
   ) { }
 
   /**
@@ -64,7 +68,7 @@ export class MessageService {
     channelId: string,
     memberId: string,
     workspaceId: string,
-    userId: string, // Add userId parameter to check ownership
+    userId: string,
   ): Promise<void> {
     // First check if user is a channel member
     const isChannelMember = await this.channelMembershipService.isUserMember(
@@ -83,44 +87,40 @@ export class MessageService {
       throw customError.notFound('Workspace not found');
     }
 
-    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
-      workspace.slug,
-    );
-    const schemaName = `workspace_${sanitizedSlug}`;
+  
 
-    // Check if channel exists and if it's private
-    const [channel] = await this.dataSource.query(
-      `SELECT name, is_private FROM "${schemaName}".channels WHERE id = $1`,
-      [channelId],
+    const channel = await this.channelQueryService.findChannelById(
+      channelId,
+      workspaceId,
     );
 
     if (!channel) {
       throw customError.notFound('Channel not found');
     }
 
-    // If channel is private, deny access (even for owners/admins unless they're members)
-    if (channel.is_private) {
-      throw customError.forbidden(
-        'You are not a member of this private channel',
-      );
-    }
+      // If channel is private, deny access (even for owners/admins unless they're members)
+      if (channel.isPrivate) {
+        throw customError.forbidden(
+          'You are not a member of this private channel',
+        );
+      }
 
-    // Channel is public - check if user is workspace owner or admin
-    const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
+      // Channel is public - check if user is workspace owner or admin
+      const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
 
-    // Check if user is admin
-    const member = await this.memberService.isUserMember(workspaceId, userId);
-    const isAdmin = member?.role === 'admin' || member?.role === 'owner';
+      // Check if user is admin
+      const member = await this.memberService.isUserMember(workspaceId, userId);
+      const isAdmin = member?.role === 'admin' || member?.role === 'owner';
 
-    if (isOwner || isAdmin) {
-      this.logger.debug(
-        `Allowing ${isOwner ? 'owner' : 'admin'} ${userId} access to public channel ${channel.name}`,
-      );
-      return; // Allow access for owners/admins to public channels
-    }
+      if (isOwner || isAdmin) {
+        this.logger.debug(
+          `Allowing ${isOwner ? 'owner' : 'admin'} ${userId} access to public channel ${channel.name}`,
+        );
+        return; // Allow access for owners/admins to public channels
+      }
 
-    // User is not a member and not owner/admin
-    throw customError.forbidden('You are not a member of this channel');
+      // User is not a member and not owner/admin
+      throw customError.forbidden('You are not a member of this channel');
   }
 
 
