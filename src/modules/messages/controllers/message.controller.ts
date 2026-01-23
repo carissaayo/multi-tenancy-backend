@@ -1,18 +1,16 @@
-import { Controller, Get, Param, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Req } from "@nestjs/common";
 import { MessageService } from "../services/message.service";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
+import { GetMessagesDto } from "../dtos/message.dto";
 
 @ApiTags("Messages")
 @Controller('messages')
 export class MessageController {
     constructor(
         private readonly messageService: MessageService
-    ) {
-
-
-    }
-    @Get(':channelId')
+    ) {}
+    @Get('')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Get messages' })
     @ApiResponse({
@@ -21,8 +19,23 @@ export class MessageController {
     })
     getMessages(
         @Req() req: AuthenticatedRequest,
-        @Param('channelId') channelId: string
+        @Body()dto: GetMessagesDto 
     ) {
-        return this.messageService.getChannelMessages(req, channelId);
+        return this.messageService.getChannelMessages(req, dto);
+    }
+
+    @Get(':messageId')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Get messages' })
+    @ApiResponse({
+        status: 200,
+        description: 'Messages retrieved successfully',
+    })
+    getSingleMessage(
+        @Req() req: AuthenticatedRequest,
+        @Param('messageId') messageId: string
+        
+    ) {
+        return this.messageService.getMessageById(req, messageId);
     }
 }

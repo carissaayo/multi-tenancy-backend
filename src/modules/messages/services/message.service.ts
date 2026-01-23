@@ -7,6 +7,7 @@ import { ChannelMembershipService } from 'src/modules/channels/services/channel-
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { ChannelQueryService } from 'src/modules/channels/services/channel-query.service';
+import { GetMessagesDto } from '../dtos/message.dto';
 
 
 @Injectable()
@@ -209,7 +210,7 @@ export class MessageService {
    */
   async getChannelMessages(
     req: AuthenticatedRequest,
-    channelId: string,
+    dto: GetMessagesDto
   ): Promise<{
     messages: Message[];
     nextCursor: string | null;
@@ -217,7 +218,7 @@ export class MessageService {
   }> {
     const userId = req.userId;
     const workspaceId = req.workspaceId!;
-console.log(channelId,"channelId");
+const channelId = dto.channelId;
 
     const limit = Math.min(Number(req.query?.limit) || 50, 100);
     const cursor = req.query?.cursor as string;
