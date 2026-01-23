@@ -154,11 +154,6 @@ export class MessageService {
   async getChannelMessages(
     req: AuthenticatedRequest,
     channelId: string,
-    options?: {
-      limit?: number;
-      cursor?: string;
-      direction?: 'before' | 'after';
-    },
   ): Promise<{
     messages: Message[];
     nextCursor: string | null;
@@ -167,6 +162,9 @@ export class MessageService {
     const userId = req.userId;
     const workspaceId = req.workspaceId!;
 
+    const limit = Math.min(Number(req.query?.limit) || 50, 100);
+    const cursor = req.query?.cursor as string;
+    const direction = req.query?.direction as 'before' | 'after' || 'before';
     // Validate workspace membership and get schema name and member
     const { member, schemaName } = await this.validateWorkspaceMembership(
       workspaceId,
@@ -179,10 +177,6 @@ export class MessageService {
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
-      const limit = Math.min(options?.limit || 50, 100);
-      const cursor = options?.cursor;
-      const direction = options?.direction || 'before';
-
       let query: string;
       let params: any[];
 
