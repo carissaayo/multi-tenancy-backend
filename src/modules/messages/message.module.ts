@@ -11,6 +11,8 @@ import { ChannelModule } from '../channels/channel.module';
 import { MessagingGateway } from './gateways/messaging.gateway';
 import { MessageService } from './services/message.service';
 
+import { MessageController } from './controllers/message.controller';
+
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -30,6 +32,7 @@ import { MessageService } from './services/message.service';
     forwardRef(() => ChannelModule),
   ],
   providers: [MessagingGateway, MessageService],
+  controllers: [MessageController],
   exports: [MessagingGateway, MessageService],
 })
 export class MessageModule {}
