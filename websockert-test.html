@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        input, textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+            color: #dc3545;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Messaging Gateway Test</h1>
+    
+    <div class="status disconnected" id="status">
+        Disconnected
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Connection</h2>
+        <input type="text" id="serverUrl" placeholder="http://localhost:8000" value="http://localhost:8000">
+
+            <input type="text" id="token" placeholder="Your JWT Token">
+            <button id="connectBtn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+
+        <div class="panel">
+            <h2>Actions</h2>
+            <input type="text" id="workspaceId" placeholder="Workspace ID">
+            <button onclick="joinWorkspace()">Join Workspace</button>
+            <button onclick="leaveWorkspace()">Leave Workspace</button>
+            
+            <hr>
+            
+            <input type="text" id="channelId" placeholder="Channel ID">
+            <button onclick="joinChannel()">Join Channel</button>
+            
+            <hr>
+            
+            <input type="text" id="messageChannelId" placeholder="Channel ID">
+            <input type="text" id="messageWorkspaceId" placeholder="Workspace ID">
+            <textarea id="messageContent" placeholder="Message content"></textarea>
+            <button onclick="sendMessage()">Send Message</button>
+            
+            <hr>
+            
+            <input type="text" id="typingChannelId" placeholder="Channel ID">
+            <button onclick="startTyping()">Start Typing</button>
+            <button onclick="stopTyping()">Stop Typing</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>Event Log</h2>
+        <div class="log" id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script>
+        let socket = null;
+        let currentWorkspaceId = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function connect() {
+               const serverUrl = document.getElementById('serverUrl').value;
+            const token = document.getElementById('token').value;
+
+            if (!token) {
+                alert('Please enter a JWT token');
+                return;
+            }
+
+            // Ensure URL doesn't have trailing slash
+            let url = serverUrl.replace(/\/$/, '');
+
+            // IMPORTANT: Add the namespace to the URL
+            // Socket.IO namespace /messaging
+            url = url + '/messaging';
+
+            log(`Connecting to ${url}...`, 'info');
+
+            socket = io(url, {
+                path: '/socket.io',
+                auth: {
+                    token: token
+                },
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+            });
+
+            socket.on('connect', () => {
+                log('✅ Connected successfully!', 'success');
+                updateStatus(true);
+            });
+
+            socket.on('connect_error', (error) => {
+                log(`❌ Connection error: ${error.message}`, 'error');
+                updateStatus(false);
+            });
+
+            socket.on('disconnect', (reason) => {
+                log(`⚠️ Disconnected: ${reason}`, 'error');
+                updateStatus(false);
+            });
+
+            socket.on('error', (data) => {
+                log(`❌ Error: ${JSON.stringify(data)}`, 'error');
+            });
+
+            // Listen for workspace events
+            socket.on('joinedWorkspace', (data) => {
+                log(`✅ Joined workspace: ${JSON.stringify(data)}`, 'success');
+            });
+
+            socket.on('leftWorkspace', (data) => {
+                log(`ℹ️ Left workspace: ${JSON.stringify(data)}`, 'info');
+            });
+
+            socket.on('workspaceJoined', (data) => {
+                log(`✅ Workspace joined event: ${JSON.stringify(data)}`, 'success');
+            });
+
+            socket.on('memberJoined', (data) => {
+                log(`👤 New member joined: ${JSON.stringify(data)}`, 'success');
+            });
+
+            // Listen for channel events
+            socket.on('joinedChannel', (data) => {
+                log(`✅ Joined channel: ${JSON.stringify(data)}`, 'success');
+            });
+
+            // Listen for messages
+            socket.on('newMessage', (data) => {
+                log(`💬 New message: ${JSON.stringify(data, null, 2)}`, 'success');
+            });
+
+            socket.on('messageSent', (data) => {
+                log(`✅ Message sent: ${JSON.stringify(data)}`, 'success');
+            });
+
+            socket.on('userTyping', (data) => {
+                log(`⌨️ User typing: ${JSON.stringify(data)}`, 'info');
+            });
+
+            socket.on('channelCreated', (data) => {
+                log(`📢 Channel created: ${JSON.stringify(data)}`, 'success');
+            });
+
+            socket.on('channelUpdated', (data) => {
+                log(`📝 Channel updated: ${JSON.stringify(data)}`, 'info');
+            });
+
+            socket.on('channelDeleted', (data) => {
+                log(`🗑️ Channel deleted: ${JSON.stringify(data)}`, 'info');
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+                log('Disconnected', 'info');
+                updateStatus(false);
+            }
+        }
+
+        function joinWorkspace() {
+            const workspaceId = document.getElementById('workspaceId').value;
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!workspaceId) {
+                alert('Please enter workspace ID');
+                return;
+            }
+            currentWorkspaceId = workspaceId;
+            socket.emit('joinWorkspace', { workspaceId });
+            log(`📤 Joining workspace: ${workspaceId}`, 'info');
+        }
+
+        function leaveWorkspace() {
+            const workspaceId = document.getElementById('workspaceId').value;
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!workspaceId) {
+                alert('Please enter workspace ID');
+                return;
+            }
+            socket.emit('leaveWorkspace', { workspaceId });
+            log(`📤 Leaving workspace: ${workspaceId}`, 'info');
+        }
+
+        function joinChannel() {
+            const channelId = document.getElementById('channelId').value;
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!channelId) {
+                alert('Please enter channel ID');
+                return;
+            }
+            socket.emit('joinChannel', { channelId });
+            log(`📤 Joining channel: ${channelId}`, 'info');
+        }
+
+        function sendMessage() {
+            const channelId = document.getElementById('messageChannelId').value;
+            const workspaceId = document.getElementById('messageWorkspaceId').value;
+            const content = document.getElementById('messageContent').value;
+            
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!channelId || !workspaceId || !content) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            socket.emit('sendMessage', {
+                channelId,
+                workspaceId,
+                content
+            });
+            log(`📤 Sending message to channel ${channelId}: ${content}`, 'info');
+        }
+
+        function startTyping() {
+            const channelId = document.getElementById('typingChannelId').value;
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!channelId) {
+                alert('Please enter channel ID');
+                return;
+            }
+            socket.emit('typing', { channelId, isTyping: true });
+            log(`📤 Typing in channel: ${channelId}`, 'info');
+        }
+
+        function stopTyping() {
+            const channelId = document.getElementById('typingChannelId').value;
+            if (!socket || !socket.connected) {
+                alert('Not connected');
+                return;
+            }
+            if (!channelId) {
+                alert('Please enter channel ID');
+                return;
+            }
+            socket.emit('typing', { channelId, isTyping: false });
+            log(`📤 Stopped typing in channel: ${channelId}`, 'info');
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

@@ -48,14 +48,36 @@ export class MessageService {
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
-      // Insert message
-      const [result] = await this.dataSource.query(
-        `INSERT INTO "${schemaName}".messages 
-         (channel_id, member_id, content, thread_id, type, is_edited, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-         RETURNING *`,
-        [channelId, member.id, content, threadId || null, 'text', false],
-      );
+      // Check if type column exists
+      const columnCheck = await this.dataSource.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = $1 
+      AND table_name = 'messages' 
+      AND column_name = 'type'
+    `, [schemaName]);
+
+      const hasTypeColumn = columnCheck.length > 0;
+
+      // Insert message - conditionally include type column
+      let query: string;
+      let params: any[];
+
+      if (hasTypeColumn) {
+        query = `INSERT INTO "${schemaName}".messages 
+               (channel_id, member_id, content, thread_id, type, is_edited, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+               RETURNING *`;
+        params = [channelId, member.id, content, threadId || null, 'text', false];
+      } else {
+        query = `INSERT INTO "${schemaName}".messages 
+               (channel_id, member_id, content, thread_id, is_edited, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+               RETURNING *`;
+        params = [channelId, member.id, content, threadId || null, false];
+      }
+
+      const [result] = await this.dataSource.query(query, params);
 
       // Map database result to Message interface
       const message: Message = {
@@ -63,12 +85,12 @@ export class MessageService {
         channelId: result.channel_id,
         memberId: result.member_id,
         content: result.content,
-        type: result.type || 'text',
+        type: result.type || 'text', // Default to 'text' if column doesn't exist
         threadId: result.thread_id,
         isEdited: result.is_edited,
         createdAt: result.created_at,
         updatedAt: result.updated_at,
-        deletedAt: result.deleted_at,
+        deletedAt: result.deleted_at || null,
       };
 
       return message;

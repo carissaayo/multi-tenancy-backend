@@ -338,20 +338,37 @@ export class MessagingGateway
 
     const roomName = `workspace:${workspaceId}`;
 
+    // Get the namespace (since we're using /messaging namespace)
+    const namespace = this.server.of('/messaging');
+
     // Join all user's socket connections to the workspace room
     for (const socketId of userSocketIds) {
-      const socket = this.server.sockets.sockets.get(socketId);
-      if (socket) {
-        await socket.join(roomName);
+      try {
+        // Access socket through the namespace
+        const socket = namespace.sockets.get(socketId);
+        if (socket) {
+          await socket.join(roomName);
 
-        // Track the connection
-        if (!this.workspaceRooms.has(workspaceId)) {
-          this.workspaceRooms.set(workspaceId, new Set());
+          // Track the connection
+          if (!this.workspaceRooms.has(workspaceId)) {
+            this.workspaceRooms.set(workspaceId, new Set());
+          }
+          this.workspaceRooms.get(workspaceId)!.add(socketId);
+
+          this.logger.log(
+            `Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`,
+          );
+        } else {
+          this.logger.warn(
+            `Socket ${socketId} not found in namespace, may have disconnected`,
+          );
+          // Clean up stale socket ID
+          userSocketIds.delete(socketId);
         }
-        this.workspaceRooms.get(workspaceId)!.add(socketId);
-
-        this.logger.log(
-          `Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`,
+      } catch (error) {
+        this.logger.error(
+          `Error joining socket ${socketId} to workspace ${workspaceId}:`,
+          error,
         );
       }
     }
