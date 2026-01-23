@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Req } from "@nestjs/common";
 import { MessageService } from "../services/message.service";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
-import { GetMessagesDto } from "../dtos/message.dto";
+import { GetMessagesDto, UpdateMessageDto } from "../dtos/message.dto";
 
 @ApiTags("Messages")
 @Controller('messages')
@@ -51,6 +51,21 @@ export class MessageController {
         
     ) {
         return this.messageService.getMessageById(req, messageId);
+    }
+
+    @Patch(':messageId')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Update message by sender' })
+    @ApiResponse({
+        status: 200,
+        description: 'Message updated successfully',
+    })
+    updateMessageBySender(
+        @Req() req: AuthenticatedRequest,
+        @Param('messageId') messageId: string,
+        @Body() dto: UpdateMessageDto   
+    ) {
+        return this.messageService.updateMessageBySender(req, messageId,dto);
     }
 
 

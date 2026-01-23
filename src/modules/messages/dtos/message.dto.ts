@@ -6,3 +6,9 @@ export  class GetMessagesDto {
     @IsUUID()
     channelId!: string;
 }
+
+export  class UpdateMessageDto {
+    @IsString()
+    @IsNotEmpty()
+    newContent!: string;
+}

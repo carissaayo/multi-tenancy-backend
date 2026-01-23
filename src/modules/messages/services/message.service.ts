@@ -7,7 +7,7 @@ import { ChannelMembershipService } from 'src/modules/channels/services/channel-
 import { customError } from 'src/core/error-handler/custom-errors';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { ChannelQueryService } from 'src/modules/channels/services/channel-query.service';
-import { GetMessagesDto } from '../dtos/message.dto';
+import { GetMessagesDto, UpdateMessageDto } from '../dtos/message.dto';
 
 
 @Injectable()
@@ -507,8 +507,9 @@ const channelId = dto.channelId;
   async updateMessageBySender(
     req: AuthenticatedRequest,
     messageId: string,
-    newContent: string,
+        dto: UpdateMessageDto,
   ): Promise<Message> {
+    const {  newContent } = dto;
     const { member, schemaName } = await this.validateWorkspaceMembership(
       req.workspaceId!,
       req.userId,
