@@ -24,6 +24,20 @@ export class MessageController {
         return this.messageService.getChannelMessages(req, dto);
     }
 
+    @Get('member')
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Get messages' })
+    @ApiResponse({
+        status: 200,
+        description: 'Messages retrieved successfully',
+    })
+    getMessagesByMember(
+        @Req() req: AuthenticatedRequest,
+        @Body() dto: GetMessagesDto
+    ) {
+        return this.messageService.getMessagesByMember(req, dto);
+    }
+
     @Get(':messageId')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Get messages' })
@@ -38,4 +52,6 @@ export class MessageController {
     ) {
         return this.messageService.getMessageById(req, messageId);
     }
+
+
 }

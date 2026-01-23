@@ -316,6 +316,133 @@ const channelId = dto.channelId;
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
+
+  /**
+ * Get messages sent by a specific member in a channel with cursor-based pagination
+ * Returns all non-deleted messages sent by the user
+ */
+  async getMessagesByMember(
+    req: AuthenticatedRequest,
+    dto: GetMessagesDto,
+    options?: {
+      limit?: number;
+      cursor?: string;
+      direction?: 'before' | 'after';
+      memberUserId?: string; // Optional: if not provided, uses authenticated user
+    },
+  ): Promise<{
+    messages: Message[];
+    nextCursor: string | null;
+    hasMore: boolean;
+  }> {
+    const userId = options?.memberUserId || req.userId;
+    const workspaceId = req.workspaceId!;
+
+    const channelId = dto.channelId;
+    // Validate workspace membership
+    const { member, schemaName } = await this.validateWorkspaceMembership(
+      workspaceId,
+      userId,
+    );
+
+    // Validate channel membership - pass userId for owner/admin check
+    await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
+
+    await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
+
+    try {
+      const limit = Math.min(options?.limit || 50, 100);
+      const cursor = options?.cursor;
+      const direction = options?.direction || 'before';
+
+      let query: string;
+      let params: any[];
+
+      if (cursor) {
+        // Get cursor message timestamp
+        const [cursorMessage] = await this.dataSource.query(
+          `SELECT created_at FROM "${schemaName}".messages 
+           WHERE id = $1 AND channel_id = $2 AND member_id = $3 AND deleted_at IS NULL`,
+          [cursor, channelId, member.id],
+        );
+
+        if (!cursorMessage) {
+          throw new Error('Invalid cursor: message not found');
+        }
+
+        const cursorTimestamp = cursorMessage.created_at;
+
+        if (direction === 'before') {
+          query = `SELECT * FROM "${schemaName}".messages 
+                   WHERE channel_id = $1 
+                   AND member_id = $2
+                   AND deleted_at IS NULL
+                   AND created_at < $3
+                   ORDER BY created_at DESC
+                   LIMIT $4`;
+          params = [channelId, member.id, cursorTimestamp, limit + 1];
+        } else {
+          query = `SELECT * FROM "${schemaName}".messages 
+                   WHERE channel_id = $1 
+                   AND member_id = $2
+                   AND deleted_at IS NULL
+                   AND created_at > $3
+                   ORDER BY created_at ASC
+                   LIMIT $4`;
+          params = [channelId, member.id, cursorTimestamp, limit + 1];
+        }
+      } else {
+        query = `SELECT * FROM "${schemaName}".messages 
+                 WHERE channel_id = $1 
+                 AND member_id = $2
+                 AND deleted_at IS NULL
+                 ORDER BY created_at DESC
+                 LIMIT $3`;
+        params = [channelId, member.id, limit + 1];
+      }
+
+      const results = await this.dataSource.query(query, params);
+
+      const hasMore = results.length > limit;
+      const messages = hasMore ? results.slice(0, limit) : results;
+
+      let nextCursor: string | null = null;
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        nextCursor = lastMessage.id;
+      }
+
+      const orderedMessages = direction === 'after' ? messages.reverse() : messages;
+
+      const mappedMessages = orderedMessages.map((result: any) => ({
+        id: result.id,
+        channelId: result.channel_id,
+        memberId: result.member_id,
+        content: result.content,
+        type: result.type || 'text',
+        threadId: result.thread_id,
+        isEdited: result.is_edited,
+        createdAt: result.created_at,
+        updatedAt: result.updated_at,
+        deletedAt: result.deleted_at || null,
+      }));
+
+      this.logger.log(
+        `Retrieved ${mappedMessages.length} messages by member ${member.id} in channel ${channelId}`,
+      );
+
+      return {
+        messages: mappedMessages,
+        nextCursor: hasMore ? nextCursor : null,
+        hasMore,
+      };
+    } catch (error) {
+      this.logger.error('Error fetching messages by member:', error);
+      throw error;
+    } finally {
+      await this.dataSource.query(`SET search_path TO public`);
+    }
+  }
   /**
    * Get a message by ID
    */
