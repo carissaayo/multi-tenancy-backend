@@ -55,22 +55,75 @@ export class MessageService {
 
   /**
    * Helper method to validate channel membership
+   * - Channel members always have access
+   * - Workspace owners and admins have access to public channels (even if not members)
+   * - Private channels require explicit membership (even for owners/admins)
    * @throws customError.forbidden if user is not a member of the channel
    */
   private async validateChannelMembership(
     channelId: string,
     memberId: string,
     workspaceId: string,
+    userId: string, // Add userId parameter to check ownership
   ): Promise<void> {
+    // First check if user is a channel member
     const isChannelMember = await this.channelMembershipService.isUserMember(
       channelId,
       memberId,
       workspaceId,
     );
-    if (!isChannelMember) {
-      throw customError.forbidden('You are not a member of this channel');
+
+    if (isChannelMember) {
+      return; // User is a member, allow access
     }
+
+    // If not a member, check if channel is public and user is owner/admin
+    const workspace = await this.workspacesService.findById(workspaceId);
+    if (!workspace) {
+      throw customError.notFound('Workspace not found');
+    }
+
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    // Check if channel exists and if it's private
+    const [channel] = await this.dataSource.query(
+      `SELECT name, is_private FROM "${schemaName}".channels WHERE id = $1`,
+      [channelId],
+    );
+
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+
+    // If channel is private, deny access (even for owners/admins unless they're members)
+    if (channel.is_private) {
+      throw customError.forbidden(
+        'You are not a member of this private channel',
+      );
+    }
+
+    // Channel is public - check if user is workspace owner or admin
+    const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
+
+    // Check if user is admin
+    const member = await this.memberService.isUserMember(workspaceId, userId);
+    const isAdmin = member?.role === 'admin' || member?.role === 'owner';
+
+    if (isOwner || isAdmin) {
+      this.logger.debug(
+        `Allowing ${isOwner ? 'owner' : 'admin'} ${userId} access to public channel ${channel.name}`,
+      );
+      return; // Allow access for owners/admins to public channels
+    }
+
+    // User is not a member and not owner/admin
+    throw customError.forbidden('You are not a member of this channel');
   }
+
+
 
   /**
    * Create a new message in a channel
@@ -88,7 +141,7 @@ export class MessageService {
       userId,
     );
    
-    await this.validateChannelMembership(channelId, member.id, workspaceId);
+    await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
 
     // Set search path to workspace schema
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
@@ -148,9 +201,10 @@ export class MessageService {
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
+
   /**
-    * Get messages for a channel with cursor-based pagination
-    */
+   * Get messages for a channel with cursor-based pagination
+   */
   async getChannelMessages(
     req: AuthenticatedRequest,
     channelId: string,
@@ -165,14 +219,15 @@ export class MessageService {
     const limit = Math.min(Number(req.query?.limit) || 50, 100);
     const cursor = req.query?.cursor as string;
     const direction = req.query?.direction as 'before' | 'after' || 'before';
+
     // Validate workspace membership and get schema name and member
     const { member, schemaName } = await this.validateWorkspaceMembership(
       workspaceId,
       userId,
     );
 
-    // Validate channel membership
-    await this.validateChannelMembership(channelId, member.id, workspaceId);
+    // Validate channel membership - pass userId for owner/admin check
+    await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
 
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
@@ -257,7 +312,6 @@ export class MessageService {
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
-
   /**
    * Get a message by ID
    */
@@ -293,6 +347,7 @@ export class MessageService {
         result.channel_id,
         member.id,
         workspaceId,
+        userId,
       );
 
       return {
@@ -350,6 +405,7 @@ export class MessageService {
         existingMessage.channel_id,
         member.id,
         req.workspaceId!,
+        req.userId,
       );
 
       // Update the message
@@ -420,6 +476,7 @@ export class MessageService {
         existingMessage.channel_id,
         member.id,
         req.workspaceId!,
+        req.userId,
       );
 
       // Soft delete the message
@@ -498,6 +555,7 @@ export class MessageService {
         existingMessage.channel_id,
         member.id,
         workspaceId,
+        userId,
       );
 
       // Soft delete the message
