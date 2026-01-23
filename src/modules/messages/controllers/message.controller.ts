@@ -12,7 +12,7 @@ export class MessageController {
 
 
     }
-    @Get('')
+    @Get(':id')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Get messages' })
     @ApiResponse({
