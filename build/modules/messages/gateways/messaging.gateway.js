@@ -19,14 +19,17 @@ const socket_io_1 = require("socket.io");
 const common_1 = require("@nestjs/common");
 const ws_auth_guard_1 = require("../guards/ws-auth.guard");
 const message_service_1 = require("../services/message.service");
+const auth_domain_service_1 = require("../../../core/security/services/auth-domain.service");
 let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
     messageService;
+    authDomain;
     server;
     logger = new common_1.Logger(MessagingGateway_1.name);
     userSockets = new Map();
     workspaceRooms = new Map();
-    constructor(messageService) {
+    constructor(messageService, authDomain) {
         this.messageService = messageService;
+        this.authDomain = authDomain;
     }
     afterInit(server) {
         this.logger.log('WebSocket Gateway initialized');
@@ -34,18 +37,41 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
     async handleConnection(client) {
         this.logger.log(`Client attempting to connect: ${client.id}`);
         try {
-            const token = client.handshake.auth.token ||
-                client.handshake.headers.authorization?.replace('Bearer ', '');
+            const token = client.handshake.auth?.token ||
+                client.handshake.headers?.authorization?.replace('Bearer ', '');
             if (!token) {
                 this.logger.warn(`Client ${client.id} rejected: No token provided`);
-                client.disconnect();
+                client.emit('error', {
+                    message: 'Authentication required',
+                    code: 'NO_TOKEN'
+                });
+                setTimeout(() => {
+                    if (client.connected) {
+                        client.disconnect(true);
+                    }
+                }, 100);
                 return;
             }
-            this.logger.log(`Client connected: ${client.id}`);
+            const auth = await this.authDomain.validateAccessToken(token);
+            client.userId = auth.userId;
+            client.workspaceId = auth.workspaceId;
+            if (!this.userSockets.has(auth.userId)) {
+                this.userSockets.set(auth.userId, new Set());
+            }
+            this.userSockets.get(auth.userId).add(client.id);
+            this.logger.log(`Client ${client.id} connected successfully (user: ${auth.userId})`);
         }
         catch (error) {
-            this.logger.error(`Connection error for client ${client.id}:`, error);
-            client.disconnect();
+            this.logger.warn(`Client ${client.id} authentication failed: ${error?.message || 'Unknown error'}`);
+            client.emit('error', {
+                message: error?.message || 'Authentication failed',
+                code: error?.code || 'AUTH_FAILED'
+            });
+            setTimeout(() => {
+                if (client.connected) {
+                    client.disconnect(true);
+                }
+            }, 100);
         }
     }
     handleDisconnect(client) {
@@ -177,15 +203,25 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
             return;
         }
         const roomName = `workspace:${workspaceId}`;
+        const namespace = this.server.of('/messaging');
         for (const socketId of userSocketIds) {
-            const socket = this.server.sockets.sockets.get(socketId);
-            if (socket) {
-                await socket.join(roomName);
-                if (!this.workspaceRooms.has(workspaceId)) {
-                    this.workspaceRooms.set(workspaceId, new Set());
+            try {
+                const socket = namespace.sockets.get(socketId);
+                if (socket) {
+                    await socket.join(roomName);
+                    if (!this.workspaceRooms.has(workspaceId)) {
+                        this.workspaceRooms.set(workspaceId, new Set());
+                    }
+                    this.workspaceRooms.get(workspaceId).add(socketId);
+                    this.logger.log(`Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`);
                 }
-                this.workspaceRooms.get(workspaceId).add(socketId);
-                this.logger.log(`Socket ${socketId} (user: ${userId}) joined workspace ${workspaceId}`);
+                else {
+                    this.logger.warn(`Socket ${socketId} not found in namespace, may have disconnected`);
+                    userSocketIds.delete(socketId);
+                }
+            }
+            catch (error) {
+                this.logger.error(`Error joining socket ${socketId} to workspace ${workspaceId}:`, error);
             }
         }
         this.emitToUser(userId, 'workspaceJoined', {
@@ -253,6 +289,7 @@ exports.MessagingGateway = MessagingGateway = MessagingGateway_1 = __decorate([
         },
         namespace: '/messaging',
     }),
-    __metadata("design:paramtypes", [message_service_1.MessageService])
+    __metadata("design:paramtypes", [message_service_1.MessageService,
+        auth_domain_service_1.AuthDomainService])
 ], MessagingGateway);
 //# sourceMappingURL=messaging.gateway.js.map

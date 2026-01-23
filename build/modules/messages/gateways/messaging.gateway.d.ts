@@ -2,13 +2,15 @@ import { OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit } from '@nestjs
 import { Server, Socket } from 'socket.io';
 import type { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interface';
 import { MessageService } from '../services/message.service';
+import { AuthDomainService } from 'src/core/security/services/auth-domain.service';
 export declare class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private readonly messageService;
+    private readonly authDomain;
     server: Server;
     private readonly logger;
     private userSockets;
     private workspaceRooms;
-    constructor(messageService: MessageService);
+    constructor(messageService: MessageService, authDomain: AuthDomainService);
     afterInit(server: Server): void;
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): void;

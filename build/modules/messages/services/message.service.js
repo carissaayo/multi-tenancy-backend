@@ -41,10 +41,31 @@ let MessageService = MessageService_1 = class MessageService {
         const schemaName = `workspace_${sanitizedSlug}`;
         await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
         try {
-            const [result] = await this.dataSource.query(`INSERT INTO "${schemaName}".messages 
-         (channel_id, member_id, content, thread_id, type, is_edited, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-         RETURNING *`, [channelId, member.id, content, threadId || null, 'text', false]);
+            const columnCheck = await this.dataSource.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = $1 
+      AND table_name = 'messages' 
+      AND column_name = 'type'
+    `, [schemaName]);
+            const hasTypeColumn = columnCheck.length > 0;
+            let query;
+            let params;
+            if (hasTypeColumn) {
+                query = `INSERT INTO "${schemaName}".messages 
+               (channel_id, member_id, content, thread_id, type, is_edited, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+               RETURNING *`;
+                params = [channelId, member.id, content, threadId || null, 'text', false];
+            }
+            else {
+                query = `INSERT INTO "${schemaName}".messages 
+               (channel_id, member_id, content, thread_id, is_edited, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+               RETURNING *`;
+                params = [channelId, member.id, content, threadId || null, false];
+            }
+            const [result] = await this.dataSource.query(query, params);
             const message = {
                 id: result.id,
                 channelId: result.channel_id,
@@ -55,7 +76,7 @@ let MessageService = MessageService_1 = class MessageService {
                 isEdited: result.is_edited,
                 createdAt: result.created_at,
                 updatedAt: result.updated_at,
-                deletedAt: result.deleted_at,
+                deletedAt: result.deleted_at || null,
             };
             return message;
         }
