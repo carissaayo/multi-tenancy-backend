@@ -22,7 +22,9 @@ export class ChannelMembershipService {
     private readonly dataSource: DataSource,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
+    @Inject(forwardRef(() => MemberService))
     private readonly memberService: MemberService,
     private readonly channelQueryService: ChannelQueryService,
     private readonly tokenManager: TokenManager,

@@ -223,9 +223,10 @@ export class MessagingGateway
       content: string;
       workspaceId: string;
       threadId?: string;
+      userId:string,
     },
   ) {
-    const { channelId, content, workspaceId, threadId } = data;
+    const { channelId, content, workspaceId, threadId, userId } = data;
 
     if (!content || content.trim().length === 0) {
       return {
@@ -239,7 +240,7 @@ export class MessagingGateway
       const message = await this.messageService.createMessage(
         workspaceId,
         channelId,
-        client.userId,
+        userId,
         content.trim(),
         threadId,
       );

@@ -30,8 +30,8 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
       ChannelMemberEntity,
       ChannelInvitation,
     ]),
-    MemberModule,
-    WorkspaceModule,
+    forwardRef(() => MemberModule),
+    forwardRef(() => WorkspaceModule),
     SecurityModule,
     forwardRef(() => MessageModule),
   ],
@@ -50,6 +50,10 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
     ChannelInviteService,
     EmailService,
   ],
-  exports: [ChannelService],
+  exports: [
+    ChannelService,
+    ChannelMembershipService,
+
+  ],
 })
-export class ChannelModule {}
+export class ChannelModule { }

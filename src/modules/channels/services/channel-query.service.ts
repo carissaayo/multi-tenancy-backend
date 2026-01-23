@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +15,7 @@ export class ChannelQueryService {
     private readonly dataSource: DataSource,
     @InjectRepository(Workspace)
     private readonly workspaceRepo: Repository<Workspace>,
+    @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
   ) {}
 

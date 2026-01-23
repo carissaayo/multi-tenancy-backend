@@ -6,6 +6,7 @@ import { SecurityModule } from 'src/core/security/security.module';
 import { UserModule } from '../users/user.module';
 import { MemberModule } from '../members/member.module';
 import { MessageModule } from '../messages/message.module';
+import { ChannelModule } from '../channels/channel.module';
 
 import { WorkspacesService } from './services/workspace.service';
 import { WorkspaceQueryService } from './services/workspace-query.service';
@@ -40,6 +41,8 @@ import { WorkspaceMember } from 'src/core/security/decorators/workspace-member.d
     UserModule,
     forwardRef(() => MemberModule),
     forwardRef(() => MessageModule),
+    forwardRef(() => ChannelModule),
+    
   ],
   providers: [
     WorkspacesService,

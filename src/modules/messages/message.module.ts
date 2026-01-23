@@ -6,6 +6,7 @@ import { StringValue } from 'ms';
 import { WorkspaceModule } from '../workspaces/workspace.module';
 import { MemberModule } from '../members/member.module';
 import { SecurityModule } from 'src/core/security/security.module';
+import { ChannelModule } from '../channels/channel.module';
 
 import { MessagingGateway } from './gateways/messaging.gateway';
 import { MessageService } from './services/message.service';
@@ -26,6 +27,7 @@ import { MessageService } from './services/message.service';
     forwardRef(() => WorkspaceModule),
     forwardRef(() => MemberModule),
     forwardRef(() => SecurityModule),
+    forwardRef(() => ChannelModule),
   ],
   providers: [MessagingGateway, MessageService],
   exports: [MessagingGateway, MessageService],
