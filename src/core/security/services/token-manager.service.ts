@@ -38,7 +38,7 @@ export class TokenManager {
     res: Response,
     expiredAccessToken: string,
     refreshToken: string,
-  ): Promise<AuthResult> {
+  ): Promise<AuthResult & { accessToken?: string }> {
     try {
       const decodedRefresh = this.jwtService.verify(refreshToken, {
         secret: appConfig.jwt.refresh_token_secret,
@@ -76,10 +76,49 @@ export class TokenManager {
       storedToken.lastUsedAt = new Date();
       await this.refreshTokenRepo.save(storedToken);
 
-      // ⛔ Do NOT issue workspace-scoped token here
-      // Client must reselect workspace
+      // Generate new access token with same workspace context if available
+      let newAccessToken: string;
+      if (expiredDecoded?.workspaceId) {
+        // If there was a workspace context, try to preserve it
+        // Note: This requires member lookup - simplified version
+        newAccessToken = this.jwtService.sign(
+          {
+            sub: user.id,
+            email: user.email,
+            workspaceId: expiredDecoded.workspaceId,
+            isActive: user.isActive,
+            iat: Math.floor(Date.now() / 1000),
+          },
+          {
+            expiresIn: appConfig.jwt.duration10m as StringValue,
+            secret: appConfig.jwt.access_token_secret,
+          },
+        );
+      } else {
+        // Global token (no workspace)
+        newAccessToken = this.jwtService.sign(
+          {
+            sub: user.id,
+            email: user.email,
+            type: 'global',
+            isActive: user.isActive,
+            iat: Math.floor(Date.now() / 1000),
+          },
+          {
+            expiresIn: appConfig.jwt.duration10m as StringValue,
+            secret: appConfig.jwt.access_token_secret,
+          },
+        );
+      }
 
-      return { success: true, user };
+      // Set new access token in response header
+      res.setHeader('X-New-Access-Token', newAccessToken);
+
+      return {
+        success: true,
+        user,
+        accessToken: newAccessToken, // Also return it for convenience
+      };
     } catch (err) {
       res.status(HttpStatus.UNAUTHORIZED).json({
         success: false,
@@ -99,7 +138,7 @@ export class TokenManager {
     userId: string,
     refreshToken: string,
     req?: Request,
-    expiresIn: StringValue = '7d',
+    expiresIn: StringValue = '1d', 
   ): Promise<void> {
     const tokenHash = this.hashToken(refreshToken);
     const expiresMs = ms(expiresIn);
@@ -140,21 +179,13 @@ export class TokenManager {
     options?: { loginType?: boolean },
   ): Promise<{ accessToken: string; refreshToken?: string }> {
     const workspace = req.workspace;
-    const member = req.workspaceMember;
-    const memberRole = req.workspaceMemberRole;
-    // if (!workspace || !member) {
-    //   throw customError.badRequest(
-    //     'Workspace context required to issue access token',
-    //   );
-    // }
+
 
     const accessToken = this.jwtService.sign(
       {
         sub: user.id,
         email: user.email,
         workspaceId: workspace,
-        // memberId: member,
-        // role: memberRole,
         isActive: user.isActive,
         iat: Math.floor(Date.now() / 1000),
       },

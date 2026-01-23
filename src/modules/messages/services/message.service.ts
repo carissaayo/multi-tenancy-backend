@@ -70,6 +70,8 @@ export class MessageService {
     workspaceId: string,
     userId: string,
   ): Promise<void> {
+    console.log(channelId,"channelId");
+    
     // First check if user is a channel member
     const isChannelMember = await this.channelMembershipService.isUserMember(
       channelId,
@@ -215,6 +217,7 @@ export class MessageService {
   }> {
     const userId = req.userId;
     const workspaceId = req.workspaceId!;
+console.log(channelId,"channelId");
 
     const limit = Math.min(Number(req.query?.limit) || 50, 100);
     const cursor = req.query?.cursor as string;

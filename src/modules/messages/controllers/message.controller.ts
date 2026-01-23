@@ -12,7 +12,7 @@ export class MessageController {
 
 
     }
-    @Get(':id')
+    @Get(':channelId')
     @ApiBearerAuth('access-token')
     @ApiOperation({ summary: 'Get messages' })
     @ApiResponse({

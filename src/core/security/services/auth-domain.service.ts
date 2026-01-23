@@ -17,7 +17,7 @@ export class AuthDomainService {
     private readonly jwtService: JwtService,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   async validateAccessToken(token: string): Promise<{
     user: User;
@@ -34,9 +34,10 @@ export class AuthDomainService {
         workspaceId?: string;
       };
     } catch (error) {
+      // Re-throw TokenExpiredError so it can be caught and handled for refresh
       if (error instanceof TokenExpiredError) {
         this.logger.warn('Token expired');
-        throw new UnauthorizedException('Token expired');
+        throw error; // Re-throw the original TokenExpiredError
       }
       if (error instanceof JsonWebTokenError) {
         this.logger.warn('Invalid token format');
