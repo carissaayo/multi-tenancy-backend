@@ -14,6 +14,7 @@ const security_module_1 = require("../../core/security/security.module");
 const user_module_1 = require("../users/user.module");
 const member_module_1 = require("../members/member.module");
 const message_module_1 = require("../messages/message.module");
+const channel_module_1 = require("../channels/channel.module");
 const workspace_service_1 = require("./services/workspace.service");
 const workspace_query_service_1 = require("./services/workspace-query.service");
 const workspace_membership_service_1 = require("./services/workspace-membership.service");
@@ -48,6 +49,7 @@ exports.WorkspaceModule = WorkspaceModule = __decorate([
             user_module_1.UserModule,
             (0, common_1.forwardRef)(() => member_module_1.MemberModule),
             (0, common_1.forwardRef)(() => message_module_1.MessageModule),
+            (0, common_1.forwardRef)(() => channel_module_1.ChannelModule),
         ],
         providers: [
             workspace_service_1.WorkspacesService,

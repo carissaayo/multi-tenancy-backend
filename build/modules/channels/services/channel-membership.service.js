@@ -280,6 +280,8 @@ exports.ChannelMembershipService = ChannelMembershipService;
 exports.ChannelMembershipService = ChannelMembershipService = ChannelMembershipService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(1, (0, typeorm_2.InjectRepository)(workspace_entity_1.Workspace)),
+    __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => workspace_service_1.WorkspacesService))),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => member_service_1.MemberService))),
     __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => messaging_gateway_1.MessagingGateway))),
     __metadata("design:paramtypes", [typeorm_1.DataSource,
         typeorm_3.Repository,

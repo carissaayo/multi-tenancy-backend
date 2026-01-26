@@ -238,7 +238,7 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
         const schemaName = `workspace_${sanitizedSlug}`;
         await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
         await queryRunner.query(`
-    CREATE TABLE "${schemaName}".members (
+    CREATE TABLE IF NOT EXISTS "${schemaName}".members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL,
       role VARCHAR(50) NOT NULL,
@@ -251,11 +251,11 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
     )
   `);
         await queryRunner.query(`
-    CREATE INDEX idx_${schemaName}_members_user_id
+    CREATE INDEX IF NOT EXISTS idx_${schemaName}_members_user_id
     ON "${schemaName}".members(user_id)
   `);
         await queryRunner.query(`
-    CREATE TABLE "${schemaName}".channels (
+    CREATE TABLE IF NOT EXISTS "${schemaName}".channels (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR(100) NOT NULL,
       description TEXT,
@@ -266,7 +266,7 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
     )
   `);
         await queryRunner.query(`
-    CREATE TABLE "${schemaName}".channel_members (
+    CREATE TABLE IF NOT EXISTS "${schemaName}".channel_members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       channel_id UUID NOT NULL
         REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
@@ -277,7 +277,7 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
     )
   `);
         await queryRunner.query(`
-  CREATE TABLE "${schemaName}".messages (
+  CREATE TABLE IF NOT EXISTS "${schemaName}".messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     channel_id UUID NOT NULL
       REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
@@ -294,15 +294,15 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
   )
 `);
         await queryRunner.query(`
-  CREATE INDEX idx_${schemaName}_messages_channel_created
+  CREATE INDEX IF NOT EXISTS idx_${schemaName}_messages_channel_created
   ON "${schemaName}".messages(channel_id, created_at)
 `);
         await queryRunner.query(`
-  CREATE INDEX idx_${schemaName}_messages_thread
+  CREATE INDEX IF NOT EXISTS idx_${schemaName}_messages_thread
   ON "${schemaName}".messages(thread_id)
 `);
         await queryRunner.query(`
-    CREATE TABLE "${schemaName}".files (
+    CREATE TABLE IF NOT EXISTS "${schemaName}".files (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       channel_id UUID NOT NULL
         REFERENCES "${schemaName}".channels(id) ON DELETE CASCADE,
@@ -316,7 +316,7 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
     )
   `);
         await queryRunner.query(`
-    CREATE TABLE "${schemaName}".reactions (
+    CREATE TABLE IF NOT EXISTS "${schemaName}".reactions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       message_id UUID NOT NULL
         REFERENCES "${schemaName}".messages(id) ON DELETE CASCADE,

@@ -43,7 +43,7 @@ let AuthDomainService = AuthDomainService_1 = class AuthDomainService {
         catch (error) {
             if (error instanceof jsonwebtoken_1.TokenExpiredError) {
                 this.logger.warn('Token expired');
-                throw new common_1.UnauthorizedException('Token expired');
+                throw error;
             }
             if (error instanceof jsonwebtoken_1.JsonWebTokenError) {
                 this.logger.warn('Invalid token format');

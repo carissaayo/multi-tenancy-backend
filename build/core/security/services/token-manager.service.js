@@ -66,7 +66,37 @@ let TokenManager = TokenManager_1 = class TokenManager {
             }
             storedToken.lastUsedAt = new Date();
             await this.refreshTokenRepo.save(storedToken);
-            return { success: true, user };
+            let newAccessToken;
+            if (expiredDecoded?.workspaceId) {
+                newAccessToken = this.jwtService.sign({
+                    sub: user.id,
+                    email: user.email,
+                    workspaceId: expiredDecoded.workspaceId,
+                    isActive: user.isActive,
+                    iat: Math.floor(Date.now() / 1000),
+                }, {
+                    expiresIn: appConfig.jwt.duration10m,
+                    secret: appConfig.jwt.access_token_secret,
+                });
+            }
+            else {
+                newAccessToken = this.jwtService.sign({
+                    sub: user.id,
+                    email: user.email,
+                    type: 'global',
+                    isActive: user.isActive,
+                    iat: Math.floor(Date.now() / 1000),
+                }, {
+                    expiresIn: appConfig.jwt.duration10m,
+                    secret: appConfig.jwt.access_token_secret,
+                });
+            }
+            res.setHeader('X-New-Access-Token', newAccessToken);
+            return {
+                success: true,
+                user,
+                accessToken: newAccessToken,
+            };
         }
         catch (err) {
             res.status(common_1.HttpStatus.UNAUTHORIZED).json({
@@ -79,7 +109,7 @@ let TokenManager = TokenManager_1 = class TokenManager {
     hashToken(token) {
         return require('crypto').createHash('sha256').update(token).digest('hex');
     }
-    async storeRefreshToken(userId, refreshToken, req, expiresIn = '7d') {
+    async storeRefreshToken(userId, refreshToken, req, expiresIn = '1d') {
         const tokenHash = this.hashToken(refreshToken);
         const expiresMs = (0, ms_1.default)(expiresIn);
         const expiresAt = new Date(Date.now() + expiresMs);
@@ -107,8 +137,6 @@ let TokenManager = TokenManager_1 = class TokenManager {
     }
     async signTokens(user, req, options) {
         const workspace = req.workspace;
-        const member = req.workspaceMember;
-        const memberRole = req.workspaceMemberRole;
         const accessToken = this.jwtService.sign({
             sub: user.id,
             email: user.email,

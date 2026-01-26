@@ -38,8 +38,8 @@ exports.ChannelModule = ChannelModule = __decorate([
                 channel_member_entity_1.ChannelMemberEntity,
                 channel_invitations_entity_1.ChannelInvitation,
             ]),
-            member_module_1.MemberModule,
-            workspace_module_1.WorkspaceModule,
+            (0, common_1.forwardRef)(() => member_module_1.MemberModule),
+            (0, common_1.forwardRef)(() => workspace_module_1.WorkspaceModule),
             security_module_1.SecurityModule,
             (0, common_1.forwardRef)(() => message_module_1.MessageModule),
         ],
@@ -58,7 +58,11 @@ exports.ChannelModule = ChannelModule = __decorate([
             channel_invite_service_1.ChannelInviteService,
             email_service_1.EmailService,
         ],
-        exports: [channel_service_1.ChannelService],
+        exports: [
+            channel_service_1.ChannelService,
+            channel_membership_service_1.ChannelMembershipService,
+            channel_query_service_1.ChannelQueryService
+        ],
     })
 ], ChannelModule);
 //# sourceMappingURL=channel.module.js.map

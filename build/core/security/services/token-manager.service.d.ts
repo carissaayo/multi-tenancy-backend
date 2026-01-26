@@ -12,7 +12,9 @@ export declare class TokenManager {
     private readonly refreshTokenRepo;
     private readonly logger;
     constructor(jwtService: JwtService, userRepo: Repository<User>, refreshTokenRepo: Repository<RefreshToken>);
-    handleTokenRefresh(req: Request, res: Response, expiredAccessToken: string, refreshToken: string): Promise<AuthResult>;
+    handleTokenRefresh(req: Request, res: Response, expiredAccessToken: string, refreshToken: string): Promise<AuthResult & {
+        accessToken?: string;
+    }>;
     private hashToken;
     private storeRefreshToken;
     private getClientIP;

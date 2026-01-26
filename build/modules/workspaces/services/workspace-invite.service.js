@@ -52,15 +52,17 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const crypto = __importStar(require("crypto"));
 const config_1 = require("@nestjs/config");
-const workspace_initations_entity_1 = require("../entities/workspace_initations.entity");
-const user_entity_1 = require("../../users/entities/user.entity");
-const custom_errors_1 = require("../../../core/error-handler/custom-errors");
 const member_service_1 = require("../../members/services/member.service");
-const permission_interface_1 = require("../../../core/security/interfaces/permission.interface");
 const email_service_1 = require("../../../core/email/services/email.service");
 const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
-const workspace_interface_1 = require("../interfaces/workspace.interface");
 const messaging_gateway_1 = require("../../messages/gateways/messaging.gateway");
+const workspace_service_1 = require("./workspace.service");
+const channel_membership_service_1 = require("../../channels/services/channel-membership.service");
+const workspace_initations_entity_1 = require("../entities/workspace_initations.entity");
+const permission_interface_1 = require("../../../core/security/interfaces/permission.interface");
+const user_entity_1 = require("../../users/entities/user.entity");
+const custom_errors_1 = require("../../../core/error-handler/custom-errors");
+const workspace_interface_1 = require("../interfaces/workspace.interface");
 let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteService {
     workspaceInvitationRepo;
     userRepo;
@@ -69,9 +71,12 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
     configService;
     tokenManager;
     messagingGateway;
+    dataSource;
+    workspaceService;
+    channelMembershipService;
     logger = new common_1.Logger(WorkspaceInviteService_1.name);
     INIVTE_EXPIRY_DAYS = 1;
-    constructor(workspaceInvitationRepo, userRepo, memberService, emailService, configService, tokenManager, messagingGateway) {
+    constructor(workspaceInvitationRepo, userRepo, memberService, emailService, configService, tokenManager, messagingGateway, dataSource, workspaceService, channelMembershipService) {
         this.workspaceInvitationRepo = workspaceInvitationRepo;
         this.userRepo = userRepo;
         this.memberService = memberService;
@@ -79,6 +84,9 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
         this.configService = configService;
         this.tokenManager = tokenManager;
         this.messagingGateway = messagingGateway;
+        this.dataSource = dataSource;
+        this.workspaceService = workspaceService;
+        this.channelMembershipService = channelMembershipService;
     }
     async inviteByEmail(req, inviteDto) {
         const { email, role } = inviteDto;
@@ -191,7 +199,8 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
         if (!inviter) {
             throw custom_errors_1.customError.notFound('Inviter not found');
         }
-        await this.memberService.addMemberToWorkspace(workspace.id, user.id, invitation.role ?? workspace_interface_1.WorkspaceInvitationRole.MEMBER);
+        const newMember = await this.memberService.addMemberToWorkspace(workspace.id, user.id, invitation.role ?? workspace_interface_1.WorkspaceInvitationRole.MEMBER);
+        await this.addMemberToDefaultChannels(workspace.id, newMember.id);
         await this.messagingGateway.joinUserToWorkspace(user.id, workspace.id);
         this.messagingGateway.emitToUser(user.id, 'workspaceJoined', {
             workspace: {
@@ -253,6 +262,45 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
             refreshToken: tokens.refreshToken || '',
         };
     }
+    async addMemberToDefaultChannels(workspaceId, memberId) {
+        try {
+            const workspace = await this.workspaceService.findById(workspaceId);
+            if (!workspace) {
+                this.logger.warn(`Workspace ${workspaceId} not found, skipping default channel join`);
+                return;
+            }
+            const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(workspace.slug);
+            const schemaName = `workspace_${sanitizedSlug}`;
+            const defaultChannels = await this.dataSource.query(`
+        SELECT id, name 
+        FROM "${schemaName}".channels 
+        WHERE name IN ('general', 'random') 
+        AND is_private = false
+        ORDER BY name
+      `);
+            if (!defaultChannels || defaultChannels.length === 0) {
+                this.logger.warn(`No default channels found in workspace ${workspaceId}, skipping`);
+                return;
+            }
+            for (const channel of defaultChannels) {
+                try {
+                    await this.channelMembershipService.addMemberToChannel(channel.id, memberId, workspaceId);
+                    this.logger.log(`Added member ${memberId} to default channel ${channel.name} (${channel.id}) in workspace ${workspaceId}`);
+                }
+                catch (error) {
+                    if (error.message?.includes('already')) {
+                        this.logger.debug(`Member ${memberId} already in channel ${channel.name}`);
+                    }
+                    else {
+                        this.logger.error(`Failed to add member ${memberId} to channel ${channel.name}: ${error.message}`);
+                    }
+                }
+            }
+        }
+        catch (error) {
+            this.logger.error(`Error adding member ${memberId} to default channels in workspace ${workspaceId}: ${error.message}`);
+        }
+    }
     async listPendingInvites(workspaceId) { }
     async hasInvitePermission(workspaceId, userId, workspace) {
         if (workspace.createdBy === userId || workspace.ownerId === userId) {
@@ -280,12 +328,17 @@ exports.WorkspaceInviteService = WorkspaceInviteService = WorkspaceInviteService
     __param(1, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __param(2, (0, common_1.Inject)((0, common_1.forwardRef)(() => member_service_1.MemberService))),
     __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => messaging_gateway_1.MessagingGateway))),
+    __param(8, (0, common_1.Inject)((0, common_1.forwardRef)(() => workspace_service_1.WorkspacesService))),
+    __param(9, (0, common_1.Inject)((0, common_1.forwardRef)(() => channel_membership_service_1.ChannelMembershipService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         member_service_1.MemberService,
         email_service_1.EmailService,
         config_1.ConfigService,
         token_manager_service_1.TokenManager,
-        messaging_gateway_1.MessagingGateway])
+        messaging_gateway_1.MessagingGateway,
+        typeorm_2.DataSource,
+        workspace_service_1.WorkspacesService,
+        channel_membership_service_1.ChannelMembershipService])
 ], WorkspaceInviteService);
 //# sourceMappingURL=workspace-invite.service.js.map
