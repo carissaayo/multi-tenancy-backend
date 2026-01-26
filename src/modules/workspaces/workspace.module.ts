@@ -61,6 +61,6 @@ import { WorkspaceMember } from 'src/core/security/decorators/workspace-member.d
     WorkspaceManagementController,
     WorkspaceSettingsController,
   ],
-  exports: [WorkspacesService],
+  exports: [WorkspacesService, WorkspaceQueryService],
 })
 export class WorkspaceModule {}

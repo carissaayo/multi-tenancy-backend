@@ -4,8 +4,18 @@ import { Repository } from 'typeorm';
 import bcrypt from 'bcryptjs';
 import { validate as isUUID } from 'uuid';
 
-import { User } from '../users/entities/user.entity';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
+import { UsersService } from '../users/services/user.service';
+import { MemberService } from '../members/services/member.service';
+import { EmailService } from 'src/core/email/services/email.service';
+import { WorkspaceQueryService } from '../workspaces/services/workspace-query.service';
+
+import { User } from '../users/entities/user.entity';
+import { Workspace } from '../workspaces/entities/workspace.entity';
+
+import { generateOtp } from 'src/utils/util';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { customError } from 'src/core/error-handler/custom-errors';
 import {
   ChangePasswordDTO,
   LoginDto,
@@ -15,14 +25,6 @@ import {
   SelectWorkspaceDTO,
   VerifyEmailDTO,
 } from './auth.dto';
-import { customError } from 'src/core/error-handler/custom-errors';
-import { generateOtp } from 'src/utils/util';
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { UsersService } from '../users/services/user.service';
-import { MemberService } from '../members/services/member.service';
-import { WorkspaceMember } from '../members/entities/member.entity';
-import { EmailService } from 'src/core/email/services/email.service';
-import { Workspace } from '../workspaces/entities/workspace.entity';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +37,8 @@ export class AuthService {
     private readonly memberService: MemberService,
     private readonly tokenManager: TokenManager,
     private readonly emailService: EmailService,
+    private readonly workspaceQueryService: WorkspaceQueryService,
+
   ) {}
 
   /* ---------------- REGISTER ---------------- */
@@ -133,6 +137,10 @@ export class AuthService {
       throw customError.forbidden('Not a member of this workspace');
     }
 
+    // Get workspace statistics (memberCount and channelCount)
+    const stats = await this.workspaceQueryService.getWorkspaceStats(workspaceId);
+
+
     // Issue workspace-scoped token
     const accessToken = this.tokenManager.signWorkspaceToken(
       user,
@@ -142,7 +150,12 @@ export class AuthService {
 
     return {
       accessToken,  
-      workspace: workspace,
+      workspace: {
+        ...workspace,
+        membersCount: stats.memberCount,
+        channelCount: stats.channelCount,
+        userRole: result.role,
+},
       message: 'Workspace context established',
     };
   }
