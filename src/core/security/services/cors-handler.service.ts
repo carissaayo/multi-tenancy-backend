@@ -22,7 +22,7 @@ export class CorsHandler {
         );
         res.setHeader(
           'Access-Control-Allow-Headers',
-          'Content-Type, Authorization, X-Requested-With, X-API-Key',
+          'Content-Type, Authorization, X-Requested-With, X-API-Key, x-workspace-slug',
         );
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Max-Age', '86400');
