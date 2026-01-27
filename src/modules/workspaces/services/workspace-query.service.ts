@@ -72,7 +72,8 @@ export class WorkspaceQueryService {
     );
 
     // Find which workspaces the user is a member of
-    const workspaceSlugs: string[] = [];
+
+    const workspaceData: Array<{ slug: string; memberCount: number }> = [];
 
     for (const row of workspaceSchemas) {
       const schemaName = row.schema_name;
@@ -81,52 +82,56 @@ export class WorkspaceQueryService {
         // Check if user is a member in this workspace schema
         const [member] = await this.dataSource.query(
           `SELECT 1 FROM "${schemaName}".members 
-         WHERE user_id = $1 AND is_active = true 
-         LIMIT 1`,
+       WHERE user_id = $1 AND is_active = true 
+       LIMIT 1`,
           [user.id],
         );
 
         if (member) {
-          // Extract slug from schema name (workspace_slug -> slug)
-          // Handle both sanitized (underscores) and original (hyphens) slugs
+          // Get member count while we're here
+          const [countResult] = await this.dataSource.query(
+            `SELECT COUNT(*) as count FROM "${schemaName}".members WHERE is_active = true`,
+          );
+
           const slugFromSchema = schemaName
             .replace('workspace_', '')
             .replace(/_/g, '-');
-          workspaceSlugs.push(slugFromSchema);
+
+          workspaceData.push({
+            slug: slugFromSchema,
+            memberCount: parseInt(countResult.count),
+          });
         }
       } catch (error) {
-        // Schema might not exist or be accessible, skip it
         this.logger.warn(
           `Failed to check membership in schema ${schemaName}: ${error.message}`,
         );
       }
     }
 
-    // Get workspace details from public schema
-    if (workspaceSlugs.length === 0) {
-      const tokens = await this.tokenManager.signTokens(user, req);
-      return {
-        workspaces: [],
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken || '',
-        message: 'No workspaces found',
-        totalWorkspacesCount: 0,
-      };
-    }
-    // Query workspaces with safe user fields
+    const workspaceSlugs = workspaceData.map(w => w.slug);
     const workspaces = await this.getMultipleWorkspacesWithSafeFields(
       workspaceSlugs,
       true,
     );
 
+    // Add member counts to workspaces
+    const workspacesWithCounts = workspaces.map(workspace => {
+      const data = workspaceData.find(w => w.slug === workspace.slug);
+      return {
+        ...workspace,
+        membersCount: data?.memberCount || 0,
+      };
+    });
+
     const tokens = await this.tokenManager.signTokens(user, req);
 
     return {
-      workspaces: workspaces,
+      workspaces: workspacesWithCounts, // Return workspaces with member counts
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
       message: 'Workspaces fetched successfully',
-      totalWorkspacesCount: workspaces.length,
+      totalWorkspacesCount: workspacesWithCounts.length,
     };
   }
 
