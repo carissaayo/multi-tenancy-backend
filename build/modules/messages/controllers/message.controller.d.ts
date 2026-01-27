@@ -1,15 +1,20 @@
 import { MessageService } from "../services/message.service";
 import type { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
-import { GetMessagesDto, UpdateMessageDto } from "../dtos/message.dto";
+import { UpdateMessageDto } from "../dtos/message.dto";
 export declare class MessageController {
     private readonly messageService;
     constructor(messageService: MessageService);
-    getMessages(req: AuthenticatedRequest, dto: GetMessagesDto): Promise<{
+    getChannelMessages(req: AuthenticatedRequest, channelId: string, limit?: number, cursor?: string, direction?: 'before' | 'after'): Promise<{
         messages: import("../entities/message.entity").Message[];
         nextCursor: string | null;
         hasMore: boolean;
     }>;
-    getMessagesByMember(req: AuthenticatedRequest, dto: GetMessagesDto): Promise<{
+    getMyMessages(req: AuthenticatedRequest, channelId?: string, limit?: number, cursor?: string, direction?: 'before' | 'after'): Promise<{
+        messages: import("../entities/message.entity").Message[];
+        nextCursor: string | null;
+        hasMore: boolean;
+    }>;
+    getMemberMessages(req: AuthenticatedRequest, memberId: string, channelId?: string, limit?: number, cursor?: string, direction?: 'before' | 'after'): Promise<{
         messages: import("../entities/message.entity").Message[];
         nextCursor: string | null;
         hasMore: boolean;

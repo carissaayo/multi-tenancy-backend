@@ -17,7 +17,7 @@ export declare class MessageService {
     private validateWorkspaceMembership;
     private validateChannelMembership;
     createMessage(workspaceId: string, channelId: string, userId: string, content: string, threadId?: string): Promise<Message>;
-    getChannelMessages(req: AuthenticatedRequest, dto: GetMessagesDto): Promise<{
+    getChannelMessages(req: AuthenticatedRequest, channelId: string): Promise<{
         messages: Message[];
         nextCursor: string | null;
         hasMore: boolean;

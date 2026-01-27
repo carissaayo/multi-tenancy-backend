@@ -22,11 +22,26 @@ let MessageController = class MessageController {
     constructor(messageService) {
         this.messageService = messageService;
     }
-    getMessages(req, dto) {
-        return this.messageService.getChannelMessages(req, dto);
+    getChannelMessages(req, channelId, limit, cursor, direction) {
+        return this.messageService.getChannelMessages(req, channelId);
     }
-    getMessagesByMember(req, dto) {
-        return this.messageService.getMessagesByMember(req, dto);
+    getMyMessages(req, channelId, limit, cursor, direction) {
+        req.query = {
+            ...req.query,
+            limit: limit?.toString(),
+            cursor,
+            direction
+        };
+        return this.messageService.getMessagesByMember(req, { channelId: channelId || '' }, { limit, cursor, direction });
+    }
+    getMemberMessages(req, memberId, channelId, limit, cursor, direction) {
+        req.query = {
+            ...req.query,
+            limit: limit?.toString(),
+            cursor,
+            direction
+        };
+        return this.messageService.getMessagesByMember(req, { channelId: channelId || '' }, { limit, cursor, direction, memberUserId: memberId });
     }
     getSingleMessage(req, messageId) {
         return this.messageService.getMessageById(req, messageId);
@@ -37,41 +52,49 @@ let MessageController = class MessageController {
 };
 exports.MessageController = MessageController;
 __decorate([
-    (0, common_1.Get)(''),
+    (0, common_1.Get)('channel/:channelId'),
     (0, swagger_1.ApiBearerAuth)('access-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get messages' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Messages retrieved successfully',
-    }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get messages from a channel' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Param)('channelId')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('cursor')),
+    __param(4, (0, common_1.Query)('direction')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, message_dto_1.GetMessagesDto]),
+    __metadata("design:paramtypes", [Object, String, Number, String, String]),
     __metadata("design:returntype", void 0)
-], MessageController.prototype, "getMessages", null);
+], MessageController.prototype, "getChannelMessages", null);
 __decorate([
     (0, common_1.Get)('member'),
     (0, swagger_1.ApiBearerAuth)('access-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get messages' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Messages retrieved successfully',
-    }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get messages by current member' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Query)('channelId')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('cursor')),
+    __param(4, (0, common_1.Query)('direction')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, message_dto_1.GetMessagesDto]),
+    __metadata("design:paramtypes", [Object, String, Number, String, String]),
     __metadata("design:returntype", void 0)
-], MessageController.prototype, "getMessagesByMember", null);
+], MessageController.prototype, "getMyMessages", null);
+__decorate([
+    (0, common_1.Get)('member/:memberId'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get messages by specific member' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('memberId')),
+    __param(2, (0, common_1.Query)('channelId')),
+    __param(3, (0, common_1.Query)('limit')),
+    __param(4, (0, common_1.Query)('cursor')),
+    __param(5, (0, common_1.Query)('direction')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, Number, String, String]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "getMemberMessages", null);
 __decorate([
     (0, common_1.Get)(':messageId'),
     (0, swagger_1.ApiBearerAuth)('access-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get messages' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Messages retrieved successfully',
-    }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get single message' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('messageId')),
     __metadata("design:type", Function),
@@ -82,10 +105,6 @@ __decorate([
     (0, common_1.Patch)(':messageId'),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Update message by sender' }),
-    (0, swagger_1.ApiResponse)({
-        status: 200,
-        description: 'Message updated successfully',
-    }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Param)('messageId')),
     __param(2, (0, common_1.Body)()),

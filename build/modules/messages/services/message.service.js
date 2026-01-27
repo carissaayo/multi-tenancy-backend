@@ -126,10 +126,9 @@ let MessageService = MessageService_1 = class MessageService {
             await this.dataSource.query(`SET search_path TO public`);
         }
     }
-    async getChannelMessages(req, dto) {
+    async getChannelMessages(req, channelId) {
         const userId = req.userId;
         const workspaceId = req.workspaceId;
-        const channelId = dto.channelId;
         const limit = Math.min(Number(req.query?.limit) || 50, 100);
         const cursor = req.query?.cursor;
         const direction = req.query?.direction || 'before';
@@ -139,38 +138,48 @@ let MessageService = MessageService_1 = class MessageService {
         try {
             let query;
             let params;
+            const selectClause = `
+            SELECT 
+                m.*,
+                u.full_name as user_full_name,
+                u.avatar_url as user_avatar_url,
+                u.email as user_email
+            FROM "${schemaName}".messages m
+            INNER JOIN "${schemaName}".members mem ON m.member_id = mem.id
+            INNER JOIN public.users u ON mem.user_id = u.id
+        `;
             if (cursor) {
                 const [cursorMessage] = await this.dataSource.query(`SELECT created_at FROM "${schemaName}".messages 
-         WHERE id = $1 AND channel_id = $2 AND deleted_at IS NULL`, [cursor, channelId]);
+                 WHERE id = $1 AND channel_id = $2 AND deleted_at IS NULL`, [cursor, channelId]);
                 if (!cursorMessage) {
                     throw new Error('Invalid cursor: message not found');
                 }
                 const cursorTimestamp = cursorMessage.created_at;
                 if (direction === 'before') {
-                    query = `SELECT * FROM "${schemaName}".messages 
-                 WHERE channel_id = $1 
-                 AND deleted_at IS NULL
-                 AND created_at < $2
-                 ORDER BY created_at DESC
-                 LIMIT $3`;
+                    query = `${selectClause}
+                    WHERE m.channel_id = $1 
+                        AND m.deleted_at IS NULL
+                        AND m.created_at < $2
+                    ORDER BY m.created_at DESC
+                    LIMIT $3`;
                     params = [channelId, cursorTimestamp, limit + 1];
                 }
                 else {
-                    query = `SELECT * FROM "${schemaName}".messages 
-                 WHERE channel_id = $1 
-                 AND deleted_at IS NULL
-                 AND created_at > $2
-                 ORDER BY created_at ASC
-                 LIMIT $3`;
+                    query = `${selectClause}
+                    WHERE m.channel_id = $1 
+                        AND m.deleted_at IS NULL
+                        AND m.created_at > $2
+                    ORDER BY m.created_at ASC
+                    LIMIT $3`;
                     params = [channelId, cursorTimestamp, limit + 1];
                 }
             }
             else {
-                query = `SELECT * FROM "${schemaName}".messages 
-               WHERE channel_id = $1 
-               AND deleted_at IS NULL
-               ORDER BY created_at DESC
-               LIMIT $2`;
+                query = `${selectClause}
+                WHERE m.channel_id = $1 
+                    AND m.deleted_at IS NULL
+                ORDER BY m.created_at DESC
+                LIMIT $2`;
                 params = [channelId, limit + 1];
             }
             const results = await this.dataSource.query(query, params);
@@ -193,6 +202,11 @@ let MessageService = MessageService_1 = class MessageService {
                 createdAt: result.created_at,
                 updatedAt: result.updated_at,
                 deletedAt: result.deleted_at || null,
+                user: {
+                    fullName: result.user_full_name,
+                    avatarUrl: result.user_avatar_url,
+                    email: result.user_email,
+                }
             }));
             return {
                 messages: mappedMessages,
