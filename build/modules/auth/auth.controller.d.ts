@@ -31,7 +31,26 @@ export declare class AuthController {
     }>;
     selectWorkspace(selectWorkspaceDto: SelectWorkspaceDTO, req: AuthenticatedRequest): Promise<{
         accessToken: string;
-        workspace: import("../workspaces/entities/workspace.entity").Workspace;
+        workspace: {
+            membersCount: number;
+            channelCount: number;
+            userRole: "member" | "admin" | "guest" | "owner";
+            id: string;
+            slug: string;
+            name: string;
+            description: string;
+            logoUrl: string;
+            plan: import("../workspaces/interfaces/workspace.interface").WorkspacePlan;
+            isActive: boolean;
+            settings: Record<string, any>;
+            createdBy: string;
+            creator: import("../users/entities/user.entity").User;
+            ownerId: string;
+            owner: import("../users/entities/user.entity").User;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date;
+        };
         message: string;
     }>;
 }

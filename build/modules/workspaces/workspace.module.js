@@ -68,7 +68,7 @@ exports.WorkspaceModule = WorkspaceModule = __decorate([
             workspace_management_controller_1.WorkspaceManagementController,
             workspace_settings_controller_1.WorkspaceSettingsController,
         ],
-        exports: [workspace_service_1.WorkspacesService],
+        exports: [workspace_service_1.WorkspacesService, workspace_query_service_1.WorkspaceQueryService],
     })
 ], WorkspaceModule);
 //# sourceMappingURL=workspace.module.js.map

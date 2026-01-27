@@ -1,12 +1,13 @@
 import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
 import { TokenManager } from 'src/core/security/services/token-manager.service';
-import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, SelectWorkspaceDTO, VerifyEmailDTO } from './auth.dto';
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { UsersService } from '../users/services/user.service';
 import { MemberService } from '../members/services/member.service';
 import { EmailService } from 'src/core/email/services/email.service';
+import { WorkspaceQueryService } from '../workspaces/services/workspace-query.service';
+import { User } from '../users/entities/user.entity';
 import { Workspace } from '../workspaces/entities/workspace.entity';
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { ChangePasswordDTO, LoginDto, RegisterDto, RequestResetPasswordDTO, ResetPasswordDTO, SelectWorkspaceDTO, VerifyEmailDTO } from './auth.dto';
 export declare class AuthService {
     private readonly userRepo;
     private readonly workspaceRepo;
@@ -14,7 +15,8 @@ export declare class AuthService {
     private readonly memberService;
     private readonly tokenManager;
     private readonly emailService;
-    constructor(userRepo: Repository<User>, workspaceRepo: Repository<Workspace>, userService: UsersService, memberService: MemberService, tokenManager: TokenManager, emailService: EmailService);
+    private readonly workspaceQueryService;
+    constructor(userRepo: Repository<User>, workspaceRepo: Repository<Workspace>, userService: UsersService, memberService: MemberService, tokenManager: TokenManager, emailService: EmailService, workspaceQueryService: WorkspaceQueryService);
     register(dto: RegisterDto): Promise<{
         message: string;
         emailCode: string | null;
@@ -27,7 +29,26 @@ export declare class AuthService {
     }>;
     selectWorkspace(dto: SelectWorkspaceDTO, req: AuthenticatedRequest): Promise<{
         accessToken: string;
-        workspace: Workspace;
+        workspace: {
+            membersCount: number;
+            channelCount: number;
+            userRole: "member" | "admin" | "guest" | "owner";
+            id: string;
+            slug: string;
+            name: string;
+            description: string;
+            logoUrl: string;
+            plan: import("../workspaces/interfaces/workspace.interface").WorkspacePlan;
+            isActive: boolean;
+            settings: Record<string, any>;
+            createdBy: string;
+            creator: User;
+            ownerId: string;
+            owner: User;
+            createdAt: Date;
+            updatedAt: Date;
+            deletedAt: Date;
+        };
         message: string;
     }>;
     private validatePassword;

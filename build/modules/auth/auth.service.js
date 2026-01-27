@@ -21,14 +21,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const uuid_1 = require("uuid");
-const user_entity_1 = require("../users/entities/user.entity");
 const token_manager_service_1 = require("../../core/security/services/token-manager.service");
-const custom_errors_1 = require("../../core/error-handler/custom-errors");
-const util_1 = require("../../utils/util");
 const user_service_1 = require("../users/services/user.service");
 const member_service_1 = require("../members/services/member.service");
 const email_service_1 = require("../../core/email/services/email.service");
+const workspace_query_service_1 = require("../workspaces/services/workspace-query.service");
+const user_entity_1 = require("../users/entities/user.entity");
 const workspace_entity_1 = require("../workspaces/entities/workspace.entity");
+const util_1 = require("../../utils/util");
+const custom_errors_1 = require("../../core/error-handler/custom-errors");
 let AuthService = class AuthService {
     userRepo;
     workspaceRepo;
@@ -36,13 +37,15 @@ let AuthService = class AuthService {
     memberService;
     tokenManager;
     emailService;
-    constructor(userRepo, workspaceRepo, userService, memberService, tokenManager, emailService) {
+    workspaceQueryService;
+    constructor(userRepo, workspaceRepo, userService, memberService, tokenManager, emailService, workspaceQueryService) {
         this.userRepo = userRepo;
         this.workspaceRepo = workspaceRepo;
         this.userService = userService;
         this.memberService = memberService;
         this.tokenManager = tokenManager;
         this.emailService = emailService;
+        this.workspaceQueryService = workspaceQueryService;
     }
     async register(dto) {
         const { email, password, confirmPassword, fullName, phoneNumber } = dto;
@@ -115,10 +118,16 @@ let AuthService = class AuthService {
         if (!result) {
             throw custom_errors_1.customError.forbidden('Not a member of this workspace');
         }
+        const stats = await this.workspaceQueryService.getWorkspaceStats(workspaceId);
         const accessToken = this.tokenManager.signWorkspaceToken(user, workspaceId, result);
         return {
             accessToken,
-            workspace: workspace,
+            workspace: {
+                ...workspace,
+                membersCount: stats.memberCount,
+                channelCount: stats.channelCount,
+                userRole: result.role,
+            },
             message: 'Workspace context established',
         };
     }
@@ -222,6 +231,7 @@ exports.AuthService = AuthService = __decorate([
         user_service_1.UsersService,
         member_service_1.MemberService,
         token_manager_service_1.TokenManager,
-        email_service_1.EmailService])
+        email_service_1.EmailService,
+        workspace_query_service_1.WorkspaceQueryService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

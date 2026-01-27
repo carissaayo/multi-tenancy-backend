@@ -19,7 +19,8 @@ let CorsHandler = class CorsHandler {
             if (origin && this.allowedOrigins.includes(origin)) {
                 res.setHeader('Access-Control-Allow-Origin', origin);
                 res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-API-Key');
+                res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-API-Key, x-workspace-slug, refreshtoken');
+                res.setHeader('Access-Control-Expose-Headers', 'X-New-Access-Token, Authorization');
                 res.setHeader('Access-Control-Allow-Credentials', 'true');
                 res.setHeader('Access-Control-Max-Age', '86400');
             }
