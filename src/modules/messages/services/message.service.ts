@@ -210,7 +210,7 @@ export class MessageService {
    */
   async getChannelMessages(
     req: AuthenticatedRequest,
-    channelId:string
+    channelId: string
   ): Promise<{
     messages: Message[];
     nextCursor: string | null;
@@ -223,25 +223,34 @@ export class MessageService {
     const cursor = req.query?.cursor as string;
     const direction = req.query?.direction as 'before' | 'after' || 'before';
 
-    // Validate workspace membership and get schema name and member
     const { member, schemaName } = await this.validateWorkspaceMembership(
       workspaceId,
       userId,
     );
 
-    // Validate channel membership - pass userId for owner/admin check
     await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
-
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
       let query: string;
       let params: any[];
 
+      // Base SELECT with JOINs
+      const selectClause = `
+            SELECT 
+                m.*,
+                u.full_name as user_full_name,
+                u.avatar_url as user_avatar_url,
+                u.email as user_email
+            FROM "${schemaName}".messages m
+            INNER JOIN "${schemaName}".members mem ON m.member_id = mem.id
+            INNER JOIN public.users u ON mem.user_id = u.id
+        `;
+
       if (cursor) {
         const [cursorMessage] = await this.dataSource.query(
           `SELECT created_at FROM "${schemaName}".messages 
-         WHERE id = $1 AND channel_id = $2 AND deleted_at IS NULL`,
+                 WHERE id = $1 AND channel_id = $2 AND deleted_at IS NULL`,
           [cursor, channelId],
         );
 
@@ -252,28 +261,28 @@ export class MessageService {
         const cursorTimestamp = cursorMessage.created_at;
 
         if (direction === 'before') {
-          query = `SELECT * FROM "${schemaName}".messages 
-                 WHERE channel_id = $1 
-                 AND deleted_at IS NULL
-                 AND created_at < $2
-                 ORDER BY created_at DESC
-                 LIMIT $3`;
+          query = `${selectClause}
+                    WHERE m.channel_id = $1 
+                        AND m.deleted_at IS NULL
+                        AND m.created_at < $2
+                    ORDER BY m.created_at DESC
+                    LIMIT $3`;
           params = [channelId, cursorTimestamp, limit + 1];
         } else {
-          query = `SELECT * FROM "${schemaName}".messages 
-                 WHERE channel_id = $1 
-                 AND deleted_at IS NULL
-                 AND created_at > $2
-                 ORDER BY created_at ASC
-                 LIMIT $3`;
+          query = `${selectClause}
+                    WHERE m.channel_id = $1 
+                        AND m.deleted_at IS NULL
+                        AND m.created_at > $2
+                    ORDER BY m.created_at ASC
+                    LIMIT $3`;
           params = [channelId, cursorTimestamp, limit + 1];
         }
       } else {
-        query = `SELECT * FROM "${schemaName}".messages 
-               WHERE channel_id = $1 
-               AND deleted_at IS NULL
-               ORDER BY created_at DESC
-               LIMIT $2`;
+        query = `${selectClause}
+                WHERE m.channel_id = $1 
+                    AND m.deleted_at IS NULL
+                ORDER BY m.created_at DESC
+                LIMIT $2`;
         params = [channelId, limit + 1];
       }
 
@@ -301,6 +310,11 @@ export class MessageService {
         createdAt: result.created_at,
         updatedAt: result.updated_at,
         deletedAt: result.deleted_at || null,
+        user: {
+          fullName: result.user_full_name,
+          avatarUrl: result.user_avatar_url,
+          email: result.user_email,
+        }
       }));
 
       return {
@@ -315,7 +329,6 @@ export class MessageService {
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
-
   /**
  * Get messages sent by a specific member in a channel with cursor-based pagination
  * Returns all non-deleted messages sent by the user
