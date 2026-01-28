@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, Req } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { MessageService } from "../services/message.service";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import type { AuthenticatedRequest } from "src/core/security/interfaces/custom-request.interface";
@@ -8,6 +8,22 @@ import { GetMessagesDto, UpdateMessageDto } from "../dtos/message.dto";
 @Controller('messages')
 export class MessageController {
     constructor(private readonly messageService: MessageService) { }
+
+    @Post()
+    @ApiBearerAuth('access-token')
+    @ApiOperation({ summary: 'Create a new message' })
+    createMessage(
+        @Req() req: AuthenticatedRequest,
+        @Body() dto: { channelId: string; content: string; threadId?: string }
+    ) {
+        return this.messageService.createMessage(
+            req.workspaceId!,
+            dto.channelId,
+            req.userId,
+            dto.content,
+            dto.threadId,
+        );
+    }
 
     // GET /messages/channel/:channelId
     @Get('channel/:channelId')

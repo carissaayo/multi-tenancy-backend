@@ -12,6 +12,7 @@ import { MessagingGateway } from './gateways/messaging.gateway';
 import { MessageService } from './services/message.service';
 
 import { MessageController } from './controllers/message.controller';
+import { UserModule } from '../users/user.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MessageController } from './controllers/message.controller';
     forwardRef(() => MemberModule),
     forwardRef(() => SecurityModule),
     forwardRef(() => ChannelModule),
+    UserModule
   ],
   providers: [MessagingGateway, MessageService],
   controllers: [MessageController],
