@@ -143,7 +143,8 @@ let MessageService = MessageService_1 = class MessageService {
                 m.*,
                 u.full_name as user_full_name,
                 u.avatar_url as user_avatar_url,
-                u.email as user_email
+                u.email as user_email,
+                u.id as user_id
             FROM "${schemaName}".messages m
             INNER JOIN "${schemaName}".members mem ON m.member_id = mem.id
             INNER JOIN public.users u ON mem.user_id = u.id
@@ -160,7 +161,7 @@ let MessageService = MessageService_1 = class MessageService {
                     WHERE m.channel_id = $1 
                         AND m.deleted_at IS NULL
                         AND m.created_at < $2
-                    ORDER BY m.created_at DESC
+                 ORDER BY m.created_at ASC
                     LIMIT $3`;
                     params = [channelId, cursorTimestamp, limit + 1];
                 }
@@ -178,7 +179,7 @@ let MessageService = MessageService_1 = class MessageService {
                 query = `${selectClause}
                 WHERE m.channel_id = $1 
                     AND m.deleted_at IS NULL
-                ORDER BY m.created_at DESC
+                ORDER BY m.created_at ASC
                 LIMIT $2`;
                 params = [channelId, limit + 1];
             }
@@ -190,7 +191,7 @@ let MessageService = MessageService_1 = class MessageService {
                 const lastMessage = messages[messages.length - 1];
                 nextCursor = lastMessage.id;
             }
-            const orderedMessages = direction === 'after' ? messages.reverse() : messages;
+            const orderedMessages = messages;
             const mappedMessages = orderedMessages.map((result) => ({
                 id: result.id,
                 channelId: result.channel_id,
@@ -206,6 +207,7 @@ let MessageService = MessageService_1 = class MessageService {
                     fullName: result.user_full_name,
                     avatarUrl: result.user_avatar_url,
                     email: result.user_email,
+                    id: result.user_id
                 }
             }));
             return {

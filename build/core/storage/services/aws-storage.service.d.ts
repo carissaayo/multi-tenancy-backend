@@ -1,7 +1,9 @@
 import { ConfigService } from '@nestjs/config';
+export type UploadScope = 'user' | 'workspace';
 export interface UploadOptions {
-    workspaceId?: string;
+    scope: UploadScope;
     userId: string;
+    workspaceId?: string;
     folder?: string;
     maxSizeInMB?: number;
     allowedMimeTypes?: string[];
@@ -22,7 +24,11 @@ export declare class AWSStorageService {
     constructor(configService: ConfigService);
     uploadFile(file: Express.Multer.File, options: UploadOptions): Promise<UploadedFile>;
     uploadMultipleFiles(files: Express.Multer.File[], options: UploadOptions): Promise<UploadedFile[]>;
-    deleteFile(key: string, workspaceId: string): Promise<void>;
+    deleteFile(key: string, options: {
+        scope: 'user' | 'workspace';
+        workspaceId?: string;
+        userId?: string;
+    }): Promise<void>;
     getPresignedUrl(key: string, workspaceId: string, expiresInSeconds?: number): Promise<string>;
     private validateFile;
     private generateFileKey;

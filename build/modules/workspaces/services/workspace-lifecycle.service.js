@@ -148,24 +148,17 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
         if (workspace.logoUrl) {
             try {
                 const oldKey = this.storageService.parseS3Url(workspace.logoUrl);
-                await this.storageService.deleteFile(oldKey, workspaceId);
+                await this.storageService.deleteFile(oldKey, { scope: 'workspace', workspaceId });
             }
             catch (error) {
                 this.logger.warn(`Failed to delete old logo for workspace ${workspaceId}: ${error.message}`);
             }
         }
         const uploadedFile = await this.storageService.uploadFile(file, {
+            scope: 'workspace',
             workspaceId,
             userId: user.id,
             folder: 'logos',
-            maxSizeInMB: 5,
-            allowedMimeTypes: [
-                'image/jpeg',
-                'image/png',
-                'image/jpg',
-                'image/gif',
-                'image/webp',
-            ],
             makePublic: true,
         });
         workspace.logoUrl = uploadedFile.url;

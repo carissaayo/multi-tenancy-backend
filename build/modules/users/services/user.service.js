@@ -82,23 +82,16 @@ let UsersService = UsersService_1 = class UsersService {
         if (user.avatarUrl) {
             try {
                 const oldKey = this.storageService.parseS3Url(user.avatarUrl);
-                await this.storageService.deleteFile(oldKey, user.id);
+                await this.storageService.deleteFile(oldKey, { scope: 'user', userId: user.id });
             }
             catch (error) {
                 this.logger.warn(`Failed to delete old avatar for user ${user.id}: ${error.message}`);
             }
         }
         const uploadedFile = await this.storageService.uploadFile(file, {
+            scope: 'user',
             userId: user.id,
             folder: 'avatars',
-            maxSizeInMB: 5,
-            allowedMimeTypes: [
-                'image/jpeg',
-                'image/png',
-                'image/jpg',
-                'image/gif',
-                'image/webp',
-            ],
             makePublic: true,
         });
         user.avatarUrl = uploadedFile.url;

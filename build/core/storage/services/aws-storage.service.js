@@ -67,15 +67,21 @@ let AWSStorageService = class AWSStorageService {
     async uploadMultipleFiles(files, options) {
         return Promise.all(files.map((file) => this.uploadFile(file, options)));
     }
-    async deleteFile(key, workspaceId) {
-        if (!key.startsWith(`workspaces/${workspaceId}/`)) {
-            throw custom_errors_1.customError.forbidden('Cannot delete files from other workspaces');
+    async deleteFile(key, options) {
+        if (options.scope === 'workspace') {
+            if (!options.workspaceId || !key.startsWith(`workspaces/${options.workspaceId}/`)) {
+                throw custom_errors_1.customError.forbidden('Cannot delete files from another workspace');
+            }
         }
-        const command = new client_s3_1.DeleteObjectCommand({
+        if (options.scope === 'user') {
+            if (!options.userId || !key.startsWith(`users/${options.userId}/`)) {
+                throw custom_errors_1.customError.forbidden('Cannot delete files from another user');
+            }
+        }
+        await this.s3Client.send(new client_s3_1.DeleteObjectCommand({
             Bucket: this.bucketName,
             Key: key,
-        });
-        await this.s3Client.send(command);
+        }));
     }
     async getPresignedUrl(key, workspaceId, expiresInSeconds = 3600) {
         if (!key.startsWith(`workspaces/${workspaceId}/`)) {
@@ -109,11 +115,17 @@ let AWSStorageService = class AWSStorageService {
         }
     }
     generateFileKey(file, options) {
-        const { workspaceId, folder = 'uploads', userId } = options;
+        const { scope, workspaceId, userId, folder = 'uploads' } = options;
         const ext = file.originalname.split('.').pop() || 'bin';
         const uniqueId = (0, crypto_1.randomUUID)();
         const timestamp = Date.now();
-        return `workspaces/${workspaceId}/${folder}/${userId}-${timestamp}-${uniqueId}.${ext}`;
+        if (scope === 'workspace') {
+            if (!workspaceId) {
+                throw custom_errors_1.customError.badRequest('workspaceId is required for workspace uploads');
+            }
+            return `workspaces/${workspaceId}/${folder}/${userId}-${timestamp}-${uniqueId}.${ext}`;
+        }
+        return `users/${userId}/${folder}/${timestamp}-${uniqueId}.${ext}`;
     }
     getFileUrl(key, isPublic) {
         if (this.cdnDomain && isPublic) {
