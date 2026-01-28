@@ -71,8 +71,8 @@ export class MessageService {
     workspaceId: string,
     userId: string,
   ): Promise<void> {
-    console.log(channelId,"channelId");
-    
+    console.log(channelId, "channelId");
+
     // First check if user is a channel member
     const isChannelMember = await this.channelMembershipService.isUserMember(
       channelId,
@@ -90,7 +90,7 @@ export class MessageService {
       throw customError.notFound('Workspace not found');
     }
 
-  
+
 
     const channel = await this.channelQueryService.findChannelById(
       channelId,
@@ -101,29 +101,29 @@ export class MessageService {
       throw customError.notFound('Channel not found');
     }
 
-      // If channel is private, deny access (even for owners/admins unless they're members)
-      if (channel.isPrivate) {
-        throw customError.forbidden(
-          'You are not a member of this private channel',
-        );
-      }
+    // If channel is private, deny access (even for owners/admins unless they're members)
+    if (channel.isPrivate) {
+      throw customError.forbidden(
+        'You are not a member of this private channel',
+      );
+    }
 
-      // Channel is public - check if user is workspace owner or admin
-      const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
+    // Channel is public - check if user is workspace owner or admin
+    const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
 
-      // Check if user is admin
-      const member = await this.memberService.isUserMember(workspaceId, userId);
-      const isAdmin = member?.role === 'admin' || member?.role === 'owner';
+    // Check if user is admin
+    const member = await this.memberService.isUserMember(workspaceId, userId);
+    const isAdmin = member?.role === 'admin' || member?.role === 'owner';
 
-      if (isOwner || isAdmin) {
-        this.logger.debug(
-          `Allowing ${isOwner ? 'owner' : 'admin'} ${userId} access to public channel ${channel.name}`,
-        );
-        return; // Allow access for owners/admins to public channels
-      }
+    if (isOwner || isAdmin) {
+      this.logger.debug(
+        `Allowing ${isOwner ? 'owner' : 'admin'} ${userId} access to public channel ${channel.name}`,
+      );
+      return; // Allow access for owners/admins to public channels
+    }
 
-      // User is not a member and not owner/admin
-      throw customError.forbidden('You are not a member of this channel');
+    // User is not a member and not owner/admin
+    throw customError.forbidden('You are not a member of this channel');
   }
 
 
@@ -143,7 +143,7 @@ export class MessageService {
       workspaceId,
       userId,
     );
-   
+
     await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
 
     // Set search path to workspace schema
@@ -241,7 +241,8 @@ export class MessageService {
                 m.*,
                 u.full_name as user_full_name,
                 u.avatar_url as user_avatar_url,
-                u.email as user_email
+                u.email as user_email,
+                u.id as user_id
             FROM "${schemaName}".messages m
             INNER JOIN "${schemaName}".members mem ON m.member_id = mem.id
             INNER JOIN public.users u ON mem.user_id = u.id
@@ -265,7 +266,7 @@ export class MessageService {
                     WHERE m.channel_id = $1 
                         AND m.deleted_at IS NULL
                         AND m.created_at < $2
-                    ORDER BY m.created_at DESC
+                 ORDER BY m.created_at ASC
                     LIMIT $3`;
           params = [channelId, cursorTimestamp, limit + 1];
         } else {
@@ -281,7 +282,7 @@ export class MessageService {
         query = `${selectClause}
                 WHERE m.channel_id = $1 
                     AND m.deleted_at IS NULL
-                ORDER BY m.created_at DESC
+                ORDER BY m.created_at ASC
                 LIMIT $2`;
         params = [channelId, limit + 1];
       }
@@ -297,7 +298,7 @@ export class MessageService {
         nextCursor = lastMessage.id;
       }
 
-      const orderedMessages = direction === 'after' ? messages.reverse() : messages;
+      const orderedMessages = messages; 
 
       const mappedMessages = orderedMessages.map((result: any) => ({
         id: result.id,
@@ -314,6 +315,7 @@ export class MessageService {
           fullName: result.user_full_name,
           avatarUrl: result.user_avatar_url,
           email: result.user_email,
+          id: result.user_id
         }
       }));
 
@@ -519,9 +521,9 @@ export class MessageService {
   async updateMessageBySender(
     req: AuthenticatedRequest,
     messageId: string,
-        dto: UpdateMessageDto,
+    dto: UpdateMessageDto,
   ): Promise<Message> {
-    const {  newContent } = dto;
+    const { newContent } = dto;
     const { member, schemaName } = await this.validateWorkspaceMembership(
       req.workspaceId!,
       req.userId,
