@@ -220,6 +220,7 @@ export class UsersService {
       lastLoginAt: user.lastLoginAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      userName:user.userName
     };
   }
 }

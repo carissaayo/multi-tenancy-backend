@@ -293,15 +293,24 @@ export class MessagingGateway
   // Typing indicator
   @UseGuards(WsAuthGuard)
   @SubscribeMessage('typing')
-  handleTyping(
+  async handleTyping( 
     @ConnectedSocket() client: AuthenticatedSocket,
     @MessageBody() data: { channelId: string; isTyping: boolean },
   ) {
     const { channelId, isTyping } = data;
 
+    const user = await this.userService.findById(client.userId);  
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const userProfile = await this.userService.getUserProfile(user); 
+
     // Broadcast to everyone in channel except sender
     client.to(`channel:${channelId}`).emit('userTyping', {
       userId: client.userId,
+      userName: userProfile?.userName,
+      fullName: userProfile?.fullName,
       channelId,
       isTyping,
     });
