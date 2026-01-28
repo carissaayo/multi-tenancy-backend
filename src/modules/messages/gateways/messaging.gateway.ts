@@ -14,18 +14,17 @@ import { WsAuthGuard } from '../guards/ws-auth.guard';
 import type { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interface';
 import { MessageService } from '../services/message.service';
 import { AuthDomainService } from 'src/core/security/services/auth-domain.service';
+import { UsersService } from 'src/modules/users/services/user.service';
 
 @WebSocketGateway({
   cors: {
-    // origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    origin:'http://localhost:8000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   },
   namespace: '/messaging',
 })
 export class MessagingGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
   private readonly logger = new Logger(MessagingGateway.name);
@@ -39,6 +38,7 @@ export class MessagingGateway
   constructor(
     private readonly messageService: MessageService,
     private readonly authDomain: AuthDomainService,
+    private readonly userService: UsersService,
   ) { }
 
   afterInit(server: Server) {
@@ -223,7 +223,7 @@ export class MessagingGateway
       content: string;
       workspaceId: string;
       threadId?: string;
-    
+
     },
   ) {
     const { channelId, content, workspaceId, threadId } = data;
@@ -240,12 +240,16 @@ export class MessagingGateway
       const message = await this.messageService.createMessage(
         workspaceId,
         channelId,
-       client.userId,
+        client.userId,
         content.trim(),
         threadId,
       );
+      const user = await this.userService.findById(client.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+      const userDetails =  this.userService.getUserProfile(user);
 
-      // Prepare message payload for clients
       const messagePayload = {
         id: message.id,
         channelId: message.channelId,
@@ -256,9 +260,14 @@ export class MessagingGateway
         isEdited: message.isEdited,
         createdAt: message.createdAt,
         updatedAt: message.updatedAt,
-        userId: client.userId, // Include userId for client convenience
+        user: {  
+          id: client.userId,
+          fullName: userDetails.fullName,
+          avatarUrl: userDetails.avatarUrl,
+          email: userDetails.email,
+        }
       };
-
+     
       // Emit to all clients in the channel
       this.server.to(`channel:${channelId}`).emit('newMessage', messagePayload);
 
@@ -298,6 +307,25 @@ export class MessagingGateway
     });
   }
 
+  // Leave a channel room
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('leaveChannel')
+  async handleLeaveChannel(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { channelId: string },
+  ) {
+    const { channelId } = data;
+    const roomName = `channel:${channelId}`;
+
+    await client.leave(roomName);
+
+    this.logger.log(`Client ${client.id} left channel ${channelId}`);
+
+    return {
+      event: 'leftChannel',
+      data: { channelId, success: true },
+    };
+  }
   // Utility method to emit to specific user (all their connections)
   emitToUser(userId: string, event: string, data: any) {
     const userSocketIds = this.userSockets.get(userId);
