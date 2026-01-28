@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class DockerFirstMigration1700000000000 implements MigrationInterface {
-  name = 'DockerFirstMigration1700000000000';
+export class DockerFirstMigration1767701843036 implements MigrationInterface {
+  name = 'DockerFirstMigration1767701843036';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(

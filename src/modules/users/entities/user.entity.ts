@@ -22,6 +22,15 @@ export class User {
 
   @Column({
     type: 'varchar',
+    length: 255,
+    nullable: true,
+    unique: true,
+    name: 'user_name',
+  })
+  userName: string | null;
+
+  @Column({
+    type: 'varchar',
     length: 20,
     nullable: true,
     unique: true,

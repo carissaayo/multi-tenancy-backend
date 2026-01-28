@@ -16,6 +16,39 @@ export class UsersService {
     private readonly storageService: AWSStorageService,
   ) {}
 
+  /**
+   * Generate userName from fullName by removing spaces and converting to lowercase
+   * If userName already exists, append a number to make it unique
+   */
+  private async generateUniqueUserName(fullName: string): Promise<string|null> {
+    if (!fullName) {
+      return null;
+    }
+
+    // Remove spaces and convert to lowercase
+    let baseUserName = fullName.replace(/\s+/g, '').toLowerCase();
+
+    // Check if userName already exists
+    let userName = baseUserName;
+    let counter = 1;
+    
+    while (true) {
+      const existingUser = await this.userRepo.findOne({
+        where: { userName },
+      });
+
+      if (!existingUser) {
+        break; // userName is unique
+      }
+
+      // Append number if userName exists
+      userName = `${baseUserName}${counter}`;
+      counter++;
+    }
+
+    return userName;
+  }
+
   async create(dto: CreateUserDto) {
     const existing = await this.userRepo.findOne({
       where: { email: dto.email },
@@ -27,10 +60,14 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
+    // Generate userName from fullName
+    const userName = await this.generateUniqueUserName(dto.fullName);
+
     const user = this.userRepo.create({
       email: dto.email.toLowerCase(),
       passwordHash,
       fullName: dto.fullName,
+      userName,
     });
 
     return this.userRepo.save(user);
