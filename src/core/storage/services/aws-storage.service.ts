@@ -10,14 +10,21 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { customError } from 'src/core/error-handler/custom-errors';
 
+export type UploadScope = 'user' | 'workspace';
+
 export interface UploadOptions {
-  workspaceId?: string;
+  scope: UploadScope;
+
   userId: string;
-  folder?: string; // 'avatars', 'attachments', 'logos', etc.
+
+  workspaceId?: string; // only required when scope === 'workspace'
+
+  folder?: string;
   maxSizeInMB?: number;
   allowedMimeTypes?: string[];
   makePublic?: boolean;
 }
+
 
 export interface UploadedFile {
   url: string;
@@ -111,19 +118,30 @@ export class AWSStorageService {
   /**
    * Delete a file
    */
-  async deleteFile(key: string, workspaceId: string): Promise<void> {
-    // Security: Ensure the key belongs to the workspace
-    if (!key.startsWith(`workspaces/${workspaceId}/`)) {
-      throw customError.forbidden('Cannot delete files from other workspaces');
+  async deleteFile(
+    key: string,
+    options: { scope: 'user' | 'workspace'; workspaceId?: string; userId?: string },
+  ): Promise<void> {
+    if (options.scope === 'workspace') {
+      if (!options.workspaceId || !key.startsWith(`workspaces/${options.workspaceId}/`)) {
+        throw customError.forbidden('Cannot delete files from another workspace');
+      }
     }
 
-    const command = new DeleteObjectCommand({
-      Bucket: this.bucketName,
-      Key: key,
-    });
+    if (options.scope === 'user') {
+      if (!options.userId || !key.startsWith(`users/${options.userId}/`)) {
+        throw customError.forbidden('Cannot delete files from another user');
+      }
+    }
 
-    await this.s3Client.send(command);
+    await this.s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }),
+    );
   }
+
 
   /**
    * Generate a presigned URL for secure private file access
@@ -191,14 +209,24 @@ export class AWSStorageService {
     file: Express.Multer.File,
     options: UploadOptions,
   ): string {
-    const { workspaceId, folder = 'uploads', userId } = options;
+    const { scope, workspaceId, userId, folder = 'uploads' } = options;
+
     const ext = file.originalname.split('.').pop() || 'bin';
     const uniqueId = randomUUID();
     const timestamp = Date.now();
 
-    // Tenant-scoped path structure
-    return `workspaces/${workspaceId}/${folder}/${userId}-${timestamp}-${uniqueId}.${ext}`;
+    if (scope === 'workspace') {
+      if (!workspaceId) {
+        throw customError.badRequest('workspaceId is required for workspace uploads');
+      }
+
+      return `workspaces/${workspaceId}/${folder}/${userId}-${timestamp}-${uniqueId}.${ext}`;
+    }
+
+    // USER SCOPE (avatars)
+    return `users/${userId}/${folder}/${timestamp}-${uniqueId}.${ext}`;
   }
+
 
   /**
    * Get file URL (CDN or S3)

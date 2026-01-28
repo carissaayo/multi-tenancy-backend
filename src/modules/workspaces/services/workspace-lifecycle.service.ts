@@ -249,7 +249,7 @@ export class WorkspaceLifecycleService {
     if (workspace.logoUrl) {
       try {
         const oldKey = this.storageService.parseS3Url(workspace.logoUrl);
-        await this.storageService.deleteFile(oldKey, workspaceId);
+        await this.storageService.deleteFile(oldKey, { scope: 'workspace', workspaceId });
       } catch (error) {
         this.logger.warn(
           `Failed to delete old logo for workspace ${workspaceId}: ${error.message}`,
@@ -259,19 +259,13 @@ export class WorkspaceLifecycleService {
 
     // Upload new logo to S3
     const uploadedFile = await this.storageService.uploadFile(file, {
+      scope: 'workspace',
       workspaceId,
       userId: user.id,
       folder: 'logos',
-      maxSizeInMB: 5,
-      allowedMimeTypes: [
-        'image/jpeg',
-        'image/png',
-        'image/jpg',
-        'image/gif',
-        'image/webp',
-      ],
       makePublic: true,
     });
+
 
     // Update workspace with new logo URL
     workspace.logoUrl = uploadedFile.url;
