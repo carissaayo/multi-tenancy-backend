@@ -17,6 +17,7 @@ const channel_module_1 = require("../channels/channel.module");
 const messaging_gateway_1 = require("./gateways/messaging.gateway");
 const message_service_1 = require("./services/message.service");
 const message_controller_1 = require("./controllers/message.controller");
+const user_module_1 = require("../users/user.module");
 let MessageModule = class MessageModule {
 };
 exports.MessageModule = MessageModule;
@@ -38,6 +39,7 @@ exports.MessageModule = MessageModule = __decorate([
             (0, common_1.forwardRef)(() => member_module_1.MemberModule),
             (0, common_1.forwardRef)(() => security_module_1.SecurityModule),
             (0, common_1.forwardRef)(() => channel_module_1.ChannelModule),
+            user_module_1.UserModule
         ],
         providers: [messaging_gateway_1.MessagingGateway, message_service_1.MessageService],
         controllers: [message_controller_1.MessageController],

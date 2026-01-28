@@ -47,6 +47,25 @@ let AuthService = class AuthService {
         this.emailService = emailService;
         this.workspaceQueryService = workspaceQueryService;
     }
+    async generateUniqueUserName(fullName) {
+        if (!fullName) {
+            return null;
+        }
+        let baseUserName = fullName.replace(/\s+/g, '').toLowerCase();
+        let userName = baseUserName;
+        let counter = 1;
+        while (true) {
+            const existingUser = await this.userRepo.findOne({
+                where: { userName },
+            });
+            if (!existingUser) {
+                break;
+            }
+            userName = `${baseUserName}${counter}`;
+            counter++;
+        }
+        return userName;
+    }
     async register(dto) {
         const { email, password, confirmPassword, fullName, phoneNumber } = dto;
         if (password !== confirmPassword) {
@@ -66,10 +85,12 @@ let AuthService = class AuthService {
         }
         const passwordHash = await bcryptjs_1.default.hash(password, 12);
         const emailCode = (0, util_1.generateOtp)('numeric', 8);
+        const userName = await this.generateUniqueUserName(fullName);
         const user = this.userRepo.create({
             email: email.toLowerCase(),
             passwordHash,
             fullName,
+            userName,
             phoneNumber,
             emailCode,
         });

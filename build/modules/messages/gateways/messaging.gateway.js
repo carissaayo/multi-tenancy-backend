@@ -20,16 +20,19 @@ const common_1 = require("@nestjs/common");
 const ws_auth_guard_1 = require("../guards/ws-auth.guard");
 const message_service_1 = require("../services/message.service");
 const auth_domain_service_1 = require("../../../core/security/services/auth-domain.service");
+const user_service_1 = require("../../users/services/user.service");
 let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
     messageService;
     authDomain;
+    userService;
     server;
     logger = new common_1.Logger(MessagingGateway_1.name);
     userSockets = new Map();
     workspaceRooms = new Map();
-    constructor(messageService, authDomain) {
+    constructor(messageService, authDomain, userService) {
         this.messageService = messageService;
         this.authDomain = authDomain;
+        this.userService = userService;
     }
     afterInit(server) {
         this.logger.log('WebSocket Gateway initialized');
@@ -144,6 +147,11 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
         }
         try {
             const message = await this.messageService.createMessage(workspaceId, channelId, client.userId, content.trim(), threadId);
+            const user = await this.userService.findById(client.userId);
+            if (!user) {
+                throw new Error('User not found');
+            }
+            const userDetails = this.userService.getUserProfile(user);
             const messagePayload = {
                 id: message.id,
                 channelId: message.channelId,
@@ -154,7 +162,12 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
                 isEdited: message.isEdited,
                 createdAt: message.createdAt,
                 updatedAt: message.updatedAt,
-                userId: client.userId,
+                user: {
+                    id: client.userId,
+                    fullName: userDetails.fullName,
+                    avatarUrl: userDetails.avatarUrl,
+                    email: userDetails.email,
+                }
             };
             this.server.to(`channel:${channelId}`).emit('newMessage', messagePayload);
             this.logger.log(`Message sent by user ${client.userId} in channel ${channelId}`);
@@ -173,13 +186,30 @@ let MessagingGateway = MessagingGateway_1 = class MessagingGateway {
             };
         }
     }
-    handleTyping(client, data) {
+    async handleTyping(client, data) {
         const { channelId, isTyping } = data;
+        const user = await this.userService.findById(client.userId);
+        if (!user) {
+            throw new Error('User not found');
+        }
+        const userProfile = await this.userService.getUserProfile(user);
         client.to(`channel:${channelId}`).emit('userTyping', {
             userId: client.userId,
+            userName: userProfile?.userName,
+            fullName: userProfile?.fullName,
             channelId,
             isTyping,
         });
+    }
+    async handleLeaveChannel(client, data) {
+        const { channelId } = data;
+        const roomName = `channel:${channelId}`;
+        await client.leave(roomName);
+        this.logger.log(`Client ${client.id} left channel ${channelId}`);
+        return {
+            event: 'leftChannel',
+            data: { channelId, success: true },
+        };
     }
     emitToUser(userId, event, data) {
         const userSocketIds = this.userSockets.get(userId);
@@ -279,17 +309,27 @@ __decorate([
     __param(1, (0, websockets_1.MessageBody)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], MessagingGateway.prototype, "handleTyping", null);
+__decorate([
+    (0, common_1.UseGuards)(ws_auth_guard_1.WsAuthGuard),
+    (0, websockets_1.SubscribeMessage)('leaveChannel'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], MessagingGateway.prototype, "handleLeaveChannel", null);
 exports.MessagingGateway = MessagingGateway = MessagingGateway_1 = __decorate([
     (0, websockets_1.WebSocketGateway)({
         cors: {
-            origin: 'http://localhost:8000',
+            origin: process.env.FRONTEND_URL || 'http://localhost:3000',
             credentials: true,
         },
         namespace: '/messaging',
     }),
     __metadata("design:paramtypes", [message_service_1.MessageService,
-        auth_domain_service_1.AuthDomainService])
+        auth_domain_service_1.AuthDomainService,
+        user_service_1.UsersService])
 ], MessagingGateway);
 //# sourceMappingURL=messaging.gateway.js.map

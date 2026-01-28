@@ -32,6 +32,25 @@ let UsersService = UsersService_1 = class UsersService {
         this.userRepo = userRepo;
         this.storageService = storageService;
     }
+    async generateUniqueUserName(fullName) {
+        if (!fullName) {
+            return null;
+        }
+        let baseUserName = fullName.replace(/\s+/g, '').toLowerCase();
+        let userName = baseUserName;
+        let counter = 1;
+        while (true) {
+            const existingUser = await this.userRepo.findOne({
+                where: { userName },
+            });
+            if (!existingUser) {
+                break;
+            }
+            userName = `${baseUserName}${counter}`;
+            counter++;
+        }
+        return userName;
+    }
     async create(dto) {
         const existing = await this.userRepo.findOne({
             where: { email: dto.email },
@@ -40,10 +59,12 @@ let UsersService = UsersService_1 = class UsersService {
             throw custom_errors_1.customError.badRequest('Email already registered');
         }
         const passwordHash = await bcryptjs_1.default.hash(dto.password, 12);
+        const userName = await this.generateUniqueUserName(dto.fullName);
         const user = this.userRepo.create({
             email: dto.email.toLowerCase(),
             passwordHash,
             fullName: dto.fullName,
+            userName,
         });
         return this.userRepo.save(user);
     }
@@ -160,6 +181,7 @@ let UsersService = UsersService_1 = class UsersService {
             lastLoginAt: user.lastLoginAt,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
+            userName: user.userName
         };
     }
 };

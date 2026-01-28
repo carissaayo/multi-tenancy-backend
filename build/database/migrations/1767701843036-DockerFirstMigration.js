@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DockerFirstMigration1700000000000 = void 0;
-class DockerFirstMigration1700000000000 {
-    name = 'DockerFirstMigration1700000000000';
+exports.DockerFirstMigration1767701843036 = void 0;
+class DockerFirstMigration1767701843036 {
+    name = 'DockerFirstMigration1767701843036';
     async up(queryRunner) {
         await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "email" character varying(255) NOT NULL, "password_hash" character varying(255) NOT NULL, "full_name" character varying(255), "avatar_url" character varying(500), "email_code" character varying(255), "is_email_verified" boolean NOT NULL DEFAULT false, "is_active" boolean NOT NULL DEFAULT true, "last_login_at" TIMESTAMP, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), "lock_until" TIMESTAMP, "failed_login_attempts" integer NOT NULL DEFAULT '0', "password_reset_code" character varying(255), "reset_password_expires" TIMESTAMP, CONSTRAINT "UQ_97672ac88f789774dd47f7c8be3" UNIQUE ("email"), CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "workspaces" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "slug" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, "description" text, "logo_url" character varying(500), "plan" character varying(50) NOT NULL DEFAULT 'free', "is_active" boolean NOT NULL DEFAULT true, "settings" jsonb NOT NULL DEFAULT '{}', "created_by" uuid NOT NULL, "created_at" TIMESTAMP NOT NULL DEFAULT now(), "updated_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_b8e9fe62e93d60089dfc4f175f3" UNIQUE ("slug"), CONSTRAINT "PK_098656ae401f3e1a4586f47fd8e" PRIMARY KEY ("id"))`);
@@ -64,5 +64,5 @@ class DockerFirstMigration1700000000000 {
         await queryRunner.query(`DROP TABLE "users"`);
     }
 }
-exports.DockerFirstMigration1700000000000 = DockerFirstMigration1700000000000;
+exports.DockerFirstMigration1767701843036 = DockerFirstMigration1767701843036;
 //# sourceMappingURL=1767701843036-DockerFirstMigration.js.map

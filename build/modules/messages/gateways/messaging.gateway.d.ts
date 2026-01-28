@@ -3,14 +3,16 @@ import { Server, Socket } from 'socket.io';
 import type { AuthenticatedSocket } from '../interfaces/aurthenticated-socket.interface';
 import { MessageService } from '../services/message.service';
 import { AuthDomainService } from 'src/core/security/services/auth-domain.service';
+import { UsersService } from 'src/modules/users/services/user.service';
 export declare class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
     private readonly messageService;
     private readonly authDomain;
+    private readonly userService;
     server: Server;
     private readonly logger;
     private userSockets;
     private workspaceRooms;
-    constructor(messageService: MessageService, authDomain: AuthDomainService);
+    constructor(messageService: MessageService, authDomain: AuthDomainService, userService: UsersService);
     afterInit(server: Server): void;
     handleConnection(client: Socket): Promise<void>;
     handleDisconnect(client: Socket): void;
@@ -60,7 +62,12 @@ export declare class MessagingGateway implements OnGatewayInit, OnGatewayConnect
                 isEdited: boolean;
                 createdAt: Date;
                 updatedAt: Date;
-                userId: string;
+                user: {
+                    id: string;
+                    fullName: string | null | undefined;
+                    avatarUrl: string | null | undefined;
+                    email: string | undefined;
+                };
             };
         };
     } | {
@@ -73,7 +80,16 @@ export declare class MessagingGateway implements OnGatewayInit, OnGatewayConnect
     handleTyping(client: AuthenticatedSocket, data: {
         channelId: string;
         isTyping: boolean;
-    }): void;
+    }): Promise<void>;
+    handleLeaveChannel(client: AuthenticatedSocket, data: {
+        channelId: string;
+    }): Promise<{
+        event: string;
+        data: {
+            channelId: string;
+            success: boolean;
+        };
+    }>;
     emitToUser(userId: string, event: string, data: any): void;
     emitToWorkspace(workspaceId: string, event: string, data: any): void;
     emitToChannel(channelId: string, event: string, data: any): void;

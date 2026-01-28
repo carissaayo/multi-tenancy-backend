@@ -16,6 +16,7 @@ let User = class User {
     email;
     passwordHash;
     fullName;
+    userName;
     phoneNumber;
     bio;
     city;
@@ -50,6 +51,16 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true, name: 'full_name' }),
     __metadata("design:type", Object)
 ], User.prototype, "fullName", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'varchar',
+        length: 255,
+        nullable: true,
+        unique: true,
+        name: 'user_name',
+    }),
+    __metadata("design:type", Object)
+], User.prototype, "userName", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'varchar',

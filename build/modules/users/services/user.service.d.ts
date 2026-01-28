@@ -8,6 +8,7 @@ export declare class UsersService {
     private readonly storageService;
     private readonly logger;
     constructor(userRepo: Repository<User>, storageService: AWSStorageService);
+    private generateUniqueUserName;
     create(dto: CreateUserDto): Promise<User>;
     updateUser(req: AuthenticatedRequest, updateDto: UpdateUserDto): Promise<{
         user: Partial<User>;

@@ -22,6 +22,9 @@ let MessageController = class MessageController {
     constructor(messageService) {
         this.messageService = messageService;
     }
+    createMessage(req, dto) {
+        return this.messageService.createMessage(req.workspaceId, dto.channelId, req.userId, dto.content, dto.threadId);
+    }
     getChannelMessages(req, channelId, limit, cursor, direction) {
         return this.messageService.getChannelMessages(req, channelId);
     }
@@ -51,6 +54,16 @@ let MessageController = class MessageController {
     }
 };
 exports.MessageController = MessageController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a new message' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], MessageController.prototype, "createMessage", null);
 __decorate([
     (0, common_1.Get)('channel/:channelId'),
     (0, swagger_1.ApiBearerAuth)('access-token'),

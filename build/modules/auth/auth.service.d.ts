@@ -17,6 +17,7 @@ export declare class AuthService {
     private readonly emailService;
     private readonly workspaceQueryService;
     constructor(userRepo: Repository<User>, workspaceRepo: Repository<Workspace>, userService: UsersService, memberService: MemberService, tokenManager: TokenManager, emailService: EmailService, workspaceQueryService: WorkspaceQueryService);
+    private generateUniqueUserName;
     register(dto: RegisterDto): Promise<{
         message: string;
         emailCode: string | null;
