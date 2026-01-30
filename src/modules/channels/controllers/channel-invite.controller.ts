@@ -1,4 +1,4 @@
-import { Controller, Req, Param, Patch, Body, Query } from '@nestjs/common';
+import { Controller, Req, Param, Patch, Body, Query, Post } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -19,7 +19,7 @@ export class ChannelInviteController {
   ) {}
 
   // Invite a member to join a private channel
-  @Patch(':id/invite')
+  @Post(':id/invite')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Invite a member to join a private channel' })
   @ApiResponse({

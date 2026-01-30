@@ -1,20 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
 
 import { MemberService } from 'src/modules/members/services/member.service';
 import { WorkspacesService } from 'src/modules/workspaces/services/workspace.service';
-
 import { TokenManager } from 'src/core/security/services/token-manager.service';
-
-import { Workspace } from 'src/modules/workspaces/entities/workspace.entity';
-import { Repository } from 'typeorm';
-
-import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { customError } from 'src/core/error-handler/custom-errors';
 import { ChannelQueryService } from './channel-query.service';
 import { ChannelMembershipService } from './channel-membership.service';
 import { ChannelService } from './channel.service';
+
+import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
+import { customError } from 'src/core/error-handler/custom-errors';
 import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
 
 @Injectable()

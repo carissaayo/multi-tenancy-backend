@@ -5,6 +5,7 @@ import {
   Req,
   Get,
   Param,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -62,5 +63,27 @@ export class WorkspacesController {
   ): Promise<GetUserWorkspaceResponse> {
     return this.workspaceService.getUserSingleWorkspace(id, req);
   }
-
+  @Get(':id/members')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all members of a workspace' })
+  @ApiResponse({ status: 200, description: 'List of workspace members' })
+  getWorkspaceMembers(
+    @Param('id') workspaceId: string,
+    @Req() req: AuthenticatedRequest,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('role') role?: string,
+    @Query('isActive') isActive?: string,
+  ) {
+    return this.workspaceService.getWorkspaceMembers(
+      workspaceId,
+      req,
+      {
+        limit: limit ? parseInt(limit) : undefined,
+        offset: offset ? parseInt(offset) : undefined,
+        role,
+        isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      },
+    );
+  }
 }
