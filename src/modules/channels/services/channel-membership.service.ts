@@ -119,59 +119,6 @@ export class ChannelMembershipService {
     };
   }
 
-  async inviteToJoinPrivateChannel(
-    req: AuthenticatedRequest,
-    id: string,
-    memberId: string,
-  ) {
-    const workspace = req.workspace!;
-
-    // Check if member is already in the channel
-    const isThisUserThisChannelMember = await this.isUserMember(
-      id,
-      memberId,
-      workspace.id,
-    );
-
-    if (isThisUserThisChannelMember) {
-      throw customError.badRequest('You are already a member of this channel');
-    }
-
-    // Add member to channel
-    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
-      workspace.slug,
-    );
-    const schemaName = `workspace_${sanitizedSlug}`;
-
-    try {
-      await this.dataSource.query(
-        `
-        INSERT INTO "${schemaName}".channel_members
-          (channel_id, member_id, joined_at)
-        VALUES ($1, $2, NOW())
-        ON CONFLICT (channel_id, member_id) DO NOTHING
-        `,
-        [id, memberId],
-      );
-
-      this.logger.log(
-        `Member ${memberId} joined channel ${id} in workspace ${workspace.id}`,
-      );
-
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Error adding member ${memberId} to channel ${id}: ${error.message}`,
-      );
-
-      if (error.message?.includes('does not exist')) {
-        throw customError.internalServerError('Workspace schema not found');
-      }
-
-      throw customError.internalServerError('Failed to join channel');
-    }
-  }
-
   async joinChannel(req: AuthenticatedRequest, id: string, memberId: string) {
     const workspace = req.workspace!;
 

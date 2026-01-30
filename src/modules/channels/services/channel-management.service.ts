@@ -10,7 +10,7 @@ import { ChannelService } from './channel.service';
 
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { customError } from 'src/core/error-handler/custom-errors';
-import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
+import { RemoveMemberFromChannelDto, AddMemberToChannelDto } from '../dtos/channel-management.dto';
 
 @Injectable()
 export class ChannelManagementService {
@@ -49,7 +49,7 @@ export class ChannelManagementService {
 
     if (channel.isPrivate) {
       throw customError.badRequest(
-        'You need to be invited to join this private channel',
+        'You cannot join private channels. Ask a channel member to add you.',
       );
     }
 
@@ -196,4 +196,147 @@ export class ChannelManagementService {
       refreshToken: tokens.refreshToken || '',
     };
   }
+
+  async addToChannel(
+    req: AuthenticatedRequest,
+    id: string,
+    dto: AddMemberToChannelDto,
+  ) {
+    const { memberId } = dto;
+    const user = req.user!;
+    const workspace = req.workspace!;
+
+    // Check if requester is a workspace member
+    const requesterMember = await this.memberService.isUserMember(
+      workspace.id,
+      user.id,
+    );
+
+    if (!requesterMember) {
+      throw customError.forbidden('You are not a member of this workspace');
+    }
+
+    // Get channel details
+    const channel = await this.channelQueryService.findChannelById(
+      id,
+      workspace.id,
+    );
+
+    if (!channel) {
+      throw customError.notFound('Channel not found');
+    }
+
+    // For private channels, check permissions
+    if (channel.isPrivate) {
+      // Check if requester is a member of the channel
+      const isRequesterChannelMember =
+        await this.channelMembershipService.isUserMember(
+          id,
+          requesterMember.id,
+          workspace.id,
+        );
+
+      if (!isRequesterChannelMember) {
+        throw customError.forbidden(
+          'You must be a member of this channel to add others',
+        );
+      }
+
+      // Check if requester has permission to manage channels
+      const hasPermission =
+        await this.channelService.hasChannelManagementPermission(
+          workspace.id,
+          user.id,
+          workspace,
+        );
+
+      const isChannelCreator = channel.createdBy === user.id;
+
+      if (!hasPermission && !isChannelCreator) {
+        throw customError.forbidden(
+          'You do not have permission to add members to this channel',
+        );
+      }
+    }
+
+    // Check if requester is trying to add themselves
+    if (requesterMember.id === memberId) {
+      throw customError.badRequest(
+        'You cannot add yourself. Use the join endpoint instead.',
+      );
+    }
+
+    // Get the schema name
+    const sanitizedSlug = this.workspacesService.sanitizeSlugForSQL(
+      workspace.slug,
+    );
+    const schemaName = `workspace_${sanitizedSlug}`;
+
+    // Verify the member to be added exists in the workspace
+    const [targetMember] = await this.dataSource.query(
+      `SELECT id, user_id FROM "${schemaName}".members WHERE id = $1 AND is_active = true LIMIT 1`,
+      [memberId],
+    );
+
+    if (!targetMember) {
+      throw customError.badRequest(
+        'The user is not a member of this workspace',
+      );
+    }
+
+    // Check if member is already in the channel
+    const isMemberAlreadyInChannel =
+      await this.channelMembershipService.isUserMember(
+        id,
+        memberId,
+        workspace.id,
+      );
+
+    if (isMemberAlreadyInChannel) {
+      throw customError.badRequest(
+        'The user is already a member of this channel',
+      );
+    }
+
+    // Add member to channel
+    try {
+      await this.dataSource.query(
+        `
+        INSERT INTO "${schemaName}".channel_members
+          (channel_id, member_id, joined_at)
+        VALUES ($1, $2, NOW())
+        `,
+        [id, memberId],
+      );
+
+      this.logger.log(
+        `Member ${memberId} added to channel ${id} by user ${user.id}`,
+      );
+
+      const tokens = await this.tokenManager.signTokens(user, req);
+
+      return {
+        message: `Member added to ${channel.isPrivate ? 'private' : 'public'} channel successfully`,
+        channelId: id,
+        memberId: memberId,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken || '',
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error adding member ${memberId} to channel ${id}: ${error.message}`,
+      );
+
+      if (error.statusCode) {
+        throw error;
+      }
+
+      if (error.message?.includes('does not exist')) {
+        throw customError.internalServerError('Workspace schema not found');
+      }
+
+      throw customError.internalServerError('Failed to add member to channel');
+    }
+  }
+  
 }
