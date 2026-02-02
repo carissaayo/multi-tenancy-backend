@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, Allow } from 'class-validator';
 import { WorkspacePlan } from '../interfaces/workspace.interface';
 
 export class CreateWorkspaceDto {
@@ -19,9 +19,9 @@ export class CreateWorkspaceDto {
   @IsOptional()
   description: string;
 
-  @IsString()
+  @Allow()
   @IsOptional()
-  logoUrl: string;
+  logo?: any; // File will be handled by FileInterceptor
 }
 
 export class UpdateWorkspaceDto {

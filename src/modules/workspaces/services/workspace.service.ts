@@ -37,13 +37,14 @@ export class WorkspacesService {
   async create(
     req: AuthenticatedRequest,
     createDto: CreateWorkspaceDto,
+    file?: Express.Multer.File,
   ): Promise<{
     workspace: Workspace | null;
     accessToken: string;
     refreshToken: string;
     message: string;
   }> {
-    const result = await this.workspaceLifecycleService.create(req, createDto);
+    const result = await this.workspaceLifecycleService.create(req, createDto, file);
 
     // Emit WebSocket event if workspace was created
     if (result.workspace) {

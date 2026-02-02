@@ -47,6 +47,7 @@ export class WorkspaceLifecycleService {
   async create(
     req: AuthenticatedRequest,
     createDto: CreateWorkspaceDto,
+    file?: Express.Multer.File,
   ): Promise<{
     workspace: Workspace | null;
     accessToken: string;
@@ -137,6 +138,33 @@ export class WorkspaceLifecycleService {
         user.id,
         queryRunner,
       );
+
+      if (file) {
+        try {
+          const uploadedFile = await this.storageService.uploadFile(file, {
+            scope: 'workspace',
+            workspaceId: workspace.id,
+            userId: user.id,
+            folder: 'logos',
+            makePublic: true,
+          });
+
+        
+          workspace.logoUrl = uploadedFile.url;
+          await queryRunner.manager.save(workspace);
+
+          this.logger.log(
+            `Workspace logo uploaded: ${workspace.slug} - ${uploadedFile.url}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to upload logo for workspace ${workspace.slug}: ${error.message}`,
+            error.stack,
+          );
+          // Don't fail the entire workspace creation if logo upload fails
+          // The workspace will be created without a logo
+        }
+      }
 
       // 9. Create default channels
       await this.createDefaultChannels(workspace.slug, user.id, queryRunner);
