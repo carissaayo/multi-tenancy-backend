@@ -29,5 +29,11 @@ export const workspaceOptionalRoutes = [
 
 
 export const allowDeactivatedWorkspaceRoutes = [
-  '/api/settings/activate', 
+  '/api/settings/activate',
+  'api/workspaces',
+  '/api/workspaces/:id',
+  '/api/auth/select-workspace',
+  '/api/workspaces/:id/members',
+  '/api/settings/delete',
+  '/api/management/leave',
 ];
