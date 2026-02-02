@@ -3,13 +3,9 @@ import {
   Post,
   Body,
   Req,
-  Get,
   Param,
   Patch,
-  Delete,
   Query,
-  UseInterceptors,
-  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,7 +23,7 @@ import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-r
 export class WorkspaceInviteController {
   constructor(private readonly workspaceService: WorkspaceInviteService) {}
 
-  // Create a new workspace
+  // send a workspace invitation
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Send workspace invitation' })
