@@ -5,3 +5,9 @@ export class RemoveMemberFromChannelDto {
     @IsNotEmpty()
     targetMemberId: string;
 }
+
+export class AddMemberToChannelDto {
+    @IsString()
+    @IsNotEmpty()
+    memberId: string;
+}

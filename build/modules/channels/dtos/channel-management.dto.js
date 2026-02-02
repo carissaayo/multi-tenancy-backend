@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RemoveMemberFromChannelDto = void 0;
+exports.AddMemberToChannelDto = exports.RemoveMemberFromChannelDto = void 0;
 const class_validator_1 = require("class-validator");
 class RemoveMemberFromChannelDto {
     targetMemberId;
@@ -20,4 +20,13 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], RemoveMemberFromChannelDto.prototype, "targetMemberId", void 0);
+class AddMemberToChannelDto {
+    memberId;
+}
+exports.AddMemberToChannelDto = AddMemberToChannelDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AddMemberToChannelDto.prototype, "memberId", void 0);
 //# sourceMappingURL=channel-management.dto.js.map

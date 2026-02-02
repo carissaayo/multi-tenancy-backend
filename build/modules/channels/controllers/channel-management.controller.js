@@ -31,6 +31,9 @@ let ChannelManagementController = class ChannelManagementController {
     removeMemberFromChannel(req, id, dto) {
         return this.channelManagementService.removeMemberFromChannel(req, id, dto);
     }
+    addMemberToChannel(req, id, dto) {
+        return this.channelManagementService.addToChannel(req, id, dto);
+    }
 };
 exports.ChannelManagementController = ChannelManagementController;
 __decorate([
@@ -76,6 +79,21 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, channel_management_dto_1.RemoveMemberFromChannelDto]),
     __metadata("design:returntype", void 0)
 ], ChannelManagementController.prototype, "removeMemberFromChannel", null);
+__decorate([
+    (0, common_1.Post)(':id/members/add'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Add a member to a channel (public or private)' }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: 'Member added to channel successfully',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, channel_management_dto_1.AddMemberToChannelDto]),
+    __metadata("design:returntype", void 0)
+], ChannelManagementController.prototype, "addMemberToChannel", null);
 exports.ChannelManagementController = ChannelManagementController = __decorate([
     (0, swagger_1.ApiTags)('Channel Management'),
     (0, common_1.Controller)('channels'),

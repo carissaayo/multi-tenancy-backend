@@ -22,4 +22,28 @@ export declare class WorkspaceMembershipService {
     countUserFreeWorkspaces(userId: string): Promise<number>;
     getMaxWorkspacesForUser(user: User): number;
     getMemberProfile(member: WorkspaceMember): Partial<WorkspaceMember>;
+    getWorkspaceMembers(workspaceId: string, userId: string, options?: {
+        limit?: number;
+        offset?: number;
+        role?: string;
+        isActive?: boolean;
+    }): Promise<{
+        members: Array<{
+            member: {
+                id: string;
+                userId: string;
+                role: string;
+                isActive: boolean;
+                joinedAt: Date;
+            };
+            user: {
+                id: string;
+                email: string;
+                fullName: string;
+                avatarUrl: string | null;
+                isEmailVerified: boolean;
+            };
+        }>;
+        total: number;
+    }>;
 }

@@ -1,6 +1,6 @@
 import { ChannelManagementService } from '../services/channel-management.service';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
+import { RemoveMemberFromChannelDto, AddMemberToChannelDto } from '../dtos/channel-management.dto';
 export declare class ChannelManagementController {
     private readonly channelManagementService;
     constructor(channelManagementService: ChannelManagementService);
@@ -17,6 +17,13 @@ export declare class ChannelManagementController {
     }>;
     removeMemberFromChannel(req: AuthenticatedRequest, id: string, dto: RemoveMemberFromChannelDto): Promise<{
         message: string;
+        accessToken: string;
+        refreshToken: string;
+    }>;
+    addMemberToChannel(req: AuthenticatedRequest, id: string, dto: AddMemberToChannelDto): Promise<{
+        message: string;
+        channelId: string;
+        memberId: string;
         accessToken: string;
         refreshToken: string;
     }>;

@@ -1,4 +1,4 @@
-import { Controller, Req, Param, Patch, Delete, Body } from '@nestjs/common';
+import { Controller, Req, Param, Patch, Delete, Body, Post } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,7 +9,7 @@ import {
 import { ChannelManagementService } from '../services/channel-management.service';
 
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
-import { RemoveMemberFromChannelDto } from '../dtos/channel-management.dto';
+import { RemoveMemberFromChannelDto, AddMemberToChannelDto } from '../dtos/channel-management.dto';
 
 @ApiTags('Channel Management')
 @Controller('channels')
@@ -60,5 +60,21 @@ export class ChannelManagementController {
       id,
       dto,
     );
+  }
+
+  // Add a member to a channel (works for both public and private channels)
+  @Post(':id/members/add')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Add a member to a channel (public or private)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Member added to channel successfully',
+  })
+  addMemberToChannel(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() dto: AddMemberToChannelDto,
+  ) {
+    return this.channelManagementService.addToChannel(req, id, dto);
   }
 }

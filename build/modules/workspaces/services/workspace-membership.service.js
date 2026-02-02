@@ -123,6 +123,112 @@ let WorkspaceMembershipService = WorkspaceMembershipService_1 = class WorkspaceM
     getMemberProfile(member) {
         return this.memberService.getMemberProfile(member);
     }
+    async getWorkspaceMembers(workspaceId, userId, options) {
+        const member = await this.memberService.isUserMember(workspaceId, userId);
+        if (!member) {
+            throw custom_errors_1.customError.forbidden('You are not a member of this workspace');
+        }
+        const workspace = await this.workspaceRepo.findOne({
+            where: { id: workspaceId },
+        });
+        if (!workspace) {
+            throw custom_errors_1.customError.notFound('Workspace not found');
+        }
+        const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(workspace.slug);
+        const schemaName = `workspace_${sanitizedSlug}`;
+        try {
+            let query = `
+      SELECT 
+        m.id as member_id,
+        m.user_id,
+        m.role,
+        m.permissions,
+        m.is_active as member_is_active,
+        m.joined_at as workspace_joined_at,
+        u.id as user_id,
+        u.email,
+        u.full_name,
+        u.avatar_url,
+        u.is_email_verified
+      FROM "${schemaName}".members m
+      INNER JOIN public.users u ON m.user_id = u.id
+      WHERE 1=1
+    `;
+            const params = [];
+            let paramIndex = 1;
+            if (options?.isActive !== undefined) {
+                query += ` AND m.is_active = $${paramIndex}`;
+                params.push(options.isActive);
+                paramIndex++;
+            }
+            if (options?.role) {
+                query += ` AND m.role = $${paramIndex}`;
+                params.push(options.role);
+                paramIndex++;
+            }
+            query += ` ORDER BY m.joined_at ASC`;
+            if (options?.limit) {
+                query += ` LIMIT $${paramIndex}`;
+                params.push(options.limit);
+                paramIndex++;
+            }
+            if (options?.offset) {
+                query += ` OFFSET $${paramIndex}`;
+                params.push(options.offset);
+                paramIndex++;
+            }
+            const result = await this.dataSource.query(query, params);
+            let countQuery = `
+      SELECT COUNT(*) as total
+      FROM "${schemaName}".members m
+      WHERE 1=1
+    `;
+            const countParams = [];
+            let countParamIndex = 1;
+            if (options?.isActive !== undefined) {
+                countQuery += ` AND m.is_active = $${countParamIndex}`;
+                countParams.push(options.isActive);
+                countParamIndex++;
+            }
+            if (options?.role) {
+                countQuery += ` AND m.role = $${countParamIndex}`;
+                countParams.push(options.role);
+                countParamIndex++;
+            }
+            const [countResult] = await this.dataSource.query(countQuery, countParams);
+            const total = parseInt(countResult.total);
+            const members = result.map((row) => ({
+                member: {
+                    id: row.member_id,
+                    userId: row.user_id,
+                    role: row.role,
+                    isActive: row.member_is_active,
+                    joinedAt: row.workspace_joined_at,
+                },
+                user: {
+                    id: row.user_id,
+                    email: row.email,
+                    fullName: row.full_name,
+                    avatarUrl: row.avatar_url,
+                    isEmailVerified: row.is_email_verified,
+                },
+            }));
+            return {
+                members,
+                total,
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error finding workspace members for workspace ${workspaceId}: ${error.message}`);
+            if (error.statusCode) {
+                throw error;
+            }
+            if (error.message?.includes('does not exist')) {
+                throw custom_errors_1.customError.internalServerError('Workspace schema not found');
+            }
+            throw custom_errors_1.customError.internalServerError('Failed to fetch workspace members');
+        }
+    }
 };
 exports.WorkspaceMembershipService = WorkspaceMembershipService;
 exports.WorkspaceMembershipService = WorkspaceMembershipService = WorkspaceMembershipService_1 = __decorate([

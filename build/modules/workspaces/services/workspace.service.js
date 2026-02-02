@@ -18,16 +18,19 @@ const workspace_query_service_1 = require("./workspace-query.service");
 const workspace_membership_service_1 = require("./workspace-membership.service");
 const workspace_lifecycle_service_1 = require("./workspace-lifecycle.service");
 const messaging_gateway_1 = require("../../messages/gateways/messaging.gateway");
+const token_manager_service_1 = require("../../../core/security/services/token-manager.service");
 let WorkspacesService = class WorkspacesService {
     workspaceQueryService;
     workspaceMembershipService;
     workspaceLifecycleService;
     messagingGateway;
-    constructor(workspaceQueryService, workspaceMembershipService, workspaceLifecycleService, messagingGateway) {
+    tokenManager;
+    constructor(workspaceQueryService, workspaceMembershipService, workspaceLifecycleService, messagingGateway, tokenManager) {
         this.workspaceQueryService = workspaceQueryService;
         this.workspaceMembershipService = workspaceMembershipService;
         this.workspaceLifecycleService = workspaceLifecycleService;
         this.messagingGateway = messagingGateway;
+        this.tokenManager = tokenManager;
     }
     async create(req, createDto) {
         const result = await this.workspaceLifecycleService.create(req, createDto);
@@ -61,6 +64,17 @@ let WorkspacesService = class WorkspacesService {
     }
     async countUserFreeWorkspaces(userId) {
         return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
+    }
+    async getWorkspaceMembers(workspaceId, req, options) {
+        const result = await this.workspaceMembershipService.getWorkspaceMembers(workspaceId, req.userId, options);
+        const tokens = await this.tokenManager.signTokens(req.user, req);
+        return {
+            members: result.members,
+            total: result.total,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || '',
+            message: 'Workspace members retrieved successfully',
+        };
     }
     normalizedWorkspaceData(workspace) {
         return {
@@ -98,6 +112,7 @@ exports.WorkspacesService = WorkspacesService = __decorate([
     __metadata("design:paramtypes", [workspace_query_service_1.WorkspaceQueryService,
         workspace_membership_service_1.WorkspaceMembershipService,
         workspace_lifecycle_service_1.WorkspaceLifecycleService,
-        messaging_gateway_1.MessagingGateway])
+        messaging_gateway_1.MessagingGateway,
+        token_manager_service_1.TokenManager])
 ], WorkspacesService);
 //# sourceMappingURL=workspace.service.js.map

@@ -14,6 +14,7 @@ import {
 } from '../interfaces/workspace.interface';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { MessagingGateway } from 'src/modules/messages/gateways/messaging.gateway';
+import { TokenManager } from 'src/core/security/services/token-manager.service';
 
 @Injectable()
 export class WorkspacesService {
@@ -23,6 +24,7 @@ export class WorkspacesService {
     private readonly workspaceLifecycleService: WorkspaceLifecycleService,
     @Inject(forwardRef(() => MessagingGateway))
     private readonly messagingGateway: MessagingGateway,
+    private readonly tokenManager: TokenManager,
   ) {}
 
   // ============================================
@@ -142,6 +144,34 @@ export class WorkspacesService {
    */
   async countUserFreeWorkspaces(userId: string): Promise<number> {
     return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
+  }
+
+  // In WorkspacesService
+  async getWorkspaceMembers(
+    workspaceId: string,
+    req: AuthenticatedRequest,
+    options?: {
+      limit?: number;
+      offset?: number;
+      role?: string;
+      isActive?: boolean;
+    }
+  ) {
+    const result = await this.workspaceMembershipService.getWorkspaceMembers(
+      workspaceId,
+      req.userId,
+      options,
+    );
+
+    const tokens = await this.tokenManager.signTokens(req.user!, req);
+
+    return {
+      members: result.members,
+      total: result.total,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace members retrieved successfully',
+    };
   }
 
   normalizedWorkspaceData(workspace: Workspace) {
