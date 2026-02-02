@@ -135,7 +135,10 @@ export class AuthService {
       throw customError.forbidden('Account temporarily locked');
     }
 
-    await this.validatePassword(user, dto.password);
+    const isValid = await this.validatePassword(user, dto.password);
+    if (!isValid) {
+      throw customError.unauthorized('Invalid credentials');
+    }
 
     const tokens = await this.tokenManager.signTokens(user, req, {
       loginType: true,
@@ -197,7 +200,7 @@ export class AuthService {
     };
   }
 
-  private async validatePassword(user: User, password: string) {
+  private async validatePassword(user: User, password: string): Promise<boolean> {
     const isValid = await bcrypt.compare(password, user.passwordHash);
 
     if (!isValid) {
@@ -206,14 +209,20 @@ export class AuthService {
       if (user.failedLoginAttempts >= 5) {
         user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
         user.failedLoginAttempts = 0;
+        await this.userRepo.save(user);
+        throw customError.unauthorized('Too many failed attempts. Please try again later.');
       }
-   
+      await this.userRepo.save(user);
+
+      return false;
+
     }
 
     user.failedLoginAttempts = 0;
     user.lockUntil = null;
     user.lastLoginAt = new Date();
     await this.userRepo.save(user);
+    return true;
   }
 
   /* ---------------- VERIFY EMAIL ---------------- */
@@ -316,7 +325,10 @@ export class AuthService {
       throw customError.notFound('User not found');
     }
 
-    await this.validatePassword(user, dto.password);
+    const isValid = await this.validatePassword(user, dto.password);
+    if (!isValid) {
+      throw customError.badRequest('Invalid password');
+    }
 
     if (dto.newPassword !== dto.confirmNewPassword) {
       throw customError.badRequest('Passwords do not match');
