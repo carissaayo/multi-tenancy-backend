@@ -9,6 +9,7 @@ import {
 } from '../constants/public-routes';
 import { workspaceOptionalRoutes } from '../constants/public-routes';
 import { AuthenticatedRequest } from '../interfaces/custom-request.interface';
+import { customError } from 'src/core/error-handler/custom-errors';
 
 @Injectable()
 export class TenantResolverMiddleware implements NestMiddleware {
@@ -58,21 +59,9 @@ export class TenantResolverMiddleware implements NestMiddleware {
         this.logger.warn(
           `No workspace subdomain found in hostname: ${this.getHostname(req)}`,
         );
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          message:
-            'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
-        });
-      }
-      if (!workspaceSlug) {
-        this.logger.warn(
-          `No workspace subdomain found in hostname: ${req.hostname}`,
+        throw customError.badRequest(
+          'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
         );
-        return res.status(HttpStatus.BAD_REQUEST).json({
-          success: false,
-          message:
-            'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
-        });
       }
 
       const allowsDeactivated = this.allowsDeactivatedWorkspace(
@@ -93,19 +82,15 @@ export class TenantResolverMiddleware implements NestMiddleware {
             where: { slug: workspaceSlug, isActive: false },
           });
           if (inactiveWorkspace) {
-            this.logger.warn(`Workspace ${workspaceSlug} is deactivated`);
-            return res.status(HttpStatus.FORBIDDEN).json({
-              success: false,
-              message: 'Workspace is deactivated',
-            });
+            this.logger.warn(`Workspace ${workspaceSlug} is deactivated - action not allowed`);
+            throw customError.forbidden(
+              'You can not perform this action on a deactivated workspace',
+            );
           }
         }
 
         this.logger.warn(`Workspace not found: ${workspaceSlug}`);
-        return res.status(HttpStatus.NOT_FOUND).json({
-          success: false,
-          message: 'Workspace not found',
-        });
+        throw customError.notFound('Workspace not found');
       }
 
       // Attach workspace to request
@@ -117,11 +102,13 @@ export class TenantResolverMiddleware implements NestMiddleware {
       );
       next();
     } catch (error) {
+      // Re-throw custom errors so they can be handled by the global exception filter
+      if (error instanceof Error && 'statusCode' in error) {
+        throw error;
+      }
+      // For unexpected errors, log and throw internal server error
       this.logger.error('Tenant resolution failed:', error);
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: 'Failed to resolve workspace',
-      });
+      throw customError.internalServerError('Failed to resolve workspace');
     }
   }
 
