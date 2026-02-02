@@ -22,6 +22,14 @@ export class TenantResolverMiddleware implements NestMiddleware {
 
   async use(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
+      // Skip workspace validation for OPTIONS requests (CORS preflight)
+      if (req.method === 'OPTIONS') {
+        this.logger.debug(
+          `Skipping tenant resolution for OPTIONS request: ${req.originalUrl}`,
+        );
+        return next();
+      }
+
       if (this.isPublicRoute(req.originalUrl)) {
         this.logger.debug(
           `Skipping tenant resolution for public route: ${req.originalUrl}`,
