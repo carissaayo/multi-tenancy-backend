@@ -36,4 +36,5 @@ export const allowDeactivatedWorkspaceRoutes = [
   '/api/workspaces/:id/members',
   '/api/settings/delete',
   '/api/management/leave',
+  '/api/channels'
 ];
