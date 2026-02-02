@@ -1,10 +1,8 @@
 import {
   Controller,
-  Post,
   Body,
   Req,
   Get,
-  Param,
   Patch,
   Delete,
   Query,
@@ -17,13 +15,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { WorkspacesService } from '../services/workspace.service';
-import { CreateWorkspaceDto, UpdateWorkspaceDto } from '../dtos/workspace.dto';
+import {  UpdateWorkspaceDto } from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { Workspace } from '../entities/workspace.entity';
 import {
   GetUserWorkspaceResponse,
-  GetUserWorkspacesResponse,
   NoDataWorkspaceResponse,
   UpdateWorkspaceResponse,
   WorkspacePlan,
