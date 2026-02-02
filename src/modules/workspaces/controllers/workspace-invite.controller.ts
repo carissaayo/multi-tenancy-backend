@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Query,
+  Get,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,6 +23,18 @@ import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-r
 @Controller('invitations')
 export class WorkspaceInviteController {
   constructor(private readonly workspaceService: WorkspaceInviteService) {}
+
+  // Get all workspace invitations
+  @Get()
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all workspace invitations' })
+  @ApiResponse({
+    status: 200,
+    description: 'Workspace invitations retrieved successfully',
+  })
+  getInvitations(@Req() req: AuthenticatedRequest) {
+    return this.workspaceService.listWorkspaceInvites(req);
+  }
 
   // send a workspace invitation
   @Post()

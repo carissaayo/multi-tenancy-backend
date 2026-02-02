@@ -404,7 +404,109 @@ export class WorkspaceInviteService {
     }
   }
 
-  async listPendingInvites(workspaceId: string) {}
+  /**
+   * Get all invitations for a workspace
+   * @param req - Authenticated request
+   * @returns List of workspace invitations with inviter and invitee details
+   */
+  async listWorkspaceInvites(req: AuthenticatedRequest) {
+    const workspace = req.workspace!;
+    const userId = req.userId;
+
+    // Check if user has permission to view invitations (must be admin or owner)
+    const canView = await this.hasInvitePermission(
+      workspace.id,
+      userId,
+      workspace,
+    );
+
+    if (!canView) {
+      throw customError.forbidden(
+        'You do not have permission to view workspace invitations',
+      );
+    }
+
+    // Get all invitations for this workspace
+    const invitations = await this.workspaceInvitationRepo.find({
+      where: { workspaceId: workspace.id },
+      relations: ['sentTo', 'inviter', 'revokedByUser'],
+      order: { invitedAt: 'DESC' },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+        invitedAt: true,
+        expiresAt: true,
+        acceptedAt: true,
+        revokedAt: true,
+        invitedBy: true,
+        sentToId: true,
+        revokedBy: true,
+        sentTo: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+        },
+        inviter: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+        },
+        revokedByUser: {
+          id: true,
+          email: true,
+          fullName: true,
+          avatarUrl: true,
+        },
+      },
+    });
+
+    const tokens = await this.tokenManager.signTokens(req.user!, req);
+
+    return {
+      invitations: invitations.map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        role: inv.role,
+        status: inv.status,
+        invitedAt: inv.invitedAt,
+        expiresAt: inv.expiresAt,
+        acceptedAt: inv.acceptedAt,
+        revokedAt: inv.revokedAt,
+        invitedBy: inv.inviter
+          ? {
+              id: inv.inviter.id,
+              email: inv.inviter.email,
+              fullName: inv.inviter.fullName,
+              avatarUrl: inv.inviter.avatarUrl,
+            }
+          : null,
+        sentTo: inv.sentTo
+          ? {
+              id: inv.sentTo.id,
+              email: inv.sentTo.email,
+              fullName: inv.sentTo.fullName,
+              avatarUrl: inv.sentTo.avatarUrl,
+            }
+          : null,
+        revokedBy: inv.revokedByUser
+          ? {
+              id: inv.revokedByUser.id,
+              email: inv.revokedByUser.email,
+              fullName: inv.revokedByUser.fullName,
+              avatarUrl: inv.revokedByUser.avatarUrl,
+            }
+          : null,
+      })),
+      total: invitations.length,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Workspace invitations retrieved successfully',
+    };
+  }
 
   /**
    * Check if user has permission to invite members
