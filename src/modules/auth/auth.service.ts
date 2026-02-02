@@ -207,9 +207,7 @@ export class AuthService {
         user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
         user.failedLoginAttempts = 0;
       }
-
-      await this.userRepo.save(user);
-      throw customError.unauthorized('Invalid credentials');
+   
     }
 
     user.failedLoginAttempts = 0;
