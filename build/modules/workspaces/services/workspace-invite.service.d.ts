@@ -11,7 +11,7 @@ import { User } from 'src/modules/users/entities/user.entity';
 import { Workspace } from '../entities/workspace.entity';
 import { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
 import { WorkspaceInviteDto } from '../dtos/workspace-invite.dto';
-import { NoDataWorkspaceResponse } from '../interfaces/workspace.interface';
+import { NoDataWorkspaceResponse, WorkspaceInvitationRole, WorkspaceInvitationStatus } from '../interfaces/workspace.interface';
 export declare class WorkspaceInviteService {
     private readonly workspaceInvitationRepo;
     private readonly userRepo;
@@ -39,6 +39,39 @@ export declare class WorkspaceInviteService {
     }>;
     revokeInvite(inviteId: string, req: AuthenticatedRequest): Promise<NoDataWorkspaceResponse>;
     private addMemberToDefaultChannels;
-    listPendingInvites(workspaceId: string): Promise<void>;
+    listWorkspaceInvites(req: AuthenticatedRequest): Promise<{
+        invitations: {
+            id: string;
+            email: string;
+            role: WorkspaceInvitationRole;
+            status: WorkspaceInvitationStatus;
+            invitedAt: Date;
+            expiresAt: Date;
+            acceptedAt: Date | null;
+            revokedAt: Date | null;
+            invitedBy: {
+                id: string;
+                email: string;
+                fullName: string | null;
+                avatarUrl: string | null;
+            } | null;
+            sentTo: {
+                id: string;
+                email: string;
+                fullName: string | null;
+                avatarUrl: string | null;
+            } | null;
+            revokedBy: {
+                id: string;
+                email: string;
+                fullName: string | null;
+                avatarUrl: string | null;
+            } | null;
+        }[];
+        total: number;
+        accessToken: string;
+        refreshToken: string;
+        message: string;
+    }>;
     private hasInvitePermission;
 }

@@ -17,7 +17,7 @@ class CreateWorkspaceDto {
     slug;
     plan;
     description;
-    logoUrl;
+    logo;
 }
 exports.CreateWorkspaceDto = CreateWorkspaceDto;
 __decorate([
@@ -42,10 +42,10 @@ __decorate([
     __metadata("design:type", String)
 ], CreateWorkspaceDto.prototype, "description", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Allow)(),
     (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", String)
-], CreateWorkspaceDto.prototype, "logoUrl", void 0);
+    __metadata("design:type", Object)
+], CreateWorkspaceDto.prototype, "logo", void 0);
 class UpdateWorkspaceDto {
     name;
     plan;

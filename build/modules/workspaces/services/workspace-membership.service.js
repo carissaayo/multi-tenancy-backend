@@ -76,9 +76,6 @@ let WorkspaceMembershipService = WorkspaceMembershipService_1 = class WorkspaceM
         if (!workspace) {
             throw custom_errors_1.customError.notFound('No workspace with this Id was found');
         }
-        if (!workspace.isActive) {
-            throw custom_errors_1.customError.notFound('This workspace is not active');
-        }
         const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(workspace.slug);
         const schemaName = `workspace_${sanitizedSlug}`;
         try {

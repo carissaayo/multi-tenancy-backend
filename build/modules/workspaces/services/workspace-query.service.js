@@ -147,8 +147,8 @@ let WorkspaceQueryService = WorkspaceQueryService_1 = class WorkspaceQueryServic
         }
         const { In } = await import('typeorm');
         const whereCondition = bySlug
-            ? { slug: In(identifiers), isActive: true }
-            : { id: In(identifiers), isActive: true };
+            ? { slug: In(identifiers) }
+            : { id: In(identifiers) };
         return this.workspaceRepo.find({
             where: whereCondition,
             relations: ['creator', 'owner'],

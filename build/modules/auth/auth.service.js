@@ -111,7 +111,10 @@ let AuthService = class AuthService {
         if (user.lockUntil && user.lockUntil > new Date()) {
             throw custom_errors_1.customError.forbidden('Account temporarily locked');
         }
-        await this.validatePassword(user, dto.password);
+        const isValid = await this.validatePassword(user, dto.password);
+        if (!isValid) {
+            throw custom_errors_1.customError.unauthorized('Invalid credentials');
+        }
         const tokens = await this.tokenManager.signTokens(user, req, {
             loginType: true,
         });
@@ -159,14 +162,17 @@ let AuthService = class AuthService {
             if (user.failedLoginAttempts >= 5) {
                 user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
                 user.failedLoginAttempts = 0;
+                await this.userRepo.save(user);
+                throw custom_errors_1.customError.unauthorized('Too many failed attempts. Please try again later.');
             }
             await this.userRepo.save(user);
-            throw custom_errors_1.customError.unauthorized('Invalid credentials');
+            return false;
         }
         user.failedLoginAttempts = 0;
         user.lockUntil = null;
         user.lastLoginAt = new Date();
         await this.userRepo.save(user);
+        return true;
     }
     async verifyEmail(dto, req) {
         const user = await this.userRepo.findOne({ where: { id: req.userId } });
@@ -233,7 +239,10 @@ let AuthService = class AuthService {
         if (!user) {
             throw custom_errors_1.customError.notFound('User not found');
         }
-        await this.validatePassword(user, dto.password);
+        const isValid = await this.validatePassword(user, dto.password);
+        if (!isValid) {
+            throw custom_errors_1.customError.badRequest('Invalid password');
+        }
         if (dto.newPassword !== dto.confirmNewPassword) {
             throw custom_errors_1.customError.badRequest('Passwords do not match');
         }

@@ -22,7 +22,7 @@ export declare class WorkspaceLifecycleService {
     private readonly configService;
     private readonly logger;
     constructor(workspaceRepo: Repository<Workspace>, userRepo: Repository<User>, dataSource: DataSource, tokenManager: TokenManager, workspaceMembershipService: WorkspaceMembershipService, workspaceQueryService: WorkspaceQueryService, memberService: MemberService, storageService: AWSStorageService, configService: ConfigService);
-    create(req: AuthenticatedRequest, createDto: CreateWorkspaceDto): Promise<{
+    create(req: AuthenticatedRequest, createDto: CreateWorkspaceDto, file?: Express.Multer.File): Promise<{
         workspace: Workspace | null;
         accessToken: string;
         refreshToken: string;

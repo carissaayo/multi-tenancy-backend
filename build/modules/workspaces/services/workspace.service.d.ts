@@ -14,7 +14,7 @@ export declare class WorkspacesService {
     private readonly messagingGateway;
     private readonly tokenManager;
     constructor(workspaceQueryService: WorkspaceQueryService, workspaceMembershipService: WorkspaceMembershipService, workspaceLifecycleService: WorkspaceLifecycleService, messagingGateway: MessagingGateway, tokenManager: TokenManager);
-    create(req: AuthenticatedRequest, createDto: CreateWorkspaceDto): Promise<{
+    create(req: AuthenticatedRequest, createDto: CreateWorkspaceDto, file?: Express.Multer.File): Promise<{
         workspace: Workspace | null;
         accessToken: string;
         refreshToken: string;

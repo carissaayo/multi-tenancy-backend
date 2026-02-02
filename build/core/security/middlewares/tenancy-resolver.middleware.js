@@ -20,6 +20,7 @@ const typeorm_2 = require("typeorm");
 const workspace_entity_1 = require("../../../modules/workspaces/entities/workspace.entity");
 const public_routes_1 = require("../constants/public-routes");
 const public_routes_2 = require("../constants/public-routes");
+const custom_errors_1 = require("../../error-handler/custom-errors");
 let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolverMiddleware {
     workspaceRepo;
     logger = new common_1.Logger(TenantResolverMiddleware_1.name);
@@ -28,6 +29,10 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
     }
     async use(req, res, next) {
         try {
+            if (req.method === 'OPTIONS') {
+                this.logger.debug(`Skipping tenant resolution for OPTIONS request: ${req.originalUrl}`);
+                return next();
+            }
             if (this.isPublicRoute(req.originalUrl)) {
                 this.logger.debug(`Skipping tenant resolution for public route: ${req.originalUrl}`);
                 return next();
@@ -50,17 +55,7 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
             const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
             if (!workspaceSlug) {
                 this.logger.warn(`No workspace subdomain found in hostname: ${this.getHostname(req)}`);
-                return res.status(common_1.HttpStatus.BAD_REQUEST).json({
-                    success: false,
-                    message: 'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
-                });
-            }
-            if (!workspaceSlug) {
-                this.logger.warn(`No workspace subdomain found in hostname: ${req.hostname}`);
-                return res.status(common_1.HttpStatus.BAD_REQUEST).json({
-                    success: false,
-                    message: 'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
-                });
+                throw custom_errors_1.customError.badRequest('Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)');
             }
             const allowsDeactivated = this.allowsDeactivatedWorkspace(req.originalUrl);
             const workspace = await this.workspaceRepo.findOne({
@@ -74,18 +69,12 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
                         where: { slug: workspaceSlug, isActive: false },
                     });
                     if (inactiveWorkspace) {
-                        this.logger.warn(`Workspace ${workspaceSlug} is deactivated`);
-                        return res.status(common_1.HttpStatus.FORBIDDEN).json({
-                            success: false,
-                            message: 'Workspace is deactivated',
-                        });
+                        this.logger.warn(`Workspace ${workspaceSlug} is deactivated - action not allowed`);
+                        throw custom_errors_1.customError.forbidden('You can not perform this action on a deactivated workspace');
                     }
                 }
                 this.logger.warn(`Workspace not found: ${workspaceSlug}`);
-                return res.status(common_1.HttpStatus.NOT_FOUND).json({
-                    success: false,
-                    message: 'Workspace not found',
-                });
+                throw custom_errors_1.customError.notFound('Workspace not found');
             }
             req.workspace = workspace;
             req.workspaceId = workspace.id;
@@ -93,11 +82,11 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
             next();
         }
         catch (error) {
+            if (error instanceof Error && 'statusCode' in error) {
+                throw error;
+            }
             this.logger.error('Tenant resolution failed:', error);
-            return res.status(common_1.HttpStatus.INTERNAL_SERVER_ERROR).json({
-                success: false,
-                message: 'Failed to resolve workspace',
-            });
+            throw custom_errors_1.customError.internalServerError('Failed to resolve workspace');
         }
     }
     getHostname(req) {

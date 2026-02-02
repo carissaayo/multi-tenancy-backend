@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkspacesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const platform_express_1 = require("@nestjs/platform-express");
 const workspace_service_1 = require("../services/workspace.service");
 const workspace_dto_1 = require("../dtos/workspace.dto");
 let WorkspacesController = class WorkspacesController {
@@ -22,8 +23,8 @@ let WorkspacesController = class WorkspacesController {
     constructor(workspaceService) {
         this.workspaceService = workspaceService;
     }
-    create(createDto, req) {
-        return this.workspaceService.create(req, createDto);
+    create(createDto, req, file) {
+        return this.workspaceService.create(req, createDto, file);
     }
     getUserWorkspaces(req) {
         return this.workspaceService.getUserWorkspaces(req);
@@ -44,12 +45,15 @@ exports.WorkspacesController = WorkspacesController;
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiBearerAuth)('access-token'),
-    (0, swagger_1.ApiOperation)({ summary: 'Create a new workspace' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create a new workspace with optional logo' }),
     (0, swagger_1.ApiResponse)({ status: 201, description: 'Workspace created successfully' }),
+    (0, swagger_1.ApiConsumes)('multipart/form-data'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo')),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [workspace_dto_1.CreateWorkspaceDto, Object]),
+    __metadata("design:paramtypes", [workspace_dto_1.CreateWorkspaceDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], WorkspacesController.prototype, "create", null);
 __decorate([

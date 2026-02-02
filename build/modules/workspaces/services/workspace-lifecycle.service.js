@@ -49,7 +49,7 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
         this.storageService = storageService;
         this.configService = configService;
     }
-    async create(req, createDto) {
+    async create(req, createDto, file) {
         const user = req.user;
         const workspacePlan = createDto.plan || workspace_interface_1.WorkspacePlan.FREE;
         const MAX_FREE_WORKSPACES = this.configService.get('workspace.maxFreeWorkspaces') || 2;
@@ -94,6 +94,23 @@ let WorkspaceLifecycleService = WorkspaceLifecycleService_1 = class WorkspaceLif
             await queryRunner.manager.save(workspace);
             await this.createWorkspaceSchema(workspace.slug, queryRunner);
             await this.memberService.addOwnerMember(workspace.id, workspace.slug, user.id, queryRunner);
+            if (file) {
+                try {
+                    const uploadedFile = await this.storageService.uploadFile(file, {
+                        scope: 'workspace',
+                        workspaceId: workspace.id,
+                        userId: user.id,
+                        folder: 'logos',
+                        makePublic: true,
+                    });
+                    workspace.logoUrl = uploadedFile.url;
+                    await queryRunner.manager.save(workspace);
+                    this.logger.log(`Workspace logo uploaded: ${workspace.slug} - ${uploadedFile.url}`);
+                }
+                catch (error) {
+                    this.logger.error(`Failed to upload logo for workspace ${workspace.slug}: ${error.message}`, error.stack);
+                }
+            }
             await this.createDefaultChannels(workspace.slug, user.id, queryRunner);
             await queryRunner.commitTransaction();
             const savedWorkspace = await this.workspaceQueryService.findWorkspaceWithSafeFields(workspace.id);

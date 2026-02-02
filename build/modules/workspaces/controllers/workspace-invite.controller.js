@@ -22,6 +22,9 @@ let WorkspaceInviteController = class WorkspaceInviteController {
     constructor(workspaceService) {
         this.workspaceService = workspaceService;
     }
+    getInvitations(req) {
+        return this.workspaceService.listWorkspaceInvites(req);
+    }
     sendInvitation(req, inviteDto) {
         return this.workspaceService.inviteByEmail(req, inviteDto);
     }
@@ -33,6 +36,19 @@ let WorkspaceInviteController = class WorkspaceInviteController {
     }
 };
 exports.WorkspaceInviteController = WorkspaceInviteController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all workspace invitations' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Workspace invitations retrieved successfully',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], WorkspaceInviteController.prototype, "getInvitations", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiBearerAuth)('access-token'),

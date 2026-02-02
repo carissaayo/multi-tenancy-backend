@@ -6,7 +6,7 @@ import { GetUserWorkspaceResponse, GetUserWorkspacesResponse } from '../interfac
 export declare class WorkspacesController {
     private readonly workspaceService;
     constructor(workspaceService: WorkspacesService);
-    create(createDto: CreateWorkspaceDto, req: AuthenticatedRequest): Promise<{
+    create(createDto: CreateWorkspaceDto, req: AuthenticatedRequest, file?: Express.Multer.File): Promise<{
         workspace: Workspace | null;
         accessToken: string;
         refreshToken: string;

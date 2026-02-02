@@ -4,7 +4,7 @@ export declare class CreateWorkspaceDto {
     slug: string;
     plan: WorkspacePlan;
     description: string;
-    logoUrl: string;
+    logo?: any;
 }
 export declare class UpdateWorkspaceDto {
     name: string;

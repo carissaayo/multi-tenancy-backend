@@ -32,8 +32,9 @@ let WorkspacesService = class WorkspacesService {
         this.messagingGateway = messagingGateway;
         this.tokenManager = tokenManager;
     }
-    async create(req, createDto) {
-        const result = await this.workspaceLifecycleService.create(req, createDto);
+    async create(req, createDto, file) {
+        console.log(file, "file");
+        const result = await this.workspaceLifecycleService.create(req, createDto, file);
         if (result.workspace) {
             this.messagingGateway.emitToUser(req.userId, 'workspaceCreated', {
                 workspace: this.normalizedWorkspaceData(result.workspace),

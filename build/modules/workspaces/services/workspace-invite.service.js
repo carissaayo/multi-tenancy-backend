@@ -301,7 +301,91 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
             this.logger.error(`Error adding member ${memberId} to default channels in workspace ${workspaceId}: ${error.message}`);
         }
     }
-    async listPendingInvites(workspaceId) { }
+    async listWorkspaceInvites(req) {
+        const workspace = req.workspace;
+        const userId = req.userId;
+        const canView = await this.hasInvitePermission(workspace.id, userId, workspace);
+        if (!canView) {
+            throw custom_errors_1.customError.forbidden('You do not have permission to view workspace invitations');
+        }
+        const invitations = await this.workspaceInvitationRepo.find({
+            where: { workspaceId: workspace.id },
+            relations: ['sentTo', 'inviter', 'revokedByUser'],
+            order: { invitedAt: 'DESC' },
+            select: {
+                id: true,
+                email: true,
+                role: true,
+                status: true,
+                invitedAt: true,
+                expiresAt: true,
+                acceptedAt: true,
+                revokedAt: true,
+                invitedBy: true,
+                sentToId: true,
+                revokedBy: true,
+                sentTo: {
+                    id: true,
+                    email: true,
+                    fullName: true,
+                    avatarUrl: true,
+                },
+                inviter: {
+                    id: true,
+                    email: true,
+                    fullName: true,
+                    avatarUrl: true,
+                },
+                revokedByUser: {
+                    id: true,
+                    email: true,
+                    fullName: true,
+                    avatarUrl: true,
+                },
+            },
+        });
+        const tokens = await this.tokenManager.signTokens(req.user, req);
+        return {
+            invitations: invitations.map((inv) => ({
+                id: inv.id,
+                email: inv.email,
+                role: inv.role,
+                status: inv.status,
+                invitedAt: inv.invitedAt,
+                expiresAt: inv.expiresAt,
+                acceptedAt: inv.acceptedAt,
+                revokedAt: inv.revokedAt,
+                invitedBy: inv.inviter
+                    ? {
+                        id: inv.inviter.id,
+                        email: inv.inviter.email,
+                        fullName: inv.inviter.fullName,
+                        avatarUrl: inv.inviter.avatarUrl,
+                    }
+                    : null,
+                sentTo: inv.sentTo
+                    ? {
+                        id: inv.sentTo.id,
+                        email: inv.sentTo.email,
+                        fullName: inv.sentTo.fullName,
+                        avatarUrl: inv.sentTo.avatarUrl,
+                    }
+                    : null,
+                revokedBy: inv.revokedByUser
+                    ? {
+                        id: inv.revokedByUser.id,
+                        email: inv.revokedByUser.email,
+                        fullName: inv.revokedByUser.fullName,
+                        avatarUrl: inv.revokedByUser.avatarUrl,
+                    }
+                    : null,
+            })),
+            total: invitations.length,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || '',
+            message: 'Workspace invitations retrieved successfully',
+        };
+    }
     async hasInvitePermission(workspaceId, userId, workspace) {
         if (workspace.createdBy === userId || workspace.ownerId === userId) {
             this.logger.debug(`User ${userId} is the owner of workspace ${workspaceId}`);
