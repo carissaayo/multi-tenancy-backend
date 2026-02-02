@@ -44,6 +44,8 @@ export class WorkspacesService {
     refreshToken: string;
     message: string;
   }> {
+    console.log(file,"file");
+    
     const result = await this.workspaceLifecycleService.create(req, createDto, file);
 
     // Emit WebSocket event if workspace was created

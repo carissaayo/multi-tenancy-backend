@@ -64,16 +64,16 @@ export class WorkspaceLifecycleService {
     const MAX_FREE_WORKSPACES =
       this.configService.get<number>('workspace.maxFreeWorkspaces') || 2;
 
-    if (workspacePlan === WorkspacePlan.FREE) {
-      const freeWorkspaceCount =
-        await this.workspaceMembershipService.countUserFreeWorkspaces(user.id);
+    // if (workspacePlan === WorkspacePlan.FREE) {
+    //   const freeWorkspaceCount =
+    //     await this.workspaceMembershipService.countUserFreeWorkspaces(user.id);
 
-      if (freeWorkspaceCount >= MAX_FREE_WORKSPACES) {
-        throw customError.forbidden(
-          `You have reached the maximum limit of ${MAX_FREE_WORKSPACES} free workspaces. Please upgrade to a paid plan to create more workspaces.`,
-        );
-      }
-    }
+    //   if (freeWorkspaceCount >= MAX_FREE_WORKSPACES) {
+    //     throw customError.forbidden(
+    //       `You have reached the maximum limit of ${MAX_FREE_WORKSPACES} free workspaces. Please upgrade to a paid plan to create more workspaces.`,
+    //     );
+    //   }
+    // }
 
     // 2. Check workspace limit per user
     const userWorkspaceCount =
