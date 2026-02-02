@@ -6,13 +6,17 @@ import {
   Get,
   Param,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { WorkspacesService } from '../services/workspace.service';
 import { CreateWorkspaceDto} from '../dtos/workspace.dto';
 import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-request.interface';
@@ -27,18 +31,21 @@ export class WorkspacesController {
   // Create a new workspace
   @Post()
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create a new workspace' })
+  @ApiOperation({ summary: 'Create a new workspace with optional logo' })
   @ApiResponse({ status: 201, description: 'Workspace created successfully' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('logo'))
   create(
     @Body() createDto: CreateWorkspaceDto,
     @Req() req: AuthenticatedRequest,
+    @UploadedFile() file?: Express.Multer.File,
   ): Promise<{
     workspace: Workspace | null;
     accessToken: string;
     refreshToken: string;
     message: string;
   }> {
-    return this.workspaceService.create(req, createDto);
+    return this.workspaceService.create(req, createDto, file);
   }
 
   // Get authenticated user's workspaces

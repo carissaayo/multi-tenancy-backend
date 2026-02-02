@@ -31,6 +31,14 @@ let WorkspacesController = class WorkspacesController {
     getById(id, req) {
         return this.workspaceService.getUserSingleWorkspace(id, req);
     }
+    getWorkspaceMembers(workspaceId, req, limit, offset, role, isActive) {
+        return this.workspaceService.getWorkspaceMembers(workspaceId, req, {
+            limit: limit ? parseInt(limit) : undefined,
+            offset: offset ? parseInt(offset) : undefined,
+            role,
+            isActive: isActive !== undefined ? isActive === 'true' : undefined,
+        });
+    }
 };
 exports.WorkspacesController = WorkspacesController;
 __decorate([
@@ -65,6 +73,21 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], WorkspacesController.prototype, "getById", null);
+__decorate([
+    (0, common_1.Get)(':id/members'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all members of a workspace' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of workspace members' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('offset')),
+    __param(4, (0, common_1.Query)('role')),
+    __param(5, (0, common_1.Query)('isActive')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, String, String, String, String]),
+    __metadata("design:returntype", void 0)
+], WorkspacesController.prototype, "getWorkspaceMembers", null);
 exports.WorkspacesController = WorkspacesController = __decorate([
     (0, swagger_1.ApiTags)('Workspaces'),
     (0, common_1.Controller)('workspaces'),

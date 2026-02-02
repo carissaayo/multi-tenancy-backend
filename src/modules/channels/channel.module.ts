@@ -11,13 +11,11 @@ import { ChannelLifecycleService } from "./services/channel-lifecycle.service";
 import { ChannelMembershipService } from "./services/channel-membership.service";
 import { ChannelQueryService } from "./services/channel-query.service";
 import { ChannelManagementService } from "./services/channel-management.service";
-import { ChannelInviteService } from "./services/channel-invite.service";
 import { EmailService } from "src/core/email/services/email.service";
 
 import { ChannelController } from "./controllers/channel.controller";
 import { ChannelManagementController } from "./controllers/channel-management.controller";
 import { ChannelMembershipController } from "./controllers/channel-membership.controller";
-import { ChannelInviteController } from "./controllers/channel-invite.controller";
 
 import { ChannelEntity } from "./entities/channel.entity";
 import { ChannelMemberEntity } from "./entities/channel-member.entity";
@@ -39,7 +37,6 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
     ChannelController,
     ChannelManagementController,
     ChannelMembershipController,
-    ChannelInviteController,
   ],
   providers: [
     ChannelService,
@@ -47,7 +44,6 @@ import { ChannelInvitation } from "./entities/channel_invitations.entity";
     ChannelMembershipService,
     ChannelQueryService,
     ChannelManagementService,
-    ChannelInviteService,
     EmailService,
   ],
   exports: [

@@ -30,7 +30,6 @@ export declare class ChannelMembershipService {
         refreshToken: string;
         message: string;
     }>;
-    inviteToJoinPrivateChannel(req: AuthenticatedRequest, id: string, memberId: string): Promise<boolean>;
     joinChannel(req: AuthenticatedRequest, id: string, memberId: string): Promise<boolean>;
     addMemberToChannel(channelId: string, memberId: string, workspaceId: string): Promise<import("../entities/channel.entity").Channel>;
     getChannelMembers(req: AuthenticatedRequest, id: string): Promise<{
