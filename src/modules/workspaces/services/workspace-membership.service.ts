@@ -95,9 +95,6 @@ export class WorkspaceMembershipService {
       throw customError.notFound('No workspace with this Id was found');
     }
 
-    if (!workspace.isActive) {
-      throw customError.notFound('This workspace is not active');
-    }
 
     // Check if user is a member of this workspace
     const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
