@@ -64,10 +64,12 @@ import { User } from 'src/modules/users/entities/user.entity';
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // IMPORTANT: SecurityMiddleware (CORS) MUST run before TenantResolverMiddleware
+    // This ensures CORS headers are set even when tenant validation fails
     consumer
-      .apply(TenantResolverMiddleware)
-      .forRoutes('*')
       .apply(SecurityMiddleware)
+      .forRoutes('*')
+      .apply(TenantResolverMiddleware)
       .forRoutes('*');
   }
 }

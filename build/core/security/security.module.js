@@ -30,9 +30,9 @@ const user_entity_1 = require("../../modules/users/entities/user.entity");
 let SecurityModule = class SecurityModule {
     configure(consumer) {
         consumer
-            .apply(tenancy_resolver_middleware_1.TenantResolverMiddleware)
-            .forRoutes('*')
             .apply(security_middleware_1.SecurityMiddleware)
+            .forRoutes('*')
+            .apply(tenancy_resolver_middleware_1.TenantResolverMiddleware)
             .forRoutes('*');
     }
 };

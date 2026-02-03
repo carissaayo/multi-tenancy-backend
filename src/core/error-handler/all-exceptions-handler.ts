@@ -13,6 +13,27 @@ import { ThrowException } from './custom-errors';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  // Allowed CORS origins (must match CorsHandler configuration)
+  private readonly allowedOrigins: string[] = (() => {
+    const origins: string[] = [];
+    origins.push('http://localhost:3000');
+    
+    if (process.env.FRONTEND_URL) {
+      const frontendUrl = process.env.FRONTEND_URL.trim().replace(/\/$/, '');
+      if (frontendUrl) origins.push(frontendUrl);
+    }
+    
+    if (process.env.ALLOWED_ORIGINS) {
+      const additionalOrigins = process.env.ALLOWED_ORIGINS
+        .split(',')
+        .map(origin => origin.trim().replace(/\/$/, ''))
+        .filter(origin => origin.length > 0);
+      origins.push(...additionalOrigins);
+    }
+    
+    return [...new Set(origins)];
+  })();
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -108,6 +129,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
     // Add details in development mode
     if (process.env.NODE_ENV === 'development' && details) {
       errorResponse.details = details;
+    }
+
+    // Add CORS headers to error responses
+    const origin = request.headers.origin as string | undefined;
+    if (origin && this.allowedOrigins.includes(origin)) {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+      response.setHeader('Access-Control-Allow-Credentials', 'true');
+      response.setHeader(
+        'Access-Control-Expose-Headers',
+        'X-New-Access-Token, Authorization',
+      );
     }
 
     // Send response

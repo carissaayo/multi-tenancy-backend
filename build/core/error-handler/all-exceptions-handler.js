@@ -12,6 +12,23 @@ const common_1 = require("@nestjs/common");
 const custom_errors_1 = require("./custom-errors");
 let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
     logger = new common_1.Logger(AllExceptionsFilter_1.name);
+    allowedOrigins = (() => {
+        const origins = [];
+        origins.push('http://localhost:3000');
+        if (process.env.FRONTEND_URL) {
+            const frontendUrl = process.env.FRONTEND_URL.trim().replace(/\/$/, '');
+            if (frontendUrl)
+                origins.push(frontendUrl);
+        }
+        if (process.env.ALLOWED_ORIGINS) {
+            const additionalOrigins = process.env.ALLOWED_ORIGINS
+                .split(',')
+                .map(origin => origin.trim().replace(/\/$/, ''))
+                .filter(origin => origin.length > 0);
+            origins.push(...additionalOrigins);
+        }
+        return [...new Set(origins)];
+    })();
     catch(exception, host) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse();
@@ -86,6 +103,12 @@ let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
         }
         if (process.env.NODE_ENV === 'development' && details) {
             errorResponse.details = details;
+        }
+        const origin = request.headers.origin;
+        if (origin && this.allowedOrigins.includes(origin)) {
+            response.setHeader('Access-Control-Allow-Origin', origin);
+            response.setHeader('Access-Control-Allow-Credentials', 'true');
+            response.setHeader('Access-Control-Expose-Headers', 'X-New-Access-Token, Authorization');
         }
         response.status(status).json(errorResponse);
     }
