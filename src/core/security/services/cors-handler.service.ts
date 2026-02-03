@@ -6,6 +6,7 @@ import type { Request, Response } from 'express';
 export class CorsHandler {
   private readonly allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
     'http://localhost:3000',
+    process.env.FRONTEND_URL,
   ];
 
   handleCORS(req: Request, res: Response): boolean {
