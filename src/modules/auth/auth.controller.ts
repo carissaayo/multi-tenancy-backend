@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Param } from '@nestjs/common';
+import { Controller, Post, Body, Req, Param, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -99,5 +99,24 @@ export class AuthController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.authService.selectWorkspace(selectWorkspaceDto, req);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout user (current device)' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
+  logout(@Req() req: AuthenticatedRequest) {
+    return this.authService.logout(req, false);
+  }
+
+  @Post('logout/all')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Logout user from all devices' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out from all devices successfully',
+  })
+  logoutAll(@Req() req: AuthenticatedRequest) {
+    return this.authService.logout(req, true);
   }
 }

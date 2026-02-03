@@ -339,4 +339,48 @@ export class AuthService {
 
     return { message: 'Password changed successfully' };
   }
+
+  /* ---------------- LOGOUT ---------------- */
+  /**
+   * Logout user by revoking their refresh token(s)
+   * @param req - Authenticated request
+   * @param logoutFromAllDevices - If true, revokes all refresh tokens for the user (logout from all devices)
+   */
+  async logout(
+    req: AuthenticatedRequest,
+    logoutFromAllDevices: boolean = false,
+  ) {
+    const userId = req.userId;
+    const refreshToken = req.headers['refreshtoken'] as string | undefined;
+
+    if (!userId) {
+      throw customError.unauthorized('User not authenticated');
+    }
+
+    if (logoutFromAllDevices) {
+      // Revoke all refresh tokens for this user (logout from all devices)
+      const result = await this.tokenManager.revokeAllRefreshTokens(userId);
+      return {
+        message: `Logged out from all devices successfully. ${result.revokedCount} session(s) terminated.`,
+      };
+    } else {
+      // Revoke only the current refresh token (logout from this device)
+      const result = await this.tokenManager.revokeRefreshToken(
+        userId,
+        refreshToken,
+        req,
+      );
+
+      if (result.revokedCount === 0) {
+        // No token was revoked, but still consider it a successful logout
+        return {
+          message: 'Logged out successfully',
+        };
+      }
+
+      return {
+        message: 'Logged out successfully',
+      };
+    }
+  }
 }

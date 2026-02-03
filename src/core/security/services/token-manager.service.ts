@@ -281,4 +281,89 @@ export class TokenManager {
       },
     );
   }
+
+  /**
+   * Revoke refresh token(s) for a user
+   * @param userId - User ID
+   * @param refreshToken - Optional specific refresh token to revoke. If not provided, revokes all user's tokens
+   * @param req - Optional request object to match IP and user agent
+   */
+  public async revokeRefreshToken(
+    userId: string,
+    refreshToken?: string,
+    req?: Request,
+  ): Promise<{ revokedCount: number }> {
+    try {
+      if (refreshToken) {
+        // Revoke specific refresh token
+        const tokenHash = this.hashToken(refreshToken);
+        const result = await this.refreshTokenRepo.update(
+          {
+            userId,
+            tokenHash,
+            isRevoked: false,
+          },
+          { isRevoked: true },
+        );
+
+        this.logger.log(`Revoked specific refresh token for user ${userId}`);
+        return { revokedCount: result.affected || 0 };
+      } else {
+        // Revoke all active refresh tokens for the user
+        // Optionally match IP and user agent for more targeted revocation
+        const whereClause: any = {
+          userId,
+          isRevoked: false,
+        };
+
+        if (req) {
+          const ipAddress = this.getClientIP(req);
+          const userAgent = req.headers['user-agent'] || '';
+          whereClause.ipAddress = ipAddress;
+          whereClause.userAgent = userAgent;
+        }
+
+        const result = await this.refreshTokenRepo.update(whereClause, {
+          isRevoked: true,
+        });
+
+        this.logger.log(
+          `Revoked ${result.affected || 0} refresh token(s) for user ${userId}`,
+        );
+        return { revokedCount: result.affected || 0 };
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to revoke refresh token for user ${userId}:`,
+        error,
+      );
+      throw customError.internalServerError('Failed to revoke tokens');
+    }
+  }
+
+  /**
+   * Revoke all refresh tokens for a user (force logout from all devices)
+   */
+  public async revokeAllRefreshTokens(userId: string): Promise<{ revokedCount: number }> {
+    try {
+      const result = await this.refreshTokenRepo.update(
+        {
+          userId,
+          isRevoked: false,
+        },
+        { isRevoked: true },
+      );
+
+      this.logger.log(
+        `Revoked all ${result.affected || 0} refresh token(s) for user ${userId}`,
+      );
+      return { revokedCount: result.affected || 0 };
+    } catch (error) {
+      this.logger.error(
+        `Failed to revoke all refresh tokens for user ${userId}:`,
+        error,
+      );
+      throw customError.internalServerError('Failed to revoke all tokens');
+    }
+  }
 }
