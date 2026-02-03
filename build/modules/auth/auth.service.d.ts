@@ -68,4 +68,7 @@ export declare class AuthService {
     changePassword(dto: ChangePasswordDTO, req: AuthenticatedRequest): Promise<{
         message: string;
     }>;
+    logout(req: AuthenticatedRequest, logoutFromAllDevices?: boolean): Promise<{
+        message: string;
+    }>;
 }

@@ -250,6 +250,30 @@ let AuthService = class AuthService {
         await this.userRepo.save(user);
         return { message: 'Password changed successfully' };
     }
+    async logout(req, logoutFromAllDevices = false) {
+        const userId = req.userId;
+        const refreshToken = req.headers['refreshtoken'];
+        if (!userId) {
+            throw custom_errors_1.customError.unauthorized('User not authenticated');
+        }
+        if (logoutFromAllDevices) {
+            const result = await this.tokenManager.revokeAllRefreshTokens(userId);
+            return {
+                message: `Logged out from all devices successfully. ${result.revokedCount} session(s) terminated.`,
+            };
+        }
+        else {
+            const result = await this.tokenManager.revokeRefreshToken(userId, refreshToken, req);
+            if (result.revokedCount === 0) {
+                return {
+                    message: 'Logged out successfully',
+                };
+            }
+            return {
+                message: 'Logged out successfully',
+            };
+        }
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([

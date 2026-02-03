@@ -53,4 +53,10 @@ export declare class AuthController {
         };
         message: string;
     }>;
+    logout(req: AuthenticatedRequest): Promise<{
+        message: string;
+    }>;
+    logoutAll(req: AuthenticatedRequest): Promise<{
+        message: string;
+    }>;
 }

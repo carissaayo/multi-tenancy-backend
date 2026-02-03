@@ -48,6 +48,12 @@ let AuthController = class AuthController {
     selectWorkspace(selectWorkspaceDto, req) {
         return this.authService.selectWorkspace(selectWorkspaceDto, req);
     }
+    logout(req) {
+        return this.authService.logout(req, false);
+    }
+    logoutAll(req) {
+        return this.authService.logout(req, true);
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
@@ -137,6 +143,29 @@ __decorate([
     __metadata("design:paramtypes", [auth_dto_1.SelectWorkspaceDTO, Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "selectWorkspace", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Logout user (current device)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Logged out successfully' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "logout", null);
+__decorate([
+    (0, common_1.Post)('logout/all'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Logout user from all devices' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'Logged out from all devices successfully',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "logoutAll", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),

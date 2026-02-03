@@ -29,4 +29,10 @@ export declare class TokenManager {
         refreshToken: string;
     }>;
     signWorkspaceToken(user: User, workspaceId: string, member: WorkspaceMember): string;
+    revokeRefreshToken(userId: string, refreshToken?: string, req?: Request): Promise<{
+        revokedCount: number;
+    }>;
+    revokeAllRefreshTokens(userId: string): Promise<{
+        revokedCount: number;
+    }>;
 }
