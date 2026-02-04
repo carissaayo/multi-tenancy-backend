@@ -10,7 +10,7 @@ export class TenantConnectionService {
   constructor(
     private readonly dataSource: DataSource,
     @Inject(REQUEST) private readonly request: Request,
-  ) {}
+  ) { }
 
   /**
    * Set the current tenant schema
@@ -96,15 +96,17 @@ export class TenantConnectionService {
 
       // Messages table
       `CREATE TABLE IF NOT EXISTS ${schemaName}.messages (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
-        member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
-        content TEXT NOT NULL,
-        thread_id UUID REFERENCES ${schemaName}.messages(id),
-        is_edited BOOLEAN DEFAULT false,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )`,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
+  member_id UUID NOT NULL REFERENCES ${schemaName}.members(id),
+  content TEXT NOT NULL,
+  type VARCHAR(20) DEFAULT 'text',
+  thread_id UUID REFERENCES ${schemaName}.messages(id),
+  is_edited BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  deleted_at TIMESTAMP
+)`,
 
       // Files table
       `CREATE TABLE IF NOT EXISTS ${schemaName}.files (
