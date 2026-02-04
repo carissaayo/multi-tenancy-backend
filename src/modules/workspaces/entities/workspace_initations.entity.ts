@@ -59,13 +59,12 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'invited_by' })
   inviter: User | null;
 
+  @Column({ type: 'uuid', name: 'sent_to', nullable: true })
+  sentToId: string | null;
+
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sent_to' })
   sentTo: User | null;
-
-  
-  @Column({ type: 'uuid', name: 'sentTo', nullable: true })
-  sentToId: string | null;
 
   @CreateDateColumn({ type: 'timestamp', name: 'invited_at' })
   invitedAt: Date;
