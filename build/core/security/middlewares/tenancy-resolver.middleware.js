@@ -24,6 +24,7 @@ const custom_errors_1 = require("../../error-handler/custom-errors");
 let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolverMiddleware {
     workspaceRepo;
     logger = new common_1.Logger(TenantResolverMiddleware_1.name);
+    WORKSPACE_HEADER = 'x-workspace-slug';
     constructor(workspaceRepo) {
         this.workspaceRepo = workspaceRepo;
     }
@@ -38,8 +39,8 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
                 return next();
             }
             if (this.isWorkspaceOptionalRoute(req.originalUrl)) {
-                this.logger.debug(`Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if subdomain present`);
-                const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+                this.logger.debug(`Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if available`);
+                const workspaceSlug = this.extractWorkspaceSlug(req);
                 if (workspaceSlug) {
                     const workspace = await this.workspaceRepo.findOne({
                         where: { slug: workspaceSlug, isActive: true },
@@ -47,15 +48,15 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
                     if (workspace) {
                         req.workspace = workspace;
                         req.workspaceId = workspace.id;
-                        this.logger.debug(`Workspace resolved for optional route: ${workspace.slug}`);
+                        this.logger.debug(`Workspace resolved for optional route: ${workspace.slug} (source: ${this.getWorkspaceSource(req)})`);
                     }
                 }
                 return next();
             }
-            const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+            const workspaceSlug = this.extractWorkspaceSlug(req);
             if (!workspaceSlug) {
-                this.logger.warn(`No workspace subdomain found in hostname: ${this.getHostname(req)}`);
-                throw custom_errors_1.customError.badRequest('Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)');
+                this.logger.warn(`No workspace identifier found. Hostname: ${this.getHostname(req)}, Header: ${req.headers[this.WORKSPACE_HEADER] || 'not set'}`);
+                throw custom_errors_1.customError.badRequest('Workspace identifier is required. Please provide the workspace slug via the x-workspace-slug header or use a workspace subdomain (e.g., workspace.app.com)');
             }
             const allowsDeactivated = this.allowsDeactivatedWorkspace(req.originalUrl);
             const workspace = await this.workspaceRepo.findOne({
@@ -78,7 +79,7 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
             }
             req.workspace = workspace;
             req.workspaceId = workspace.id;
-            this.logger.debug(`Resolved workspace: ${workspace.slug} (${workspace.id})${allowsDeactivated && !workspace.isActive ? ' [deactivated allowed]' : ''}`);
+            this.logger.debug(`Resolved workspace: ${workspace.slug} (${workspace.id}) via ${this.getWorkspaceSource(req)}${allowsDeactivated && !workspace.isActive ? ' [deactivated allowed]' : ''}`);
             next();
         }
         catch (error) {
@@ -91,6 +92,38 @@ let TenantResolverMiddleware = TenantResolverMiddleware_1 = class TenantResolver
     }
     getHostname(req) {
         return req.headers['x-forwarded-host'] || req.hostname;
+    }
+    extractWorkspaceSlug(req) {
+        const headerSlug = this.extractWorkspaceFromHeader(req);
+        if (headerSlug) {
+            this.logger.debug(`Workspace slug from header: ${headerSlug}`);
+            return headerSlug;
+        }
+        const subdomainSlug = this.extractWorkspaceFromSubdomain(req);
+        if (subdomainSlug) {
+            this.logger.debug(`Workspace slug from subdomain: ${subdomainSlug}`);
+            return subdomainSlug;
+        }
+        return null;
+    }
+    extractWorkspaceFromHeader(req) {
+        const headerValue = req.headers[this.WORKSPACE_HEADER];
+        if (headerValue && typeof headerValue === 'string') {
+            const slug = headerValue.trim().toLowerCase();
+            if (slug.length > 0) {
+                return slug;
+            }
+        }
+        return null;
+    }
+    getWorkspaceSource(req) {
+        if (this.extractWorkspaceFromHeader(req)) {
+            return 'header';
+        }
+        if (this.extractWorkspaceFromSubdomain(req)) {
+            return 'subdomain';
+        }
+        return 'none';
     }
     extractWorkspaceFromSubdomain(req) {
         const hostname = this.getHostname(req);
