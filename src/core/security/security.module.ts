@@ -55,17 +55,15 @@ import { User } from 'src/modules/users/entities/user.entity';
     RateLimitHandler,
     RedisRateLimiter,
     TenantResolverMiddleware,
-    {
-      provide: APP_GUARD,
-      useClass: EmailVerificationGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: EmailVerificationGuard,
+    // },
   ],
   exports: [TokenManager, AuthHandler, AuthDomainService],
 })
 export class SecurityModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    // IMPORTANT: SecurityMiddleware (CORS) MUST run before TenantResolverMiddleware
-    // This ensures CORS headers are set even when tenant validation fails
     consumer
       .apply(SecurityMiddleware)
       .forRoutes('*')
