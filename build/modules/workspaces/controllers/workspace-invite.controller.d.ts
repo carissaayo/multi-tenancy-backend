@@ -4,6 +4,33 @@ import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-r
 export declare class WorkspaceInviteController {
     private readonly workspaceService;
     constructor(workspaceService: WorkspaceInviteService);
+    getMyInvitations(req: AuthenticatedRequest): Promise<{
+        invitations: {
+            id: string;
+            token: string;
+            email: string;
+            role: import("../interfaces/workspace.interface").WorkspaceInvitationRole;
+            status: import("../interfaces/workspace.interface").WorkspaceInvitationStatus;
+            invitedAt: Date;
+            expiresAt: Date;
+            workspace: {
+                id: string;
+                name: string;
+                slug: string;
+                logoUrl: string;
+            } | null;
+            invitedBy: {
+                id: string;
+                email: string;
+                fullName: string | null;
+                avatarUrl: string | null;
+            } | null;
+        }[];
+        total: number;
+        accessToken: string;
+        refreshToken: string;
+        message: string;
+    }>;
     getInvitations(req: AuthenticatedRequest): Promise<{
         invitations: {
             id: string;

@@ -386,6 +386,61 @@ let WorkspaceInviteService = WorkspaceInviteService_1 = class WorkspaceInviteSer
             message: 'Workspace invitations retrieved successfully',
         };
     }
+    async getMyInvitations(req) {
+        const userId = req.userId;
+        const user = req.user;
+        const invitations = await this.workspaceInvitationRepo.find({
+            where: {
+                sentToId: userId,
+                status: workspace_interface_1.WorkspaceInvitationStatus.PENDING,
+            },
+            relations: ['workspace', 'inviter'],
+            order: { invitedAt: 'DESC' },
+        });
+        const validInvitations = [];
+        for (const invitation of invitations) {
+            if (invitation.expiresAt < new Date()) {
+                invitation.status = workspace_interface_1.WorkspaceInvitationStatus.EXPIRED;
+                await this.workspaceInvitationRepo.save(invitation);
+                this.logger.debug(`Marked invitation ${invitation.id} as expired`);
+            }
+            else {
+                validInvitations.push(invitation);
+            }
+        }
+        const tokens = await this.tokenManager.signTokens(user, req);
+        return {
+            invitations: validInvitations.map((inv) => ({
+                id: inv.id,
+                token: inv.token,
+                email: inv.email,
+                role: inv.role,
+                status: inv.status,
+                invitedAt: inv.invitedAt,
+                expiresAt: inv.expiresAt,
+                workspace: inv.workspace
+                    ? {
+                        id: inv.workspace.id,
+                        name: inv.workspace.name,
+                        slug: inv.workspace.slug,
+                        logoUrl: inv.workspace.logoUrl,
+                    }
+                    : null,
+                invitedBy: inv.inviter
+                    ? {
+                        id: inv.inviter.id,
+                        email: inv.inviter.email,
+                        fullName: inv.inviter.fullName,
+                        avatarUrl: inv.inviter.avatarUrl,
+                    }
+                    : null,
+            })),
+            total: validInvitations.length,
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken || '',
+            message: 'Your pending invitations retrieved successfully',
+        };
+    }
     async hasInvitePermission(workspaceId, userId, workspace) {
         if (workspace.createdBy === userId || workspace.ownerId === userId) {
             this.logger.debug(`User ${userId} is the owner of workspace ${workspaceId}`);

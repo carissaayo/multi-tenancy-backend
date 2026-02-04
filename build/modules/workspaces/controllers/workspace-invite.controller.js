@@ -22,6 +22,9 @@ let WorkspaceInviteController = class WorkspaceInviteController {
     constructor(workspaceService) {
         this.workspaceService = workspaceService;
     }
+    getMyInvitations(req) {
+        return this.workspaceService.getMyInvitations(req);
+    }
     getInvitations(req) {
         return this.workspaceService.listWorkspaceInvites(req);
     }
@@ -36,6 +39,19 @@ let WorkspaceInviteController = class WorkspaceInviteController {
     }
 };
 exports.WorkspaceInviteController = WorkspaceInviteController;
+__decorate([
+    (0, common_1.Get)('my'),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all pending invitations for current user' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'User invitations retrieved successfully',
+    }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], WorkspaceInviteController.prototype, "getMyInvitations", null);
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiBearerAuth)('access-token'),

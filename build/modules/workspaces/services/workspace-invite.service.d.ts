@@ -73,5 +73,32 @@ export declare class WorkspaceInviteService {
         refreshToken: string;
         message: string;
     }>;
+    getMyInvitations(req: AuthenticatedRequest): Promise<{
+        invitations: {
+            id: string;
+            token: string;
+            email: string;
+            role: WorkspaceInvitationRole;
+            status: WorkspaceInvitationStatus;
+            invitedAt: Date;
+            expiresAt: Date;
+            workspace: {
+                id: string;
+                name: string;
+                slug: string;
+                logoUrl: string;
+            } | null;
+            invitedBy: {
+                id: string;
+                email: string;
+                fullName: string | null;
+                avatarUrl: string | null;
+            } | null;
+        }[];
+        total: number;
+        accessToken: string;
+        refreshToken: string;
+        message: string;
+    }>;
     private hasInvitePermission;
 }
