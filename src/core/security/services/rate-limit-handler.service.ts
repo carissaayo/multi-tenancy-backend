@@ -121,7 +121,8 @@ export class RateLimitHandler {
   }
 
   /**
-   * 📊 Plan-based rate limits for workspace operations
+   * 📊 Plan-based rate limits for workspace/channel operations
+   * Tuned for read-heavy usage (channels, messages) with moderate writes
    */
   private getWorkspaceRateLimitByPlan(
     plan: string,
@@ -129,25 +130,25 @@ export class RateLimitHandler {
   ): RateLimitConfig {
     const planLimits = {
       free: {
-        POST: { windowMs: 60 * 1000, maxRequests: 20 },
-        PUT: { windowMs: 60 * 1000, maxRequests: 20 },
-        DELETE: { windowMs: 60 * 1000, maxRequests: 10 },
-        PATCH: { windowMs: 60 * 1000, maxRequests: 20 },
-        GET: { windowMs: 60 * 1000, maxRequests: 100 },
+        GET: { windowMs: 60 * 1000, maxRequests: 200 },
+        POST: { windowMs: 60 * 1000, maxRequests: 60 },
+        PUT: { windowMs: 60 * 1000, maxRequests: 60 },
+        PATCH: { windowMs: 60 * 1000, maxRequests: 60 },
+        DELETE: { windowMs: 60 * 1000, maxRequests: 30 },
       },
       pro: {
-        POST: { windowMs: 60 * 1000, maxRequests: 100 },
-        PUT: { windowMs: 60 * 1000, maxRequests: 100 },
-        DELETE: { windowMs: 60 * 1000, maxRequests: 50 },
-        PATCH: { windowMs: 60 * 1000, maxRequests: 100 },
-        GET: { windowMs: 60 * 1000, maxRequests: 500 },
+        GET: { windowMs: 60 * 1000, maxRequests: 800 },
+        POST: { windowMs: 60 * 1000, maxRequests: 200 },
+        PUT: { windowMs: 60 * 1000, maxRequests: 200 },
+        PATCH: { windowMs: 60 * 1000, maxRequests: 200 },
+        DELETE: { windowMs: 60 * 1000, maxRequests: 100 },
       },
       enterprise: {
-        POST: { windowMs: 60 * 1000, maxRequests: 1000 },
-        PUT: { windowMs: 60 * 1000, maxRequests: 1000 },
-        DELETE: { windowMs: 60 * 1000, maxRequests: 500 },
-        PATCH: { windowMs: 60 * 1000, maxRequests: 1000 },
-        GET: { windowMs: 60 * 1000, maxRequests: 5000 },
+        GET: { windowMs: 60 * 1000, maxRequests: 2000 },
+        POST: { windowMs: 60 * 1000, maxRequests: 500 },
+        PUT: { windowMs: 60 * 1000, maxRequests: 500 },
+        PATCH: { windowMs: 60 * 1000, maxRequests: 500 },
+        DELETE: { windowMs: 60 * 1000, maxRequests: 250 },
       },
     };
 
@@ -162,10 +163,14 @@ export class RateLimitHandler {
 
   private isGlobalRoute(path: string): boolean {
     const globalRoutes = [
+      '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
+      '/api/health',
+      '/api/metrics',
       '/auth/login',
       '/auth/register',
-      '/auth/forgot-password',
-      '/auth/reset-password',
       '/health',
       '/metrics',
     ];
