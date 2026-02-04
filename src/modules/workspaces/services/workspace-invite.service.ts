@@ -509,6 +509,72 @@ export class WorkspaceInviteService {
   }
 
   /**
+   * Get all pending invitations for the current user
+   * This allows users to see and accept invitations without email
+   * (useful when email sending is not available, e.g., Render free tier)
+   */
+  async getMyInvitations(req: AuthenticatedRequest) {
+    const userId = req.userId;
+    const user = req.user!;
+
+    // Get all pending invitations sent to this user
+    const invitations = await this.workspaceInvitationRepo.find({
+      where: {
+        sentToId: userId,
+        status: WorkspaceInvitationStatus.PENDING,
+      },
+      relations: ['workspace', 'inviter'],
+      order: { invitedAt: 'DESC' },
+    });
+
+    // Filter out expired invitations and mark them as expired
+    const validInvitations: WorkspaceInvitation[] = [];
+    for (const invitation of invitations) {
+      if (invitation.expiresAt < new Date()) {
+        invitation.status = WorkspaceInvitationStatus.EXPIRED;
+        await this.workspaceInvitationRepo.save(invitation);
+        this.logger.debug(`Marked invitation ${invitation.id} as expired`);
+      } else {
+        validInvitations.push(invitation);
+      }
+    }
+
+    const tokens = await this.tokenManager.signTokens(user, req);
+
+    return {
+      invitations: validInvitations.map((inv) => ({
+        id: inv.id,
+        token: inv.token,
+        email: inv.email,
+        role: inv.role,
+        status: inv.status,
+        invitedAt: inv.invitedAt,
+        expiresAt: inv.expiresAt,
+        workspace: inv.workspace
+          ? {
+              id: inv.workspace.id,
+              name: inv.workspace.name,
+              slug: inv.workspace.slug,
+              logoUrl: inv.workspace.logoUrl,
+            }
+          : null,
+        invitedBy: inv.inviter
+          ? {
+              id: inv.inviter.id,
+              email: inv.inviter.email,
+              fullName: inv.inviter.fullName,
+              avatarUrl: inv.inviter.avatarUrl,
+            }
+          : null,
+      })),
+      total: validInvitations.length,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken || '',
+      message: 'Your pending invitations retrieved successfully',
+    };
+  }
+
+  /**
    * Check if user has permission to invite members
    * User must be either:
    * 1. The workspace owner, OR

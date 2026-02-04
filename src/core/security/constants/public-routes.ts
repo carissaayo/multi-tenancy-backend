@@ -22,6 +22,7 @@ export const workspaceOptionalRoutes = [
   '/api/auth/resend-verification-email',
   '/api/auth/select-workspace',
   '/api/invitations/accept',
+  '/api/invitations/my',
   '/api/channels/invitations/accept',
   '/api/docs',
   "/api/api/docs"
