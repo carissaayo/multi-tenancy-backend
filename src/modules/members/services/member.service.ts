@@ -75,7 +75,6 @@ export class MemberService {
     const schemaName = `workspace_${sanitizedSlug}`;
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
     try {
-      // Use direct query instead of repository to ensure we're querying the correct schema
       const [member] = await this.dataSource.query(
         `SELECT * FROM "${schemaName}".members 
        WHERE user_id = $1 AND is_active = true 
@@ -104,7 +103,6 @@ export class MemberService {
       );
       return null;
     } finally {
-      // Reset search path
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
@@ -142,7 +140,6 @@ export class MemberService {
       );
     }
 
-    // Get permissions for the role
     const rolePermissions =
       RolePermissions[role as string] || RolePermissions.member;
     const permissions = rolePermissions.map((p) => p.toString());
@@ -154,7 +151,6 @@ export class MemberService {
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-      // Insert member into workspace-specific schema
       const result = await this.dataSource.query(
         `
       INSERT INTO "${schemaName}".members
@@ -198,7 +194,6 @@ export class MemberService {
         );
       }
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
@@ -208,6 +203,7 @@ export class MemberService {
       );
     }
   }
+
   /**
    * Update member role
    */
@@ -297,7 +293,6 @@ export class MemberService {
         `Error removing member from workspace ${workspaceId}: ${error.message}`,
       );
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
@@ -357,7 +352,6 @@ export class MemberService {
         `Error deactivating member from workspace ${workspaceId}: ${error.message}`,
       );
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
@@ -398,7 +392,6 @@ export class MemberService {
     );
 
     const schemaName = `workspace_${sanitizedSlug}`;
-    // Get permissions for admin and owner roles
     const adminPermissions = RolePermissions.admin.map((p) => p.toString());
     const ownerPermissions = RolePermissions.owner.map((p) => p.toString());
 
@@ -459,12 +452,10 @@ export class MemberService {
         `Error transferring ownership: ${workspaceId}: ${error.message}`,
       );
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
 
-      // Re-throw custom errors
       if (error.statusCode) {
         throw error;
       }

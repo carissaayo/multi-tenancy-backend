@@ -38,7 +38,6 @@ export class RateLimitHandler {
       1,
     );
 
-    // Set rate limit headers
     res.setHeader('X-RateLimit-Limit', config.maxRequests.toString());
     res.setHeader(
       'X-RateLimit-Remaining',
@@ -65,33 +64,24 @@ export class RateLimitHandler {
     return true;
   }
 
-  /**
-   * 🔑 CRITICAL: Generate workspace-aware identifier
-   */
   private getRateLimitIdentifier(req: RequestWithWorkspace): string {
     const ip = this.getClientIP(req);
     const userId = req.user?.id || req.user?._id || 'anonymous';
     const endpoint = req.route?.path || req.path;
 
-    // Global routes (no workspace context needed)
     if (this.isGlobalRoute(req.path)) {
       return `global:${ip}:${userId}:${endpoint}`;
     }
 
-    // Workspace routes (include workspace ID)
     const workspaceId = req.workspaceId || req.workspace?.id || 'unknown';
     return `workspace:${workspaceId}:${ip}:${userId}:${endpoint}`;
   }
 
-  /**
-   * 🎯 Get rate limit config based on workspace plan and route
-   */
   private getRateLimitConfig(req: RequestWithWorkspace): RateLimitConfig {
     const path = req.path;
     const method = req.method;
     const plan = req.workspace?.plan || 'free';
 
-    // Authentication routes - STRICT (global, no plan variation)
     if (path.includes('/auth/login')) {
       return {
         windowMs: 15 * 60 * 1000, // 15 minutes
@@ -116,14 +106,9 @@ export class RateLimitHandler {
       };
     }
 
-    // Workspace-specific routes - PLAN-BASED
     return this.getWorkspaceRateLimitByPlan(plan, method);
   }
 
-  /**
-   * 📊 Plan-based rate limits for workspace/channel operations
-   * Tuned for read-heavy usage (channels, messages) with moderate writes
-   */
   private getWorkspaceRateLimitByPlan(
     plan: string,
     method: string,
@@ -157,7 +142,7 @@ export class RateLimitHandler {
 
     return {
       ...methodLimit,
-      blockDurationMs: 5 * 60 * 1000, // 5 minutes block for all workspace operations
+      blockDurationMs: 5 * 60 * 1000,
     };
   }
 

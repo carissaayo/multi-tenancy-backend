@@ -71,9 +71,6 @@ export class MessageService {
     workspaceId: string,
     userId: string,
   ): Promise<void> {
-    console.log(channelId, "channelId");
-
-    // First check if user is a channel member
     const isChannelMember = await this.channelMembershipService.isUserMember(
       channelId,
       memberId,
@@ -81,10 +78,9 @@ export class MessageService {
     );
 
     if (isChannelMember) {
-      return; // User is a member, allow access
+      return;
     }
 
-    // If not a member, check if channel is public and user is owner/admin
     const workspace = await this.workspacesService.findById(workspaceId);
     if (!workspace) {
       throw customError.notFound('Workspace not found');
@@ -108,10 +104,7 @@ export class MessageService {
       );
     }
 
-    // Channel is public - check if user is workspace owner or admin
     const isOwner = workspace.ownerId === userId || workspace.createdBy === userId;
-
-    // Check if user is admin
     const member = await this.memberService.isUserMember(workspaceId, userId);
     const isAdmin = member?.role === 'admin' || member?.role === 'owner';
 
@@ -145,8 +138,6 @@ export class MessageService {
     );
 
     await this.validateChannelMembership(channelId, member.id, workspaceId, userId);
-
-    // Set search path to workspace schema
     await this.dataSource.query(`SET search_path TO ${schemaName}, public`);
 
     try {
@@ -160,8 +151,6 @@ export class MessageService {
     `, [schemaName]);
 
       const hasTypeColumn = columnCheck.length > 0;
-
-      // Insert message - conditionally include type column
       let query: string;
       let params: any[];
 
@@ -200,7 +189,6 @@ export class MessageService {
       this.logger.error('Error creating message:', error);
       throw error;
     } finally {
-      // Reset search path
       await this.dataSource.query(`SET search_path TO public`);
     }
   }
@@ -353,7 +341,6 @@ export class MessageService {
     const workspaceId = req.workspaceId!;
 
     const channelId = dto.channelId;
-    // Validate workspace membership
     const { member, schemaName } = await this.validateWorkspaceMembership(
       workspaceId,
       userId,
@@ -373,7 +360,6 @@ export class MessageService {
       let params: any[];
 
       if (cursor) {
-        // Get cursor message timestamp
         const [cursorMessage] = await this.dataSource.query(
           `SELECT created_at FROM "${schemaName}".messages 
            WHERE id = $1 AND channel_id = $2 AND member_id = $3 AND deleted_at IS NULL`,
@@ -487,7 +473,6 @@ export class MessageService {
         return null;
       }
 
-      // Validate channel membership after confirming message exists
       await this.validateChannelMembership(
         result.channel_id,
         member.id,
@@ -546,7 +531,6 @@ export class MessageService {
         );
       }
 
-      // Validate channel membership
       await this.validateChannelMembership(
         existingMessage.channel_id,
         member.id,
@@ -554,7 +538,6 @@ export class MessageService {
         req.userId,
       );
 
-      // Update the message
       const [result] = await this.dataSource.query(
         `UPDATE "${schemaName}".messages 
          SET content = $1, is_edited = true, updated_at = NOW()
@@ -594,7 +577,6 @@ export class MessageService {
     req: AuthenticatedRequest,
     messageId: string,
   ): Promise<{ success: boolean; message: string }> {
-    // Validate workspace membership
     const { member, schemaName } = await this.validateWorkspaceMembership(
       req.workspaceId!,
       req.userId,
@@ -617,7 +599,6 @@ export class MessageService {
         );
       }
 
-      // Validate channel membership
       await this.validateChannelMembership(
         existingMessage.channel_id,
         member.id,
@@ -625,7 +606,6 @@ export class MessageService {
         req.userId,
       );
 
-      // Soft delete the message
       const [result] = await this.dataSource.query(
         `UPDATE "${schemaName}".messages 
          SET deleted_at = NOW(), updated_at = NOW()
@@ -663,14 +643,10 @@ export class MessageService {
   ): Promise<{ success: boolean; message: string }> {
     const userId = req.userId;
     const workspaceId = req.workspaceId!;
-
-    // Validate workspace membership
     const { workspace, member, schemaName } = await this.validateWorkspaceMembership(
       workspaceId,
       userId,
     );
-
-    // Check if user is owner or admin
     const isOwner =
       workspace.ownerId === userId || workspace.createdBy === userId;
     const isAdmin = member.role === 'admin' || member.role === 'owner';
@@ -696,7 +672,6 @@ export class MessageService {
         throw customError.notFound('Message not found or already deleted');
       }
 
-      // Validate channel membership
       await this.validateChannelMembership(
         existingMessage.channel_id,
         member.id,
@@ -704,7 +679,6 @@ export class MessageService {
         userId,
       );
 
-      // Soft delete the message
       const [result] = await this.dataSource.query(
         `UPDATE "${schemaName}".messages 
          SET deleted_at = NOW(), updated_at = NOW()

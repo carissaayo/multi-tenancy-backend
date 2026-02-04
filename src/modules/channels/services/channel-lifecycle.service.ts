@@ -29,20 +29,17 @@ export class ChannelLifecycleService {
     workspace: Workspace,
     dto: CreateChannelDto,
   ): Promise<Channel> {
-    // Get the member record for the user to get member ID
     const member = await this.memberService.isUserMember(workspace.id, user.id);
     if (!member) {
       throw customError.notFound('You are not a member of this workspace');
     }
 
-    // Sanitize slug and get schema name
     const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
       workspace.slug,
     );
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-      // Create channel in workspace-specific schema
       const result = await this.dataSource.query(
         `
         INSERT INTO "${schemaName}".channels
@@ -59,7 +56,6 @@ export class ChannelLifecycleService {
 
       const channelData = result[0];
 
-      // Add creator as channel member
       await this.dataSource.query(
         `
         INSERT INTO "${schemaName}".channel_members
@@ -90,19 +86,16 @@ export class ChannelLifecycleService {
         `Error creating channel in workspace ${workspace.id}: ${error.message}`,
       );
 
-      // Handle unique constraint violation (channel name already exists)
       if (error.code === '23505') {
         throw customError.badRequest(
           'A channel with this name already exists in this workspace',
         );
       }
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
 
-      // Re-throw custom errors
       if (error.statusCode) {
         throw error;
       }
@@ -133,7 +126,6 @@ export class ChannelLifecycleService {
       throw customError.notFound('Channel not found');
     }
 
-    // Sanitize slug and get schema name
     const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
       workspace.slug,
     );
@@ -156,15 +148,12 @@ export class ChannelLifecycleService {
         paramIndex++;
       }
 
-      // Always update the updated_at timestamp
       updateFields.push(`updated_at = NOW()`);
 
       if (updateFields.length === 1) {
-        // Only updated_at would be updated, which means no actual changes
         throw customError.badRequest('No fields to update');
       }
 
-      // Add channel ID as the last parameter for WHERE clause
       updateValues.push(id);
 
       const updateQuery = `
@@ -180,7 +169,6 @@ export class ChannelLifecycleService {
         throw customError.internalServerError('Failed to update channel');
       }
 
-      // The result structure is [[{...}], metadata], so we need result[0][0]
       const rows = Array.isArray(result[0]) ? result[0] : result;
       const channelData = rows[0];
 
@@ -188,7 +176,6 @@ export class ChannelLifecycleService {
         throw customError.internalServerError('Failed to update channel');
       }
 
-      // Map SQL result to Channel format (snake_case -> camelCase)
       const updatedChannel: Channel = {
         id: channelData.id,
         name: channelData.name,
@@ -199,7 +186,6 @@ export class ChannelLifecycleService {
         updatedAt: channelData.updated_at,
       };
 
-      // Validate that we got the essential fields
       if (!updatedChannel.id || !updatedChannel.name) {
         this.logger.error(
           `Invalid channel data returned: ${JSON.stringify(channelData)}`,
@@ -220,19 +206,16 @@ export class ChannelLifecycleService {
         error.stack,
       );
 
-      // Handle unique constraint violation (channel name already exists)
       if (error.code === '23505') {
         throw customError.badRequest(
           'A channel with this name already exists in this workspace',
         );
       }
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
 
-      // Re-throw custom errors
       if (error.statusCode) {
         throw error;
       }
@@ -258,14 +241,20 @@ export class ChannelLifecycleService {
       throw customError.notFound('Channel not found');
     }
 
-    // Sanitize slug and get schema name
+    const defaultChannelNames = ['general', 'random'];
+    const channelNameLower = (channel.name || '').trim().toLowerCase();
+    if (defaultChannelNames.includes(channelNameLower)) {
+      throw customError.forbidden(
+        'The general and random channels cannot be deleted',
+      );
+    }
+
     const sanitizedSlug = this.workspaceService.sanitizeSlugForSQL(
       workspace.slug,
     );
     const schemaName = `workspace_${sanitizedSlug}`;
 
     try {
-      // Delete the channel (CASCADE will handle channel_members and messages)
       const result = await this.dataSource.query(
         `
         DELETE FROM "${schemaName}".channels
@@ -279,7 +268,6 @@ export class ChannelLifecycleService {
         throw customError.internalServerError('Failed to delete channel');
       }
 
-      // Handle nested result structure (same as update)
       const rows = Array.isArray(result[0]) ? result[0] : result;
       const deletedChannel = rows[0];
 
@@ -296,12 +284,10 @@ export class ChannelLifecycleService {
         error.stack,
       );
 
-      // Handle schema not found
       if (error.message?.includes('does not exist')) {
         throw customError.internalServerError('Workspace schema not found');
       }
 
-      // Re-throw custom errors
       if (error.statusCode) {
         throw error;
       }

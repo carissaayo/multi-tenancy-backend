@@ -41,19 +41,12 @@ export class AuthService {
 
   ) {}
 
-  /**
-   * Generate userName from fullName by removing spaces and converting to lowercase
-   * If userName already exists, append a number to make it unique
-   */
   private async generateUniqueUserName(fullName: string): Promise<string|null> {
     if (!fullName) {
       return null;
     }
 
-    // Remove spaces and convert to lowercase
     let baseUserName = fullName.replace(/\s+/g, '').toLowerCase();
-
-    // Check if userName already exists
     let userName = baseUserName;
     let counter = 1;
     
@@ -63,10 +56,9 @@ export class AuthService {
       });
 
       if (!existingUser) {
-        break; // userName is unique
+        break;
       }
 
-      // Append number if userName exists
       userName = `${baseUserName}${counter}`;
       counter++;
     }
@@ -74,7 +66,6 @@ export class AuthService {
     return userName;
   }
 
-  /* ---------------- REGISTER ---------------- */
   async register(dto: RegisterDto) {
     const { email, password, confirmPassword, fullName, phoneNumber } = dto;
 
@@ -112,8 +103,7 @@ export class AuthService {
     });
 
     await this.userRepo.save(user);
-// await remove because render do not support email sending in free plan
-   this.emailService.sendVerificationEmail(user.email, emailCode);
+    this.emailService.sendVerificationEmail(user.email, emailCode);
 
     return {
       message: 'Registration successful. Verify your email.',
@@ -151,7 +141,6 @@ export class AuthService {
     };
   }
 
-  /* ---------------- SELECT WORKSPACE ---------------- */
   async selectWorkspace(dto: SelectWorkspaceDTO, req: AuthenticatedRequest) {
     const { workspaceId } = dto;
     if (!isUUID(workspaceId)) {
@@ -167,7 +156,6 @@ export class AuthService {
       throw customError.notFound('Workspace not found');
     }
 
-    // Use member service to verify membership
     const result = await this.memberService.isUserMember(
       workspaceId,
       user.id,
@@ -225,7 +213,6 @@ export class AuthService {
     return true;
   }
 
-  /* ---------------- VERIFY EMAIL ---------------- */
   async verifyEmail(dto: VerifyEmailDTO, req: AuthenticatedRequest) {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
@@ -268,7 +255,6 @@ export class AuthService {
     return { message: 'Verification email sent' };
   }
 
-  /* ---------------- REQUEST RESET PASSWORD ---------------- */
   async requestResetPassword(dto: RequestResetPasswordDTO) {
     const user = await this.userRepo.findOne({
       where: { email: dto.email.toLowerCase() },
@@ -317,7 +303,6 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
-  /* ---------------- CHANGE PASSWORD ---------------- */
   async changePassword(dto: ChangePasswordDTO, req: AuthenticatedRequest) {
     const user = await this.userRepo.findOne({ where: { id: req.userId } });
 
@@ -358,7 +343,6 @@ export class AuthService {
     }
 
     if (logoutFromAllDevices) {
-      // Revoke all refresh tokens for this user (logout from all devices)
       const result = await this.tokenManager.revokeAllRefreshTokens(userId);
       return {
         message: `Logged out from all devices successfully. ${result.revokedCount} session(s) terminated.`,
@@ -372,7 +356,6 @@ export class AuthService {
       );
 
       if (result.revokedCount === 0) {
-        // No token was revoked, but still consider it a successful logout
         return {
           message: 'Logged out successfully',
         };

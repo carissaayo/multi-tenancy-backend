@@ -89,7 +89,6 @@ export class WorkspaceInviteService {
       throw customError.badRequest('No user found with this email');
     }
 
-    // Check if already a member
     const existingMember = await this.memberService.isUserMember(
       workspace.id,
       existingUser.id,
@@ -142,7 +141,6 @@ export class WorkspaceInviteService {
 
     const inviterName = user.fullName || user.email;
 
-    // await remove because render do not support email sending in free plan
     this.emailService.sendWorkspaceInvitation(
       email,
       workspace.name,
@@ -189,14 +187,12 @@ export class WorkspaceInviteService {
       throw customError.notFound('User not found');
     }
 
-    // Check if user's email matches invitation email
     if (user.email !== invitation.email) {
       throw customError.forbidden(
         'This invitation was sent to a different email address',
       );
     }
 
-    // Check if already a member
     const existingMember = await this.memberService.isUserMember(
       invitation.workspaceId,
       user.id,
@@ -207,8 +203,6 @@ export class WorkspaceInviteService {
       );
     }
 
-    
-    // Delete any existing ACCEPTED invitations for this workspace+email
     await this.workspaceInvitationRepo.delete({
       workspaceId: invitation.workspaceId,
       email: invitation.email,
@@ -239,18 +233,10 @@ export class WorkspaceInviteService {
       invitation.role ?? WorkspaceInvitationRole.MEMBER,
     );
 
-
-    // Add member to default channels (general and random)
     await this.addMemberToDefaultChannels(workspace.id, newMember.id);
 
+    await this.messagingGateway.joinUserToWorkspace(user.id, workspace.id);
 
-    // Emit WebSocket events
-
-    // Automatically join user to workspace WebSocket room if they have active connections
-  await this.messagingGateway.joinUserToWorkspace(user.id, workspace.id);
-
- 
-    // 1. Notify the user who accepted that they've joined
     this.messagingGateway.emitToUser(user.id, 'workspaceJoined', {
       workspace: {
         id: workspace.id,
@@ -260,7 +246,6 @@ export class WorkspaceInviteService {
       message: 'You have successfully joined the workspace',
     });
 
-    // 2. Notify all workspace members that a new member joined
     this.messagingGateway.emitToWorkspace(workspace.id, 'memberJoined', {
       workspaceId: workspace.id,
       member: {
@@ -354,7 +339,6 @@ export class WorkspaceInviteService {
       );
       const schemaName = `workspace_${sanitizedSlug}`;
 
-      // Find default channels (general and random)
       const defaultChannels = await this.dataSource.query(
         `
         SELECT id, name 
@@ -372,7 +356,6 @@ export class WorkspaceInviteService {
         return;
       }
 
-      // Add member to each default channel
       for (const channel of defaultChannels) {
         try {
           await this.channelMembershipService.addMemberToChannel(
@@ -384,7 +367,6 @@ export class WorkspaceInviteService {
             `Added member ${memberId} to default channel ${channel.name} (${channel.id}) in workspace ${workspaceId}`,
           );
         } catch (error: any) {
-          // If member is already in channel, that's okay - just log it
           if (error.message?.includes('already')) {
             this.logger.debug(
               `Member ${memberId} already in channel ${channel.name}`,
@@ -404,16 +386,10 @@ export class WorkspaceInviteService {
     }
   }
 
-  /**
-   * Get all invitations for a workspace
-   * @param req - Authenticated request
-   * @returns List of workspace invitations with inviter and invitee details
-   */
   async listWorkspaceInvites(req: AuthenticatedRequest) {
     const workspace = req.workspace!;
     const userId = req.userId;
 
-    // Check if user has permission to view invitations (must be admin or owner)
     const canView = await this.hasInvitePermission(
       workspace.id,
       userId,
@@ -508,16 +484,10 @@ export class WorkspaceInviteService {
     };
   }
 
-  /**
-   * Get all pending invitations for the current user
-   * This allows users to see and accept invitations without email
-   * (useful when email sending is not available, e.g., Render free tier)
-   */
   async getMyInvitations(req: AuthenticatedRequest) {
     const userId = req.userId;
     const user = req.user!;
 
-    // Get all pending invitations sent to this user
     const invitations = await this.workspaceInvitationRepo.find({
       where: {
         sentToId: userId,
@@ -527,7 +497,6 @@ export class WorkspaceInviteService {
       order: { invitedAt: 'DESC' },
     });
 
-    // Filter out expired invitations and mark them as expired
     const validInvitations: WorkspaceInvitation[] = [];
     for (const invitation of invitations) {
       if (invitation.expiresAt < new Date()) {
@@ -574,18 +543,11 @@ export class WorkspaceInviteService {
     };
   }
 
-  /**
-   * Check if user has permission to invite members
-   * User must be either:
-   * 1. The workspace owner, OR
-   * 2. A member with MEMBER_INVITE permission (admin/owner role)
-   */
   private async hasInvitePermission(
     workspaceId: string,
     userId: string,
     workspace: Workspace,
   ): Promise<boolean> {
-    // Check if user is the workspace owner
     if (workspace.createdBy === userId || workspace.ownerId === userId) {
       this.logger.debug(
         `User ${userId} is the owner of workspace ${workspaceId}`,
@@ -603,12 +565,9 @@ export class WorkspaceInviteService {
       return false;
     }
 
-    // Check if user has MEMBER_INVITE permission
     const hasPermission = member.permissions?.includes(
       PermissionsEnum.MEMBER_INVITE,
     );
-
-    // Also check if user is owner or admin (they should have invite permission)
     const isOwnerOrAdmin = member.role === 'owner' || member.role === 'admin';
 
     const canInvite = hasPermission || isOwnerOrAdmin;

@@ -4,8 +4,6 @@ import type { Request, Response } from 'express';
 import ms, { StringValue } from 'ms';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
-// import { RedisRateLimiter } from './radis-rate-limiter.service';
-// import { SecurityLogger } from './security.logger.service';
 
 import { AuthResult } from '../interfaces/security.interface';
 
@@ -25,7 +23,6 @@ export class TokenManager {
 
   constructor(
     private readonly jwtService: JwtService,
-    // private readonly securityLogger: SecurityLogger,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -95,7 +92,6 @@ export class TokenManager {
           },
         );
       } else {
-        // Global token (no workspace)
         newAccessToken = this.jwtService.sign(
           {
             sub: user.id,
@@ -129,7 +125,6 @@ export class TokenManager {
     }
   }
 
-  // Helper methods for token management
   private hashToken(token: string): string {
     return require('crypto').createHash('sha256').update(token).digest('hex');
   }
@@ -258,7 +253,6 @@ export class TokenManager {
     return { accessToken, refreshToken };
   }
 
-  // For workspace selection (workspace-scoped)
   public signWorkspaceToken(
     user: User,
     workspaceId: string,
@@ -295,7 +289,6 @@ export class TokenManager {
   ): Promise<{ revokedCount: number }> {
     try {
       if (refreshToken) {
-        // Revoke specific refresh token
         const tokenHash = this.hashToken(refreshToken);
         const result = await this.refreshTokenRepo.update(
           {
@@ -341,9 +334,6 @@ export class TokenManager {
     }
   }
 
-  /**
-   * Revoke all refresh tokens for a user (force logout from all devices)
-   */
   public async revokeAllRefreshTokens(userId: string): Promise<{ revokedCount: number }> {
     try {
       const result = await this.refreshTokenRepo.update(

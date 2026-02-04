@@ -23,9 +23,6 @@ export class WorkspaceInvitation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // -------------------------
-  // Workspace relationship
-  // -------------------------
   @Column({ type: 'uuid', name: 'workspace_id' })
   workspaceId: string;
 
@@ -33,9 +30,6 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'workspace_id' })
   workspace: Workspace;
 
-  // -------------------------
-  // Invitation target
-  // -------------------------
   @Column({ type: 'text' })
   email: string;
 
@@ -46,9 +40,6 @@ export class WorkspaceInvitation {
   })
   role: WorkspaceInvitationRole;
 
-  // -------------------------
-  // Invitation metadata
-  // -------------------------
   @Column({ type: 'text', unique: true })
   token: string;
 
@@ -85,9 +76,6 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'accepted_by' })
   acceptedByUser: User | null;
 
-  // -------------------------
-  // Revocation tracking
-  // -------------------------
   @Column({ type: 'timestamp', name: 'revoked_at', nullable: true })
   revokedAt: Date | null;
 
@@ -98,9 +86,6 @@ export class WorkspaceInvitation {
   @JoinColumn({ name: 'revoked_by' })
   revokedByUser: User | null;
 
-  // -------------------------
-  // Status & message
-  // -------------------------
   @Column({
     type: 'varchar',
     length: 20,

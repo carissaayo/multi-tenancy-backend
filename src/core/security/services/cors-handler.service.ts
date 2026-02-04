@@ -6,20 +6,15 @@ import type { Request, Response } from 'express';
 export class CorsHandler {
   private readonly allowedOrigins: string[] = (() => {
     const origins: string[] = [];
-
-    // Add localhost for development
     origins.push('http://localhost:3000');
 
-    // Add FRONTEND_URL if it exists
     if (process.env.FRONTEND_URL) {
-      // Remove trailing slash and trim whitespace
       const frontendUrl = process.env.FRONTEND_URL.trim().replace(/\/$/, '');
       if (frontendUrl) {
         origins.push(frontendUrl);
       }
     }
 
-    // Add ALLOWED_ORIGINS if it exists
     if (process.env.ALLOWED_ORIGINS) {
       const additionalOrigins = process.env.ALLOWED_ORIGINS
         .split(',')
@@ -28,7 +23,6 @@ export class CorsHandler {
       origins.push(...additionalOrigins);
     }
 
-    // Remove duplicates
     return [...new Set(origins)];
   })();
 
@@ -69,7 +63,6 @@ export class CorsHandler {
       return false;
     }
 
-    // Handle actual requests
     if (origin && this.allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');

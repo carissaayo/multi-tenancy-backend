@@ -13,7 +13,6 @@ import { ThrowException } from './custom-errors';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  // Allowed CORS origins (must match CorsHandler configuration)
   private readonly allowedOrigins: string[] = (() => {
     const origins: string[] = [];
     origins.push('http://localhost:3000');
@@ -61,7 +60,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = res;
       } else if (res && typeof res === 'object') {
         message = res.message || exception.message;
-        // Handle validation errors
         if (Array.isArray(res.message)) {
           message = res.message.join(', ');
           details = res.message;
@@ -79,12 +77,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       details = this.extractTypeOrmErrorDetails(typeOrmError);
     }
-    // Handle regular Error objects
     else if (exception instanceof Error) {
       message = exception.message || 'An unexpected error occurred';
       errorCode = 'UNHANDLED_ERROR';
 
-      // In development, include more details
       if (process.env.NODE_ENV === 'development') {
         details = {
           name: exception.name,
@@ -105,13 +101,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    // Log error with full details
     this.logger.error(
       `[${request.method}] ${request.url} → ${message}`,
       exception instanceof Error ? exception.stack : JSON.stringify(exception),
     );
 
-    // Build response
     const errorResponse: any = {
       status: status >= 500 ? 'error' : 'failed',
       statusCode: status,
@@ -121,12 +115,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: request.url,
     };
 
-    // Add data if present
     if (data !== null) {
       errorResponse.data = data;
     }
 
-    // Add details in development mode
     if (process.env.NODE_ENV === 'development' && details) {
       errorResponse.details = details;
     }
@@ -142,13 +134,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       );
     }
 
-    // Send response
     response.status(status).json(errorResponse);
   }
 
-  /**
-   * Check if error is a TypeORM error
-   */
   private isTypeOrmError(exception: any): boolean {
     return (
       exception?.code ||
@@ -163,7 +151,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
    * Extract user-friendly message from TypeORM error
    */
   private extractTypeOrmErrorMessage(error: any): string {
-    // Unique constraint violation
     if (error.code === '23505' || error.code === 'ER_DUP_ENTRY') {
       const match = error.detail || error.message;
       if (match) {
@@ -175,7 +162,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return 'Duplicate entry. This record already exists';
     }
 
-    // Foreign key constraint violation
     if (error.code === '23503' || error.code === 'ER_NO_REFERENCED_ROW_2') {
       return 'Referenced record does not exist';
     }
@@ -189,23 +175,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return 'Required field is missing';
     }
 
-    // Check constraint violation
     if (error.code === '23514') {
       return 'Data validation failed';
     }
 
-    // Connection errors
     if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
       return 'Database connection failed';
     }
 
-    // Return original message or generic error
     return error.message || 'Database error occurred';
   }
 
-  /**
-   * Extract TypeORM error details
-   */
   private extractTypeOrmErrorDetails(error: any): any {
     const details: any = {
       code: error.code,
@@ -227,9 +207,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
     return details;
   }
 
-  /**
-   * Get error code from HTTP status
-   */
   private getErrorCodeFromStatus(status: number): string {
     const statusToCode: Record<number, string> = {
       400: 'BAD_REQUEST',

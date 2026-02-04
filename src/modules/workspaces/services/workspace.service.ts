@@ -27,10 +27,6 @@ export class WorkspacesService {
     private readonly tokenManager: TokenManager,
   ) {}
 
-  // ============================================
-  // LIFECYCLE OPERATIONS (delegated to WorkspaceLifecycleService)
-  // ============================================
-
   /**
    * Create a new workspace
    */
@@ -44,14 +40,9 @@ export class WorkspacesService {
     refreshToken: string;
     message: string;
   }> {
-    console.log(file,"file");
-    
     const result = await this.workspaceLifecycleService.create(req, createDto, file);
 
-    // Emit WebSocket event if workspace was created
     if (result.workspace) {
-      // Note: Users need to join the workspace room first via WebSocket
-      // This event will be received by users who are already connected
       this.messagingGateway.emitToUser(req.userId, 'workspaceCreated', {
         workspace: this.normalizedWorkspaceData(result.workspace),
       });
@@ -113,10 +104,6 @@ export class WorkspacesService {
     );
   }
 
-  // ============================================
-  // MEMBERSHIP OPERATIONS (delegated to WorkspaceMembershipService)
-  // ============================================
-
   /**
    * Check if user can manage workspace (owner or admin)
    */
@@ -129,10 +116,6 @@ export class WorkspacesService {
       userId,
     );
   }
-
-  // ============================================
-  // UTILITY METHODS
-  // ============================================
 
   /**
    * Sanitize slug for use in SQL identifiers
@@ -149,7 +132,6 @@ export class WorkspacesService {
     return this.workspaceMembershipService.countUserFreeWorkspaces(userId);
   }
 
-  // In WorkspacesService
   async getWorkspaceMembers(
     workspaceId: string,
     req: AuthenticatedRequest,

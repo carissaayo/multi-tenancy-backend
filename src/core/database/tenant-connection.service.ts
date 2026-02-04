@@ -85,7 +85,6 @@ export class TenantConnectionService {
         updated_at TIMESTAMP DEFAULT NOW()
       )`,
 
-      // Channel members table
       `CREATE TABLE IF NOT EXISTS ${schemaName}.channel_members (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
@@ -94,7 +93,6 @@ export class TenantConnectionService {
         UNIQUE(channel_id, member_id)
       )`,
 
-      // Messages table
       `CREATE TABLE IF NOT EXISTS ${schemaName}.messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   channel_id UUID NOT NULL REFERENCES ${schemaName}.channels(id) ON DELETE CASCADE,
@@ -120,7 +118,6 @@ export class TenantConnectionService {
         created_at TIMESTAMP DEFAULT NOW()
       )`,
 
-      // Reactions table
       `CREATE TABLE IF NOT EXISTS ${schemaName}.reactions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         message_id UUID NOT NULL REFERENCES ${schemaName}.messages(id) ON DELETE CASCADE,
@@ -130,7 +127,6 @@ export class TenantConnectionService {
         UNIQUE(message_id, member_id, emoji)
       )`,
 
-      // Create indexes
       `CREATE INDEX IF NOT EXISTS idx_members_user_id ON ${schemaName}.members(user_id)`,
       `CREATE INDEX IF NOT EXISTS idx_messages_channel ON ${schemaName}.messages(channel_id)`,
       `CREATE INDEX IF NOT EXISTS idx_messages_thread ON ${schemaName}.messages(thread_id)`,

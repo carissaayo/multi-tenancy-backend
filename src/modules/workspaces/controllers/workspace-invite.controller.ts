@@ -24,7 +24,6 @@ import type { AuthenticatedRequest } from 'src/core/security/interfaces/custom-r
 export class WorkspaceInviteController {
   constructor(private readonly workspaceService: WorkspaceInviteService) {}
 
-  // Get all invitations sent to the current user (for accepting without email)
   @Get('my')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all pending invitations for current user' })
@@ -36,7 +35,7 @@ export class WorkspaceInviteController {
     return this.workspaceService.getMyInvitations(req);
   }
 
-  // Get all workspace invitations (admin view)
+
   @Get()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all workspace invitations' })
@@ -48,7 +47,6 @@ export class WorkspaceInviteController {
     return this.workspaceService.listWorkspaceInvites(req);
   }
 
-  // send a workspace invitation
   @Post()
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Send workspace invitation' })

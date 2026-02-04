@@ -42,10 +42,8 @@ export class WorkspaceMembershipService {
 
     if (!workspace) return false;
 
-    // Owner can always manage
     if (workspace.createdBy === userId) return true;
 
-    // Check if user is admin
     const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
       workspace.slug,
     );
@@ -86,7 +84,6 @@ export class WorkspaceMembershipService {
       throw customError.notFound('User not found');
     }
 
-    // Get workspace from public schema
     const workspace = await this.workspaceRepo.findOne({
       where: { id: workspaceId },
     });
@@ -114,11 +111,9 @@ export class WorkspaceMembershipService {
         throw customError.forbidden('You are not a member of this workspace');
       }
     } catch (error) {
-      // If it's already a custom error, rethrow it
       if (error.statusCode) {
         throw error;
       }
-      // Otherwise, schema might not exist or be accessible
       this.logger.warn(
         `Failed to check membership in schema ${schemaName}: ${error.message}`,
       );
@@ -158,9 +153,7 @@ export class WorkspaceMembershipService {
    * Get max workspaces allowed for user
    */
   getMaxWorkspacesForUser(user: User): number {
-    // This could be based on user's subscription
-    // For now, simple logic:
-    return 10; // Default limit
+    return 10;
   }
 
   getMemberProfile(member: WorkspaceMember): Partial<WorkspaceMember> {
@@ -203,7 +196,6 @@ async getWorkspaceMembers(
     throw customError.forbidden('You are not a member of this workspace');
   }
 
-  // Get workspace
   const workspace = await this.workspaceRepo.findOne({
     where: { id: workspaceId },
   });
@@ -212,14 +204,12 @@ async getWorkspaceMembers(
     throw customError.notFound('Workspace not found');
   }
 
-  // Sanitize slug and get schema name
   const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(
     workspace.slug,
   );
   const schemaName = `workspace_${sanitizedSlug}`;
 
   try {
-    // Build query with optional filters
     let query = `
       SELECT 
         m.id as member_id,
@@ -254,10 +244,8 @@ async getWorkspaceMembers(
       paramIndex++;
     }
 
-    // Order by join date
     query += ` ORDER BY m.joined_at ASC`;
 
-    // Add pagination
     if (options?.limit) {
       query += ` LIMIT $${paramIndex}`;
       params.push(options.limit);
@@ -270,10 +258,8 @@ async getWorkspaceMembers(
       paramIndex++;
     }
 
-    // Execute query
     const result = await this.dataSource.query(query, params);
 
-    // Get total count
     let countQuery = `
       SELECT COUNT(*) as total
       FROM "${schemaName}".members m

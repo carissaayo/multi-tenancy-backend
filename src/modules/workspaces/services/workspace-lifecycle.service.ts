@@ -57,10 +57,7 @@ export class WorkspaceLifecycleService {
   
     const user = req.user!;
 
-    // Determine the plan (defaults to FREE if not specified)
     const workspacePlan = createDto.plan || WorkspacePlan.FREE;
-
-    // Check free plan limit if creating a free workspace
     const MAX_FREE_WORKSPACES =
       this.configService.get<number>('workspace.maxFreeWorkspaces') || 2;
 
@@ -75,7 +72,6 @@ export class WorkspaceLifecycleService {
       }
     }
 
-    // 2. Check workspace limit per user
     const userWorkspaceCount =
       await this.workspaceMembershipService.countUserWorkspaces(user.id);
     const maxWorkspaces =
@@ -87,7 +83,6 @@ export class WorkspaceLifecycleService {
       );
     }
 
-    // 3. Validate slug is available
     const slugExists = await this.workspaceRepo.findOne({
       where: { slug: createDto.slug },
     });
@@ -96,14 +91,12 @@ export class WorkspaceLifecycleService {
       throw customError.conflict('Workspace slug already taken');
     }
 
-    // 4. Validate slug format
     if (!this.workspaceQueryService.isValidSlug(createDto.slug)) {
       throw customError.badRequest(
         'Slug must be lowercase alphanumeric with hyphens only',
       );
     }
 
-    // 5. Start transaction
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -127,11 +120,7 @@ export class WorkspaceLifecycleService {
       });
 
       await queryRunner.manager.save(workspace);
-
-      // 7. Create workspace schema in database
       await this.createWorkspaceSchema(workspace.slug, queryRunner);
-
-      // 8. Add creator as owner member
       await this.memberService.addOwnerMember(
         workspace.id,
         workspace.slug,
@@ -161,15 +150,10 @@ export class WorkspaceLifecycleService {
             `Failed to upload logo for workspace ${workspace.slug}: ${error.message}`,
             error.stack,
           );
-          // Don't fail the entire workspace creation if logo upload fails
-          // The workspace will be created without a logo
         }
       }
 
-      // 9. Create default channels
       await this.createDefaultChannels(workspace.slug, user.id, queryRunner);
-
-      // 10. Commit transaction
       await queryRunner.commitTransaction();
       const savedWorkspace =
         await this.workspaceQueryService.findWorkspaceWithSafeFields(
@@ -188,7 +172,6 @@ export class WorkspaceLifecycleService {
         message: 'Workspace created successfully',
       };
     } catch (error) {
-      // Rollback on error
       await queryRunner.rollbackTransaction();
       this.logger.error(
         `Failed to create workspace: ${error.message}`,
@@ -226,7 +209,6 @@ export class WorkspaceLifecycleService {
       );
     }
 
-    // Update workspace
     Object.assign(workspace, updateDto);
     workspace.updatedAt = new Date();
 
@@ -256,12 +238,8 @@ export class WorkspaceLifecycleService {
     req: AuthenticatedRequest,
     file: Express.Multer.File,
   ): Promise<UpdateWorkspaceResponse> {
- 
     const user = req.user!;
-
     const workspace = req.workspace!;
-
-    // Check permissions (owner/admin only)
     const canUpdate =
       await this.workspaceMembershipService.canUserManageWorkspace(
         workspace.id,
@@ -285,7 +263,6 @@ export class WorkspaceLifecycleService {
       }
     }
 
-    // Upload new logo to S3
     const uploadedFile = await this.storageService.uploadFile(file, {
       scope: 'workspace',
       workspaceId,
@@ -305,7 +282,6 @@ export class WorkspaceLifecycleService {
       `Workspace logo updated: ${workspace.slug} by user ${user.id}`,
     );
 
-    // Return workspace with safe user fields
     const updatedWorkspace =
       await this.workspaceQueryService.findWorkspaceWithSafeFields(workspaceId);
     if (!updatedWorkspace) {
@@ -328,9 +304,6 @@ export class WorkspaceLifecycleService {
     const user = req.user!;
 
     const workspace = req.workspace!;
-
-
-    // Only owner can deactivate
     if (workspace.createdBy !== user.id) {
       throw customError.forbidden(
         'Only workspace owner can deactivate workspace',
@@ -358,8 +331,6 @@ export class WorkspaceLifecycleService {
     const user = req.user!;
 
     const workspace = req.workspace!;
-
-    // Only owner can activate
     if (workspace.createdBy !== user.id) {
       throw customError.forbidden(
         'Only workspace owner can activate workspace',
@@ -387,8 +358,6 @@ export class WorkspaceLifecycleService {
     const user = req.user!;
 
     const workspace = req.workspace!;
-
-    // Only owner can delete
     if (workspace.createdBy !== user.id) {
       throw customError.forbidden('Only workspace owner can delete workspace');
     }
@@ -407,20 +376,13 @@ export class WorkspaceLifecycleService {
   /**
    * Create workspace schema in database
    */
-  /**
-   * Create workspace schema in database
-   */
   private async createWorkspaceSchema(
     slug: string,
     queryRunner: any,
   ): Promise<void> {
     const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(slug);
     const schemaName = `workspace_${sanitizedSlug}`;
-
-    // Create schema
     await queryRunner.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
-
-    // Members table
     await queryRunner.query(`
     CREATE TABLE IF NOT EXISTS "${schemaName}".members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -452,8 +414,6 @@ export class WorkspaceLifecycleService {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `);
-
-    // Channel members table
     await queryRunner.query(`
     CREATE TABLE IF NOT EXISTS "${schemaName}".channel_members (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -465,8 +425,6 @@ export class WorkspaceLifecycleService {
       CONSTRAINT uq_${schemaName}_channel_members UNIQUE (channel_id, member_id)
     )
   `);
-
-    // Messages table
     await queryRunner.query(`
   CREATE TABLE IF NOT EXISTS "${schemaName}".messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -494,8 +452,6 @@ export class WorkspaceLifecycleService {
   CREATE INDEX IF NOT EXISTS idx_${schemaName}_messages_thread
   ON "${schemaName}".messages(thread_id)
 `);
-
-    // Files table
     await queryRunner.query(`
     CREATE TABLE IF NOT EXISTS "${schemaName}".files (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -537,8 +493,6 @@ export class WorkspaceLifecycleService {
   ): Promise<void> {
     const sanitizedSlug = this.workspaceQueryService.sanitizeSlugForSQL(slug);
     const schemaName = `workspace_${sanitizedSlug}`;
-
-    // Get member ID
     const [member] = await queryRunner.query(
       `SELECT id FROM "${schemaName}".members WHERE user_id = $1`,
       [creatorUserId],
@@ -559,8 +513,6 @@ export class WorkspaceLifecycleService {
   `,
       [member.id],
     );
-
-    // Create #random channel
     const [randomChannel] = await queryRunner.query(
       `
     INSERT INTO "${schemaName}".channels (name, description, is_private, created_by)
@@ -569,8 +521,6 @@ export class WorkspaceLifecycleService {
   `,
       [member.id],
     );
-
-    // Add creator to both channels
     await queryRunner.query(
       `
     INSERT INTO "${schemaName}".channel_members (channel_id, member_id)

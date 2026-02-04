@@ -61,7 +61,6 @@ export class WorkspaceQueryService {
       throw customError.notFound('User not found');
     }
 
-    // Get all workspaces where user is a member
     const workspaceSchemas = await this.dataSource.query(
       `
     SELECT DISTINCT table_schema as schema_name
@@ -79,7 +78,6 @@ export class WorkspaceQueryService {
       const schemaName = row.schema_name;
 
       try {
-        // Check if user is a member in this workspace schema
         const [member] = await this.dataSource.query(
           `SELECT 1 FROM "${schemaName}".members 
        WHERE user_id = $1 AND is_active = true 
@@ -88,7 +86,6 @@ export class WorkspaceQueryService {
         );
 
         if (member) {
-          // Get member count while we're here
           const [countResult] = await this.dataSource.query(
             `SELECT COUNT(*) as count FROM "${schemaName}".members WHERE is_active = true`,
           );
@@ -127,7 +124,7 @@ export class WorkspaceQueryService {
     const tokens = await this.tokenManager.signTokens(user, req);
 
     return {
-      workspaces: workspacesWithCounts, // Return workspaces with member counts
+      workspaces: workspacesWithCounts,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken || '',
       message: 'Workspaces fetched successfully',
@@ -191,7 +188,12 @@ export class WorkspaceQueryService {
     });
   }
 
-  /** * Get multiple workspaces with safe user fields * @param identifiers - Array of workspace IDs or slugs * @param bySlug - If true, searches by slug; if false, searches by ID * @returns Array of workspaces with safe user fields */
+  /**
+   * Get multiple workspaces with safe user fields
+   * @param identifiers - Array of workspace IDs or slugs
+   * @param bySlug - If true, searches by slug; if false, searches by ID
+   * @returns Array of workspaces with safe user fields
+   */
   async getMultipleWorkspacesWithSafeFields(
     identifiers: string[],
     bySlug: boolean = false,

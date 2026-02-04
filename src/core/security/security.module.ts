@@ -55,10 +55,6 @@ import { User } from 'src/modules/users/entities/user.entity';
     RateLimitHandler,
     RedisRateLimiter,
     TenantResolverMiddleware,
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: EmailVerificationGuard,
-    // },
   ],
   exports: [TokenManager, AuthHandler, AuthDomainService],
 })
