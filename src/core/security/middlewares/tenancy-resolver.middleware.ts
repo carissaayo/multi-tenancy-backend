@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware, HttpStatus, Logger } from '@nestjs/common';
+import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Response, NextFunction } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -14,6 +14,9 @@ import { customError } from 'src/core/error-handler/custom-errors';
 @Injectable()
 export class TenantResolverMiddleware implements NestMiddleware {
   private readonly logger = new Logger(TenantResolverMiddleware.name);
+
+  // Header name for workspace slug (used when subdomain routing is not available)
+  private readonly WORKSPACE_HEADER = 'x-workspace-slug';
 
   constructor(
     @InjectRepository(Workspace)
@@ -40,11 +43,11 @@ export class TenantResolverMiddleware implements NestMiddleware {
       // Skip tenant resolution for workspace-agnostic routes (e.g., creating workspace, listing user workspaces)
       if (this.isWorkspaceOptionalRoute(req.originalUrl)) {
         this.logger.debug(
-          `Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if subdomain present`,
+          `Workspace optional route: ${req.originalUrl} - attempting to resolve workspace if available`,
         );
 
-        // Try to resolve workspace if subdomain exists, but don't fail if it doesn't
-        const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+        // Try to resolve workspace from header first, then subdomain
+        const workspaceSlug = this.extractWorkspaceSlug(req);
         if (workspaceSlug) {
           const workspace = await this.workspaceRepo.findOne({
             where: { slug: workspaceSlug, isActive: true },
@@ -53,22 +56,22 @@ export class TenantResolverMiddleware implements NestMiddleware {
             req.workspace = workspace;
             req.workspaceId = workspace.id;
             this.logger.debug(
-              `Workspace resolved for optional route: ${workspace.slug}`,
+              `Workspace resolved for optional route: ${workspace.slug} (source: ${this.getWorkspaceSource(req)})`,
             );
           }
         }
         return next();
       }
 
-      // For workspace-scoped routes, workspace from subdomain is REQUIRED
-      const workspaceSlug = this.extractWorkspaceFromSubdomain(req);
+      // For workspace-scoped routes, workspace is REQUIRED (from header or subdomain)
+      const workspaceSlug = this.extractWorkspaceSlug(req);
 
       if (!workspaceSlug) {
         this.logger.warn(
-          `No workspace subdomain found in hostname: ${this.getHostname(req)}`,
+          `No workspace identifier found. Hostname: ${this.getHostname(req)}, Header: ${req.headers[this.WORKSPACE_HEADER] || 'not set'}`,
         );
         throw customError.badRequest(
-          'Workspace subdomain is required. Please access this resource through your workspace subdomain (e.g., workspace.app.com)',
+          'Workspace identifier is required. Please provide the workspace slug via the x-workspace-slug header or use a workspace subdomain (e.g., workspace.app.com)',
         );
       }
 
@@ -106,7 +109,7 @@ export class TenantResolverMiddleware implements NestMiddleware {
       req.workspaceId = workspace.id;
 
       this.logger.debug(
-        `Resolved workspace: ${workspace.slug} (${workspace.id})${allowsDeactivated && !workspace.isActive ? ' [deactivated allowed]' : ''}`,
+        `Resolved workspace: ${workspace.slug} (${workspace.id}) via ${this.getWorkspaceSource(req)}${allowsDeactivated && !workspace.isActive ? ' [deactivated allowed]' : ''}`,
       );
       next();
     } catch (error) {
@@ -125,6 +128,67 @@ export class TenantResolverMiddleware implements NestMiddleware {
     return (req.headers['x-forwarded-host'] as string) || req.hostname;
   }
 
+  /**
+   * Extract workspace slug from request.
+   * Priority: 1. Header (x-workspace-slug) 2. Subdomain
+   * 
+   * Header-based resolution is useful when:
+   * - Running on platforms without wildcard SSL (e.g., Render free tier)
+   * - Testing locally without subdomain setup
+   * 
+   * Subdomain-based resolution is preferred when:
+   * - Using a custom domain with wildcard SSL certificate
+   * - Production environment with proper DNS setup
+   */
+  private extractWorkspaceSlug(req: AuthenticatedRequest): string | null {
+    // Try header first (for platforms without subdomain support)
+    const headerSlug = this.extractWorkspaceFromHeader(req);
+    if (headerSlug) {
+      this.logger.debug(`Workspace slug from header: ${headerSlug}`);
+      return headerSlug;
+    }
+
+    // Fall back to subdomain extraction
+    const subdomainSlug = this.extractWorkspaceFromSubdomain(req);
+    if (subdomainSlug) {
+      this.logger.debug(`Workspace slug from subdomain: ${subdomainSlug}`);
+      return subdomainSlug;
+    }
+
+    return null;
+  }
+
+  /**
+   * Extract workspace slug from x-workspace-slug header
+   */
+  private extractWorkspaceFromHeader(req: AuthenticatedRequest): string | null {
+    const headerValue = req.headers[this.WORKSPACE_HEADER];
+    if (headerValue && typeof headerValue === 'string') {
+      const slug = headerValue.trim().toLowerCase();
+      if (slug.length > 0) {
+        return slug;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get the source of workspace resolution (for logging/debugging)
+   */
+  private getWorkspaceSource(req: AuthenticatedRequest): string {
+    if (this.extractWorkspaceFromHeader(req)) {
+      return 'header';
+    }
+    if (this.extractWorkspaceFromSubdomain(req)) {
+      return 'subdomain';
+    }
+    return 'none';
+  }
+
+  /**
+   * Extract workspace slug from subdomain.
+   * Used when wildcard SSL is available (custom domain setup).
+   */
   private extractWorkspaceFromSubdomain(
     req: AuthenticatedRequest,
   ): string | null {
