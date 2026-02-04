@@ -23,8 +23,8 @@ let WorkspaceInvitation = class WorkspaceInvitation {
     token;
     invitedBy;
     inviter;
-    sentTo;
     sentToId;
+    sentTo;
     invitedAt;
     expiresAt;
     acceptedAt;
@@ -76,14 +76,14 @@ __decorate([
     __metadata("design:type", Object)
 ], WorkspaceInvitation.prototype, "inviter", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'uuid', name: 'sent_to', nullable: true }),
+    __metadata("design:type", Object)
+], WorkspaceInvitation.prototype, "sentToId", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'SET NULL' }),
     (0, typeorm_1.JoinColumn)({ name: 'sent_to' }),
     __metadata("design:type", Object)
 ], WorkspaceInvitation.prototype, "sentTo", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'uuid', name: 'sentTo', nullable: true }),
-    __metadata("design:type", Object)
-], WorkspaceInvitation.prototype, "sentToId", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp', name: 'invited_at' }),
     __metadata("design:type", Date)

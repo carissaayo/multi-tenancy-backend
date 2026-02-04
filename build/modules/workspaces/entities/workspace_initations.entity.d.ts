@@ -10,8 +10,8 @@ export declare class WorkspaceInvitation {
     token: string;
     invitedBy: string | null;
     inviter: User | null;
-    sentTo: User | null;
     sentToId: string | null;
+    sentTo: User | null;
     invitedAt: Date;
     expiresAt: Date;
     acceptedAt: Date | null;
